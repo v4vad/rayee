@@ -1,0 +1,43 @@
+# Project planning (kept locally, not in repo)
+PLAN.md
+CLAUDE.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+
+# Models (large files)
+*.bin
+*.pt
+*.onnx
+
+# macOS
+.DS_Store
+*.swp
+
+# Xcode
+xcuserdata/
+*.xcworkspace
+!*.xcworkspace/contents.xcworkspacedata
+DerivedData/
+*.moved-aside
+*.ipa
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Audio files (test recordings)
+*.wav
+*.mp3
+*.m4a
