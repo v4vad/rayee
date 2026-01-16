@@ -8,36 +8,26 @@
 
 ### What's Done
 - Phase 0: Project setup complete
-- Phase 1: Python code complete - all modules written and tested for imports
+- Phase 1: Python transcription engine complete and tested
+- Phase 2: Python server complete and tested
 
-### What's In Progress
-- **Testing the microphone** - macOS permission was granted to Warp but needs app restart
+### Next Step
+- **Phase 3:** Build the Swift/macOS menu bar app
 
-### Next Steps After Restarting Warp
+### How to Run the Server
+```bash
+cd /Users/karthikvadlapatla/claude/rayee/python
+source venv/bin/activate
+python run_server.py
+```
+Server runs on `http://localhost:8765`
 
-1. **Test the microphone works:**
-   ```bash
-   cd /Users/karthikvadlapatla/claude/rayee/python
-   source venv/bin/activate
-   python test_mic.py
-   ```
-   - You should see "AUDIO DETECTED" if it works
-   - If not, check System Settings → Sound → Input
-
-2. **Run the full voice-to-text test:**
-   ```bash
-   python test_rayee.py
-   ```
-   - Choose option 2 (Smart recording)
-   - Speak into your mic, it should auto-stop and transcribe
-
-3. **If everything works**, Phase 1 is verified and we move to Phase 2 (Python Server)
-
-### Files Created in Phase 1
+### Files Created
 ```
 python/
 ├── venv/                    # Python virtual environment (Python 3.11)
 ├── requirements.txt         # Dependencies list
+├── run_server.py           # Server entry point
 ├── test_rayee.py           # Main test script
 ├── test_mic.py             # Microphone diagnostic
 ├── diagnose_audio.py       # Real-time audio/VAD diagnostic
@@ -46,7 +36,9 @@ python/
     ├── audio.py            # Microphone recording
     ├── transcribe.py       # Speech-to-text using Whisper
     ├── models.py           # AI model management
-    └── vad.py              # Voice activity detection (auto-stop)
+    ├── vad.py              # Voice activity detection (auto-stop)
+    ├── server.py           # FastAPI server with endpoints
+    └── vocabulary.py       # Custom word management
 ```
 
 ---
@@ -132,18 +124,19 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 - `python/rayee/models.py` - Model loading/switching
 - `python/test_rayee.py` - Test script
 
-### Phase 2: Python Server
+### Phase 2: Python Server ✅
 **Goal:** Python runs as a background service the Swift app can talk to
 
-- [ ] Create local HTTP server or Unix socket
-- [ ] Add endpoints: /start-recording, /stop-recording, /transcribe
-- [ ] Add model switching endpoint
-- [ ] Add custom vocabulary support
-- [ ] Test: Can send commands and get transcription back
+- [x] Create local HTTP server (FastAPI on localhost:8765)
+- [x] Add endpoints: /transcribe, /status, /health
+- [x] Add model switching endpoints: /models, /model
+- [x] Add custom vocabulary support: /vocabulary
+- [x] Test: All endpoints verified working
 
-**Files to create:**
-- `python/rayee/server.py` - Local API server
-- `python/rayee/vocabulary.py` - Custom word handling
+**Files created:**
+- `python/rayee/server.py` - FastAPI server with all endpoints
+- `python/rayee/vocabulary.py` - Custom word handling (saves to ~/.rayee/vocabulary.json)
+- `python/run_server.py` - Entry point script
 
 ### Phase 3: Swift App (Basic)
 **Goal:** Native Mac app that talks to Python
