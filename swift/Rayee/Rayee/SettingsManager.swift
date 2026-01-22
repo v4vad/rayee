@@ -18,6 +18,7 @@ enum SettingsKey {
     static let selectedModel = "selectedModel"
     static let autoPasteEnabled = "autoPasteEnabled"
     static let vocabularyList = "vocabularyList"
+    static let soundsEnabled = "soundsEnabled"
 }
 
 // MARK: - AI Model Options
@@ -166,6 +167,11 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(vocabularyList, forKey: SettingsKey.vocabularyList) }
     }
 
+    // Whether to play audio feedback sounds
+    @Published var soundsEnabled: Bool {
+        didSet { UserDefaults.standard.set(soundsEnabled, forKey: SettingsKey.soundsEnabled) }
+    }
+
     private init() {
         // Load saved settings or use defaults
 
@@ -196,6 +202,13 @@ class SettingsManager: ObservableObject {
 
         // Load vocabulary list (default: empty)
         self.vocabularyList = UserDefaults.standard.stringArray(forKey: SettingsKey.vocabularyList) ?? []
+
+        // Load sounds setting (default: enabled)
+        if UserDefaults.standard.object(forKey: SettingsKey.soundsEnabled) != nil {
+            self.soundsEnabled = UserDefaults.standard.bool(forKey: SettingsKey.soundsEnabled)
+        } else {
+            self.soundsEnabled = true
+        }
     }
 
     // Save hotkey configuration to UserDefaults
@@ -222,5 +235,6 @@ class SettingsManager: ObservableObject {
         selectedModel = .small
         autoPasteEnabled = true
         vocabularyList = []
+        soundsEnabled = true
     }
 }

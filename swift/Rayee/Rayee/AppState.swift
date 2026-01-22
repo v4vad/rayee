@@ -40,6 +40,8 @@ class AppState: ObservableObject {
     let hotkeyManager = HotkeyManager.shared
     let pasteManager = PasteManager.shared
     let settings = SettingsManager.shared
+    let historyManager = HistoryManager.shared
+    let audioFeedback = AudioFeedback.shared
 
     // Timer for periodic health checks
     private var healthCheckTimer: Timer?
@@ -69,12 +71,26 @@ class AppState: ObservableObject {
         errorMessage = nil
         status = .recording
 
+        // Play start sound to confirm recording has begun
+        audioFeedback.playStartSound()
+
         // Call the Python server to record and transcribe
         Task { @MainActor in
             do {
                 let text = try await pythonBridge.transcribe()
                 self.transcribedText = text
                 self.status = .ready
+
+                // Play completion sound
+                self.audioFeedback.playStopSound()
+
+                // Save to history if we got any text
+                if !text.isEmpty {
+                    self.historyManager.saveTranscription(
+                        text: text,
+                        model: self.settings.selectedModel.rawValue
+                    )
+                }
 
                 // Auto-paste if enabled (both from settings and from the autoPaste parameter)
                 // The autoPaste parameter is true when triggered by hotkey
@@ -87,13 +103,16 @@ class AppState: ObservableObject {
             } catch PythonBridgeError.serverBusy {
                 self.errorMessage = "Server is busy. Please wait."
                 self.status = .error
+                self.audioFeedback.playErrorSound()
             } catch PythonBridgeError.serverOffline {
                 self.errorMessage = "Server is not running."
                 self.isServerOnline = false
                 self.status = .error
+                self.audioFeedback.playErrorSound()
             } catch {
                 self.errorMessage = "Transcription failed: \(error.localizedDescription)"
                 self.status = .error
+                self.audioFeedback.playErrorSound()
             }
         }
     }

@@ -16,6 +16,10 @@
 		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
 		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
 		A100000A001 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A000 /* PasteManager.swift */; };
+		A100000C001 /* TranscriptionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000C000 /* TranscriptionRecord.swift */; };
+		A100000D001 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000D000 /* HistoryManager.swift */; };
+		A100000E001 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E000 /* HistoryView.swift */; };
+		A100000F001 /* AudioFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000F000 /* AudioFeedback.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +35,10 @@
 		A1000009000 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		A100000A000 /* PasteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteManager.swift; sourceTree = "<group>"; };
 		A100000B000 /* Rayee.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Rayee.entitlements; sourceTree = "<group>"; };
+		A100000C000 /* TranscriptionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRecord.swift; sourceTree = "<group>"; };
+		A100000D000 /* HistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryManager.swift; sourceTree = "<group>"; };
+		A100000E000 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
+		A100000F000 /* AudioFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFeedback.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -64,6 +72,10 @@
 				A1000008000 /* SettingsView.swift */,
 				A1000009000 /* HotkeyManager.swift */,
 				A100000A000 /* PasteManager.swift */,
+				A100000C000 /* TranscriptionRecord.swift */,
+				A100000D000 /* HistoryManager.swift */,
+				A100000E000 /* HistoryView.swift */,
+				A100000F000 /* AudioFeedback.swift */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
 			);
@@ -155,6 +167,10 @@
 				A1000008001 /* SettingsView.swift in Sources */,
 				A1000009001 /* HotkeyManager.swift in Sources */,
 				A100000A001 /* PasteManager.swift in Sources */,
+				A100000C001 /* TranscriptionRecord.swift in Sources */,
+				A100000D001 /* HistoryManager.swift in Sources */,
+				A100000E001 /* HistoryView.swift in Sources */,
+				A100000F001 /* AudioFeedback.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

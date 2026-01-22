@@ -59,13 +59,21 @@ struct MenuBarView: View {
                 errorBanner(message: error)
             }
 
-            // Text display area
-            ScrollView {
-                Text(appState.transcribedText.isEmpty ? "Your transcribed text will appear here..." : appState.transcribedText)
+            // Text display area (editable)
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $appState.transcribedText)
                     .font(.system(size: 13))
-                    .foregroundColor(appState.transcribedText.isEmpty ? .secondary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled)  // Allow text selection
+                    .scrollContentBackground(.hidden)
+
+                // Placeholder text when empty
+                if appState.transcribedText.isEmpty {
+                    Text("Your transcribed text will appear here...")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                        .padding(.leading, 5)
+                        .padding(.top, 8)
+                        .allowsHitTesting(false)
+                }
             }
             .frame(height: 100)
             .padding(8)

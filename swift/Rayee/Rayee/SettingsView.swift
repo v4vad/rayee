@@ -26,6 +26,11 @@ struct SettingsView: View {
                 .tabItem {
                     Label("Vocabulary", systemImage: "text.book.closed")
                 }
+
+            historyTab
+                .tabItem {
+                    Label("History", systemImage: "clock.arrow.circlepath")
+                }
         }
         .frame(width: 450, height: 350)
         .alert("Accessibility Permission Required", isPresented: $showingAccessibilityAlert) {
@@ -90,6 +95,17 @@ struct SettingsView: View {
                 if settings.autoPasteEnabled {
                     accessibilityStatusView
                 }
+            }
+
+            Divider()
+
+            // Sound Feedback Section
+            Section {
+                Toggle("Play sounds", isOn: $settings.soundsEnabled)
+
+                Text("Play audio feedback when recording starts and stops")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
 
             Spacer()
@@ -172,6 +188,11 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    // MARK: - History Tab
+    private var historyTab: some View {
+        HistoryView()
     }
 
     // MARK: - Hotkey Recorder Button

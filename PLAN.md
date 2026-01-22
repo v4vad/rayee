@@ -12,9 +12,10 @@
 - Phase 2: Python server complete and tested
 - Phase 3: Swift/macOS menu bar app complete
 - Phase 4: Global hotkey, auto-paste, and settings complete
+- Phase 5: History & polish complete
 
 ### Next Step
-- **Phase 5:** History & Polish
+- **Project complete!** All core features implemented.
 
 ### How to Run the Server
 ```bash
@@ -172,20 +173,21 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 - `swift/Rayee/SettingsManager.swift` - UserDefaults-based settings persistence
 - `swift/Rayee/SettingsView.swift` - Settings interface with tabs
 
-### Phase 5: History & Polish
+### Phase 5: History & Polish ✅
 **Goal:** Save transcriptions, polish the experience
 
-- [ ] Add SQLite database for history
-- [ ] Create history view in app
-- [ ] Add search functionality
-- [ ] Add audio feedback sounds (start/stop beeps)
-- [ ] Polish UI and fix bugs
-- [ ] Package app for easy installation
+- [x] Add SQLite database for history (Swift-side, stored in ~/.rayee/history.db)
+- [x] Create history view in app (Settings → History tab)
+- [x] Add search functionality (search bar in History tab)
+- [x] Add audio feedback sounds (start/stop/error beeps using system sounds)
+- [x] Add sounds toggle in Settings (General tab → "Play sounds")
+- [ ] Package app for easy installation (optional future step)
 
-**Files to create:**
-- `swift/Rayee/HistoryManager.swift` - Database handling
-- `swift/Rayee/HistoryView.swift` - History UI
-- `python/rayee/database.py` - Python-side history storage
+**Files created:**
+- `swift/Rayee/Rayee/TranscriptionRecord.swift` - Data model for history entries
+- `swift/Rayee/Rayee/HistoryManager.swift` - SQLite database handling
+- `swift/Rayee/Rayee/HistoryView.swift` - History UI with search, copy, delete
+- `swift/Rayee/Rayee/AudioFeedback.swift` - Sound playback using NSSound
 
 ---
 
@@ -201,8 +203,7 @@ rayee/
 │   │   ├── vad.py            # Voice detection
 │   │   ├── models.py         # Model management
 │   │   ├── vocabulary.py     # Custom words
-│   │   ├── server.py         # Local API
-│   │   └── database.py       # History storage
+│   │   └── server.py         # Local API
 │   ├── requirements.txt
 │   └── run_server.py         # Entry point
 │
@@ -211,10 +212,15 @@ rayee/
 │       ├── Rayee.xcodeproj
 │       └── Rayee/
 │           ├── RayeeApp.swift
+│           ├── AppState.swift
 │           ├── MenuBarView.swift
-│           ├── StatusWindow.swift
+│           ├── StatusIndicator.swift
 │           ├── SettingsView.swift
+│           ├── SettingsManager.swift
 │           ├── HistoryView.swift
+│           ├── HistoryManager.swift
+│           ├── TranscriptionRecord.swift
+│           ├── AudioFeedback.swift
 │           ├── PythonBridge.swift
 │           ├── HotkeyManager.swift
 │           └── PasteManager.swift
