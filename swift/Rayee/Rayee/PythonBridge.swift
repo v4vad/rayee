@@ -50,6 +50,16 @@ private struct ErrorResponse: Codable {
     let detail: String?
 }
 
+// Request body for /transcribe endpoint
+private struct TranscribeRequest: Codable {
+    let silenceDuration: Double
+
+    // Maps Swift camelCase to Python snake_case
+    enum CodingKeys: String, CodingKey {
+        case silenceDuration = "silence_duration"
+    }
+}
+
 class PythonBridge {
     // Server URL - Python server runs on localhost port 8765
     private let baseURL = "http://127.0.0.1:8765"
@@ -128,8 +138,9 @@ class PythonBridge {
 
     /// Start recording and transcription
     /// This will wait while the server records audio and transcribes it
+    /// - Parameter silenceDuration: How long to wait after speech stops (in seconds)
     /// Returns the transcribed text
-    func transcribe() async throws -> String {
+    func transcribe(silenceDuration: Double = 1.5) async throws -> String {
         guard let url = URL(string: "\(baseURL)/transcribe") else {
             throw PythonBridgeError.networkError("Invalid URL")
         }
@@ -139,6 +150,10 @@ class PythonBridge {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         // Long timeout because recording + transcription takes time
         request.timeoutInterval = transcriptionTimeout
+
+        // Send the silence duration setting to the server
+        let requestBody = TranscribeRequest(silenceDuration: silenceDuration)
+        request.httpBody = try JSONEncoder().encode(requestBody)
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)

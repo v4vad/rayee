@@ -77,7 +77,9 @@ class AppState: ObservableObject {
         // Call the Python server to record and transcribe
         Task { @MainActor in
             do {
-                let text = try await pythonBridge.transcribe()
+                let text = try await pythonBridge.transcribe(
+                    silenceDuration: settings.silenceDuration
+                )
                 self.transcribedText = text
                 self.status = .ready
 

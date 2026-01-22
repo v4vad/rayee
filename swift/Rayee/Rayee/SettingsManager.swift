@@ -19,6 +19,7 @@ enum SettingsKey {
     static let autoPasteEnabled = "autoPasteEnabled"
     static let vocabularyList = "vocabularyList"
     static let soundsEnabled = "soundsEnabled"
+    static let silenceDuration = "silenceDuration"
 }
 
 // MARK: - AI Model Options
@@ -172,6 +173,12 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(soundsEnabled, forKey: SettingsKey.soundsEnabled) }
     }
 
+    // How long to wait after speech stops before transcribing (in seconds)
+    // Shorter = faster but might cut you off; Longer = more pause time allowed
+    @Published var silenceDuration: Double {
+        didSet { UserDefaults.standard.set(silenceDuration, forKey: SettingsKey.silenceDuration) }
+    }
+
     private init() {
         // Load saved settings or use defaults
 
@@ -209,6 +216,13 @@ class SettingsManager: ObservableObject {
         } else {
             self.soundsEnabled = true
         }
+
+        // Load silence duration setting (default: 1.5 seconds)
+        if let savedDuration = UserDefaults.standard.object(forKey: SettingsKey.silenceDuration) as? Double {
+            self.silenceDuration = savedDuration
+        } else {
+            self.silenceDuration = 1.5
+        }
     }
 
     // Save hotkey configuration to UserDefaults
@@ -236,5 +250,6 @@ class SettingsManager: ObservableObject {
         autoPasteEnabled = true
         vocabularyList = []
         soundsEnabled = true
+        silenceDuration = 1.5
     }
 }

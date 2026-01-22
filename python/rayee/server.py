@@ -34,6 +34,11 @@ class ServerState(str, Enum):
 
 # Request/Response models (defines the shape of data we accept/return)
 
+class TranscribeRequest(BaseModel):
+    """Optional parameters for the /transcribe endpoint."""
+    silence_duration: float = 1.5  # How long to wait after speech stops (seconds)
+
+
 class TranscribeResponse(BaseModel):
     """Response from the /transcribe endpoint."""
     text: str
@@ -133,16 +138,19 @@ async def get_status():
 
 
 @app.post("/transcribe", response_model=TranscribeResponse)
-async def transcribe():
+async def transcribe(request: TranscribeRequest = TranscribeRequest()):
     """
     Record audio and transcribe it to text.
 
     This endpoint:
     1. Starts recording from your microphone
     2. Waits for you to speak
-    3. Automatically stops when you finish speaking (after ~1.5s of silence)
+    3. Automatically stops when you finish speaking (based on silence_duration)
     4. Transcribes the audio to text using AI
     5. Returns the text
+
+    Args:
+        request: Optional settings including silence_duration (default 1.5s)
 
     Returns:
         {"text": "what you said", "status": "success"}
@@ -159,8 +167,9 @@ async def transcribe():
 
     try:
         # Record with automatic silence detection
+        # silence_duration comes from the user's settings (how long to wait after speech stops)
         recorder = SmartRecorder(
-            silence_duration=1.5,  # Stop after 1.5s of silence
+            silence_duration=request.silence_duration,
             max_duration=60.0,     # Maximum 60 seconds
         )
         audio_data = recorder.record()

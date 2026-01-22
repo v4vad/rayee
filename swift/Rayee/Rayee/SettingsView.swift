@@ -108,6 +108,24 @@ struct SettingsView: View {
                     .foregroundColor(.secondary)
             }
 
+            Divider()
+
+            // Wait Time Section
+            Section {
+                HStack {
+                    Text("Wait time")
+                    Spacer()
+                    Text(String(format: "%.1fs", settings.silenceDuration))
+                        .foregroundColor(.secondary)
+                }
+
+                Slider(value: $settings.silenceDuration, in: 0.5...5.0, step: 0.5)
+
+                Text("How long to wait after you stop speaking before transcribing")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Spacer()
 
             // Reset Button
