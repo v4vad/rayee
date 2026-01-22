@@ -4,15 +4,17 @@
 
 ---
 
-## CURRENT STATUS (January 16, 2026)
+## CURRENT STATUS (January 22, 2026)
 
 ### What's Done
 - Phase 0: Project setup complete
 - Phase 1: Python transcription engine complete and tested
 - Phase 2: Python server complete and tested
+- Phase 3: Swift/macOS menu bar app complete
+- Phase 4: Global hotkey, auto-paste, and settings complete
 
 ### Next Step
-- **Phase 3:** Build the Swift/macOS menu bar app
+- **Phase 5:** History & Polish
 
 ### How to Run the Server
 ```bash
@@ -138,35 +140,37 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 - `python/rayee/vocabulary.py` - Custom word handling (saves to ~/.rayee/vocabulary.json)
 - `python/run_server.py` - Entry point script
 
-### Phase 3: Swift App (Basic)
+### Phase 3: Swift App (Basic) ✅
 **Goal:** Native Mac app that talks to Python
 
-- [ ] Create new Xcode project (SwiftUI)
-- [ ] Create menu bar app with icon
-- [ ] Add status window (Listening/Transcribing/Ready)
-- [ ] Connect to Python server
-- [ ] Test: Click menu → Python records → Text appears in window
+- [x] Create new Xcode project (SwiftUI)
+- [x] Create menu bar app with icon
+- [x] Add status window (Listening/Transcribing/Ready)
+- [x] Connect to Python server
+- [x] Test: Click menu → Python records → Text appears in window
 
-**Files to create:**
+**Files created:**
 - `swift/Rayee/` - Xcode project folder
 - `swift/Rayee/RayeeApp.swift` - Main app entry
 - `swift/Rayee/MenuBarView.swift` - Menu bar interface
-- `swift/Rayee/StatusWindow.swift` - Recording status UI
+- `swift/Rayee/StatusIndicator.swift` - Animated status display
 - `swift/Rayee/PythonBridge.swift` - Communication with Python
+- `swift/Rayee/AppState.swift` - Central state management
 
-### Phase 4: Swift App (Features)
+### Phase 4: Swift App (Features) ✅
 **Goal:** Add hotkey, auto-paste, settings
 
-- [ ] Register global keyboard shortcut
-- [ ] Implement auto-paste via Accessibility APIs
-- [ ] Request necessary macOS permissions
-- [ ] Add settings window (hotkey, model selection, vocabulary)
-- [ ] Test: Hotkey → Record → Text pastes into any app
+- [x] Register global keyboard shortcut (Option+Space default)
+- [x] Implement auto-paste via Accessibility APIs
+- [x] Request necessary macOS permissions (accessibility)
+- [x] Add settings window (hotkey, model selection, vocabulary, auto-paste toggle)
+- [x] Test: Hotkey → Record → Text pastes into any app
 
-**Files to create:**
-- `swift/Rayee/HotkeyManager.swift` - Global shortcut handling
-- `swift/Rayee/PasteManager.swift` - Auto-paste functionality
-- `swift/Rayee/SettingsView.swift` - Settings interface
+**Files created:**
+- `swift/Rayee/HotkeyManager.swift` - Global shortcut handling using CGEvent tap
+- `swift/Rayee/PasteManager.swift` - Auto-paste via clipboard + Cmd+V simulation
+- `swift/Rayee/SettingsManager.swift` - UserDefaults-based settings persistence
+- `swift/Rayee/SettingsView.swift` - Settings interface with tabs
 
 ### Phase 5: History & Polish
 **Goal:** Save transcriptions, polish the experience

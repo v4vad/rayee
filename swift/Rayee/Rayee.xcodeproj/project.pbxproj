@@ -12,6 +12,10 @@
 		A1000003001 /* MenuBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003000 /* MenuBarView.swift */; };
 		A1000004001 /* StatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000 /* StatusIndicator.swift */; };
 		A1000005001 /* PythonBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* PythonBridge.swift */; };
+		A1000007001 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* SettingsManager.swift */; };
+		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
+		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
+		A100000A001 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A000 /* PasteManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,6 +26,11 @@
 		A1000004000 /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
 		A1000005000 /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
 		A1000006000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A1000007000 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		A1000008000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1000009000 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
+		A100000A000 /* PasteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteManager.swift; sourceTree = "<group>"; };
+		A100000B000 /* Rayee.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Rayee.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,7 +60,12 @@
 				A1000003000 /* MenuBarView.swift */,
 				A1000004000 /* StatusIndicator.swift */,
 				A1000005000 /* PythonBridge.swift */,
+				A1000007000 /* SettingsManager.swift */,
+				A1000008000 /* SettingsView.swift */,
+				A1000009000 /* HotkeyManager.swift */,
+				A100000A000 /* PasteManager.swift */,
 				A1000006000 /* Info.plist */,
+				A100000B000 /* Rayee.entitlements */,
 			);
 			path = Rayee;
 			sourceTree = "<group>";
@@ -137,6 +151,10 @@
 				A1000003001 /* MenuBarView.swift in Sources */,
 				A1000004001 /* StatusIndicator.swift in Sources */,
 				A1000005001 /* PythonBridge.swift in Sources */,
+				A1000007001 /* SettingsManager.swift in Sources */,
+				A1000008001 /* SettingsView.swift in Sources */,
+				A1000009001 /* HotkeyManager.swift in Sources */,
+				A100000A001 /* PasteManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

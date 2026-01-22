@@ -6,5 +6,7 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Rayee needs microphone access to record your voice for transcription.</string>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Rayee needs Accessibility permission to use global keyboard shortcuts and auto-paste transcribed text into other applications.</string>
 </dict>
 </plist>

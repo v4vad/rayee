@@ -10,6 +10,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @EnvironmentObject var appState: AppState
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -120,6 +121,26 @@ struct MenuBarView: View {
             }
 
             Spacer()
+
+            // Hotkey hint
+            Text(SettingsManager.shared.hotkeyConfig.displayString)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.secondary.opacity(0.1))
+                .cornerRadius(4)
+
+            // Settings button
+            Button(action: {
+                openWindow(id: "settings")
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            }) {
+                Image(systemName: "gear")
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 12))
+            .foregroundColor(.secondary)
 
             // Quit button
             Button("Quit") {

@@ -36,22 +36,32 @@ class AppState: ObservableObject {
     // For communicating with the Python server
     let pythonBridge = PythonBridge()
 
+    // Managers for hotkey and paste functionality
+    let hotkeyManager = HotkeyManager.shared
+    let pasteManager = PasteManager.shared
+    let settings = SettingsManager.shared
+
     // Timer for periodic health checks
     private var healthCheckTimer: Timer?
 
     init() {
         // Start checking if the server is online every 10 seconds
         startHealthChecks()
+
+        // Set up the global hotkey to trigger transcription
+        setupHotkey()
     }
 
     deinit {
         healthCheckTimer?.invalidate()
+        hotkeyManager.stop()
     }
 
     // MARK: - Public Methods
 
     /// Start recording and transcription
-    func startTranscription() {
+    /// When autoPaste is true (and settings allow it), text is automatically pasted where cursor is
+    func startTranscription(autoPaste: Bool = false) {
         // Don't start if already doing something
         guard status == .ready || status == .error else { return }
 
@@ -65,6 +75,15 @@ class AppState: ObservableObject {
                 let text = try await pythonBridge.transcribe()
                 self.transcribedText = text
                 self.status = .ready
+
+                // Auto-paste if enabled (both from settings and from the autoPaste parameter)
+                // The autoPaste parameter is true when triggered by hotkey
+                if autoPaste && settings.autoPasteEnabled && !text.isEmpty {
+                    // Small delay to ensure the previous app is focused
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        self.pasteManager.pasteText(text)
+                    }
+                }
             } catch PythonBridgeError.serverBusy {
                 self.errorMessage = "Server is busy. Please wait."
                 self.status = .error
@@ -128,6 +147,33 @@ class AppState: ObservableObject {
     }
 
     // MARK: - Private Methods
+
+    /// Set up the global hotkey callback
+    private func setupHotkey() {
+        hotkeyManager.onHotkeyPressed = { [weak self] in
+            guard let self = self else { return }
+            // Only start if we're in a state that allows it
+            if self.status == .ready || self.status == .error {
+                // Start transcription with auto-paste enabled (since triggered by hotkey)
+                self.startTranscription(autoPaste: true)
+            }
+        }
+    }
+
+    /// Start listening for the global hotkey (call after app is ready)
+    func startHotkeyListening() {
+        // Check for accessibility permission and start if granted
+        if hotkeyManager.hasAccessibilityPermissionSilent() {
+            hotkeyManager.start()
+        } else {
+            // Will prompt user for permission
+            _ = hotkeyManager.checkAccessibilityPermission()
+            // Try to start after a delay (user may have granted permission)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                self?.hotkeyManager.start()
+            }
+        }
+    }
 
     private func startHealthChecks() {
         // Check immediately
