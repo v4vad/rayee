@@ -242,6 +242,52 @@ rayee/
 
 ---
 
+## Development Tools & Recommendations
+
+This section documents helpful tools for building Rayee more efficiently when working with Claude Code.
+
+### MCPs (Model Context Protocol Servers)
+
+MCPs are plugins that give Claude Code extra capabilities. Here are the ones that will help with this project:
+
+| MCP | What It Does | When You'll Need It |
+|-----|--------------|---------------------|
+| **Xcode MCP** | Lets Claude interact with Xcode projects directly - build, manage files, check errors | Phase 3-4 (Swift app development) |
+| **GitHub MCP** | Manages issues, pull requests, and releases from within Claude | Throughout project for tracking |
+| **SQLite MCP** | Reads and writes to SQLite databases | Phase 5 (transcription history) |
+| **Fetch MCP** | Makes HTTP requests to test API endpoints | Phase 2-3 (testing the Python server) |
+
+**How to install MCPs:** Go to Claude Code settings and add the MCP server URLs. See [Claude Code MCP documentation](https://docs.anthropic.com/claude-code/mcp) for details.
+
+### Built-in Claude Code Agents
+
+Claude Code has specialized agents you can use without installing anything:
+
+- **Explore Agent** - Use when you need to understand how existing code works (e.g., "How does the audio recording work?")
+- **Plan Agent** - Use when designing new features before writing code
+- **Bash Agent** - Use for running terminal commands and scripts
+
+### Recommended Editor Extensions
+
+If you're editing code manually outside of Claude Code:
+
+**For VS Code:**
+- **Python** - Syntax highlighting and debugging for Python files
+- **Swift** - Syntax highlighting for Swift files
+- **REST Client** - Test API endpoints directly from VS Code
+
+### External Tools
+
+These standalone apps can help during development:
+
+| Tool | What It Does | When It's Useful |
+|------|--------------|------------------|
+| **Postman** or **Insomnia** | Visual API testing tools | Testing Python server endpoints |
+| **SF Symbols** (free from Apple) | Browse macOS system icons | Choosing icons for the menu bar app |
+| **Proxyman** | HTTP debugging proxy for Mac | Debugging Swift ↔ Python communication |
+
+---
+
 ## Verification / Testing
 
 After each phase, we'll test:
