@@ -25,6 +25,10 @@
 		A1000130001 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000130000 /* Config.swift */; };
 		A1000140001 /* HealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000140000 /* HealthMonitor.swift */; };
 		A1000150001 /* TranscriptionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000150000 /* TranscriptionCoordinator.swift */; };
+		A1000160001 /* WaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000160000 /* WaveformView.swift */; };
+		A1000170001 /* AudioLevelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000170000 /* AudioLevelMonitor.swift */; };
+		A1000180001 /* RecordingPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000180000 /* RecordingPanelView.swift */; };
+		A1000190001 /* RecordingPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000190000 /* RecordingPanelController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +53,10 @@
 		A1000130000 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1000140000 /* HealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMonitor.swift; sourceTree = "<group>"; };
 		A1000150000 /* TranscriptionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCoordinator.swift; sourceTree = "<group>"; };
+		A1000160000 /* WaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaveformView.swift; sourceTree = "<group>"; };
+		A1000170000 /* AudioLevelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelMonitor.swift; sourceTree = "<group>"; };
+		A1000180000 /* RecordingPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelView.swift; sourceTree = "<group>"; };
+		A1000190000 /* RecordingPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -91,6 +99,10 @@
 				A1000130000 /* Config.swift */,
 				A1000140000 /* HealthMonitor.swift */,
 				A1000150000 /* TranscriptionCoordinator.swift */,
+				A1000160000 /* WaveformView.swift */,
+				A1000170000 /* AudioLevelMonitor.swift */,
+				A1000180000 /* RecordingPanelView.swift */,
+				A1000190000 /* RecordingPanelController.swift */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
 			);
@@ -191,6 +203,10 @@
 				A1000130001 /* Config.swift in Sources */,
 				A1000140001 /* HealthMonitor.swift in Sources */,
 				A1000150001 /* TranscriptionCoordinator.swift in Sources */,
+				A1000160001 /* WaveformView.swift in Sources */,
+				A1000170001 /* AudioLevelMonitor.swift in Sources */,
+				A1000180001 /* RecordingPanelView.swift in Sources */,
+				A1000190001 /* RecordingPanelController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

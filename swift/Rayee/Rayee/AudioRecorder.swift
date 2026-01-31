@@ -45,6 +45,7 @@ class AudioRecorder {
     private let silenceThreshold: Float = Config.silenceThreshold
     private var silenceDuration: TimeInterval   // How long silence triggers stop
     private let maxDuration: TimeInterval = Config.maxRecordingDuration
+    private let timeoutEnabled: Bool            // Whether to enforce maxDuration
 
     // Audio engine components
     private var audioEngine: AVAudioEngine?
@@ -62,8 +63,9 @@ class AudioRecorder {
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
 
-    init(silenceDuration: TimeInterval = Config.defaultSilenceDuration) {
+    init(silenceDuration: TimeInterval = Config.defaultSilenceDuration, timeoutEnabled: Bool = true) {
         self.silenceDuration = silenceDuration
+        self.timeoutEnabled = timeoutEnabled
     }
 
     // MARK: - Public Methods
@@ -284,8 +286,8 @@ class AudioRecorder {
         // Check stopping conditions
         let elapsed = now.timeIntervalSince(recordingStartTime ?? now)
 
-        // Stop if max duration reached
-        if elapsed >= maxDuration {
+        // Stop if max duration reached (only if timeout is enabled)
+        if timeoutEnabled && elapsed >= maxDuration {
             print("[AudioRecorder] Max duration reached")
             DispatchQueue.main.async { [weak self] in
                 self?.stopRecording()

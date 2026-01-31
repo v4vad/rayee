@@ -54,6 +54,9 @@ class AppState: ObservableObject {
     /// Manages the bundled Python server
     let serverManager = ServerManager.shared
 
+    /// Controls the floating recording panel
+    private let recordingPanelController = RecordingPanelController()
+
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
@@ -81,6 +84,11 @@ class AppState: ObservableObject {
         guard status == .ready || status == .error else { return }
         errorMessage = nil
         transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
+    }
+
+    /// Stop recording and begin transcription (called from UI button)
+    func stopRecording() {
+        transcriptionCoordinator.stopRecording()
     }
 
     /// Copy the transcribed text to the clipboard
@@ -158,8 +166,14 @@ class AppState: ObservableObject {
         transcriptionCoordinator.$isRecording
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isRecording in
+                guard let self = self else { return }
                 if isRecording {
-                    self?.status = .recording
+                    self.status = .recording
+                    // Show the floating panel
+                    self.recordingPanelController.setRecording(true)
+                    self.recordingPanelController.showPanel()
+                } else {
+                    self.recordingPanelController.setRecording(false)
                 }
             }
             .store(in: &cancellables)
@@ -168,8 +182,12 @@ class AppState: ObservableObject {
         transcriptionCoordinator.$isTranscribing
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isTranscribing in
+                guard let self = self else { return }
                 if isTranscribing {
-                    self?.status = .transcribing
+                    self.status = .transcribing
+                    self.recordingPanelController.setTranscribing(true)
+                } else {
+                    self.recordingPanelController.setTranscribing(false)
                 }
             }
             .store(in: &cancellables)
@@ -177,6 +195,19 @@ class AppState: ObservableObject {
         // Handle transcription completion
         transcriptionCoordinator.onTranscriptionComplete = { [weak self] result in
             self?.handleTranscriptionResult(result)
+        }
+
+        // Forward audio levels to the panel's waveform
+        transcriptionCoordinator.onAudioLevelUpdate = { [weak self] level in
+            self?.recordingPanelController.audioLevelMonitor.addLevel(level)
+        }
+
+        // Set up panel button callbacks
+        recordingPanelController.onStop = { [weak self] in
+            self?.stopRecording()
+        }
+        recordingPanelController.onCancel = { [weak self] in
+            self?.cancelRecording()
         }
 
         // Observe server manager state
@@ -194,13 +225,19 @@ class AppState: ObservableObject {
         case .success(let text):
             transcribedText = text
             status = .ready
+            // Hide the panel after successful transcription
+            recordingPanelController.hidePanel()
 
         case .cancelled:
             status = .ready
+            // Hide the panel when cancelled
+            recordingPanelController.hidePanel()
 
         case .error(let message):
             errorMessage = message
             status = .error
+            // Hide the panel on error
+            recordingPanelController.hidePanel()
             if message.contains("not running") {
                 isServerOnline = false
             }
@@ -248,7 +285,7 @@ class AppState: ObservableObject {
 
             if self.status == .recording {
                 // Already recording - stop and transcribe
-                self.audioRecorder?.stopRecording()
+                self.transcriptionCoordinator.stopRecording()
             } else if self.status == .ready || self.status == .error {
                 // Not recording - start transcription
                 self.startTranscription(autoPaste: true)
@@ -271,9 +308,8 @@ class AppState: ObservableObject {
 
     /// Cancel recording without transcribing (called when user presses Escape)
     func cancelRecording() {
-        audioRecorder?.cancelRecording()
-        audioRecorder = nil
+        transcriptionCoordinator.cancel()
+        recordingPanelController.hidePanel()
         status = .ready
-        audioFeedback.playErrorSound()  // Audio feedback that recording was cancelled
     }
 }

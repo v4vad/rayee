@@ -86,9 +86,14 @@ struct MenuBarView: View {
 
     private var buttonSection: some View {
         HStack(spacing: 12) {
-            // Start Recording button
+            // Start Recording / Transcribe button
             Button(action: {
-                appState.startTranscription()
+                if appState.status == .recording {
+                    // Stop recording and transcribe
+                    appState.stopRecording()
+                } else {
+                    appState.startTranscription()
+                }
             }) {
                 HStack(spacing: 6) {
                     Image(systemName: buttonIcon)
@@ -97,7 +102,7 @@ struct MenuBarView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!canStartRecording)
+            .disabled(!canInteract)
             .tint(buttonTint)
 
             // Copy button
@@ -192,6 +197,11 @@ struct MenuBarView: View {
         appState.status == .ready || appState.status == .error
     }
 
+    private var canInteract: Bool {
+        // Can start recording when ready, or stop when recording
+        appState.status == .ready || appState.status == .error || appState.status == .recording
+    }
+
     private var buttonIcon: String {
         switch appState.status {
         case .startingServer:
@@ -216,7 +226,7 @@ struct MenuBarView: View {
         case .ready, .error:
             return "Start Recording"
         case .recording:
-            return "Listening..."
+            return "Transcribe"
         case .transcribing:
             return "Transcribing..."
         }

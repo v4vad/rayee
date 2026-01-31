@@ -110,18 +110,33 @@ struct SettingsView: View {
 
             Divider()
 
-            // Wait Time Section
+            // Recording Timeout Section
+            Section {
+                Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
+
+                Text("When enabled, recording stops after 60 seconds")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Divider()
+
+            // Silence Detection Section
             Section {
                 HStack {
-                    Text("Wait time")
+                    Text("Silence detection")
                     Spacer()
-                    Text(String(format: "%.1fs", settings.silenceDuration))
+                    Text(String(format: "%.0fs", settings.silenceDuration))
                         .foregroundColor(.secondary)
                 }
 
-                Slider(value: $settings.silenceDuration, in: 0.5...5.0, step: 0.5)
+                Slider(
+                    value: $settings.silenceDuration,
+                    in: Config.minSilenceDuration...Config.maxSilenceDuration,
+                    step: 5
+                )
 
-                Text("How long to wait after you stop speaking before transcribing")
+                Text("After you stop speaking, recording ends after this many seconds of silence")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
