@@ -21,6 +21,9 @@ class HotkeyManager: ObservableObject {
     // The callback to execute when hotkey is pressed
     var onHotkeyPressed: (() -> Void)?
 
+    // The callback to execute when Escape is pressed (returns true to consume the key)
+    var onEscapePressed: (() -> Bool)?
+
     // Internal state for the event tap
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
@@ -193,6 +196,18 @@ class HotkeyManager: ObservableObject {
 
             // Return nil to consume the event (don't pass it to other apps)
             return nil
+        }
+
+        // Check for Escape key (keyCode 53) with no modifiers
+        // This allows cancelling recording while letting normal Escape usage pass through
+        if keyCode == 53 && modifiers == 0 {
+            var consumed = false
+            DispatchQueue.main.sync { [weak self] in
+                consumed = self?.onEscapePressed?() ?? false
+            }
+            if consumed {
+                return nil  // Consume the event (don't pass to other apps)
+            }
         }
 
         // Not our hotkey - let the event pass through

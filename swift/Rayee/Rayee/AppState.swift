@@ -59,6 +59,9 @@ class AppState: ObservableObject {
 
     // MARK: - Initialization
 
+    // Track if we've ever been fully ready - prevents status flickering after initial startup
+    private var hasBeenReady: Bool = false
+
     init() {
         setupBindings()
         setupHotkey()
@@ -208,24 +211,29 @@ class AppState: ObservableObject {
     private func handleServerStateChange(_ serverState: ServerManager.ServerState) {
         switch serverState {
         case .starting:
-            if status == .ready || status == .error {
+            // Show "Starting server..." only during initial startup
+            // Once we've been ready, don't flip back (prevents flickering)
+            if !hasBeenReady && (status == .ready || status == .error) {
                 status = .startingServer
             }
         case .downloadingModels:
-            if status == .startingServer || status == .ready || status == .error {
+            // Show "Downloading AI models..." only during initial startup
+            if !hasBeenReady && (status == .startingServer || status == .ready) {
                 status = .downloadingModels
             }
         case .running:
+            // Server is ready - update status if we were waiting for it
             if status == .startingServer || status == .downloadingModels {
                 status = .ready
-                isServerOnline = true
             }
+            // Mark that we've successfully started once
+            hasBeenReady = true
+            isServerOnline = true
         case .failed:
-            if status == .startingServer || status == .downloadingModels {
-                status = .error
-                errorMessage = serverManager.errorMessage ?? "Server failed to start"
-                isServerOnline = false
-            }
+            // Server failed - show error
+            status = .error
+            errorMessage = serverManager.errorMessage ?? "Server failed to start"
+            isServerOnline = false
         case .notStarted, .stopped:
             break
         }
@@ -233,11 +241,39 @@ class AppState: ObservableObject {
 
     /// Set up the global hotkey callback
     private func setupHotkey() {
+        // Handle main hotkey (Option+Space by default)
+        // Now works as a toggle: press to start, press again to stop and transcribe
         hotkeyManager.onHotkeyPressed = { [weak self] in
             guard let self = self else { return }
-            if self.status == .ready || self.status == .error {
+
+            if self.status == .recording {
+                // Already recording - stop and transcribe
+                self.audioRecorder?.stopRecording()
+            } else if self.status == .ready || self.status == .error {
+                // Not recording - start transcription
                 self.startTranscription(autoPaste: true)
             }
         }
+
+        // Handle Escape key to cancel recording
+        // Returns true to consume the key (prevent it from reaching other apps)
+        // Returns false to let Escape work normally when not recording
+        hotkeyManager.onEscapePressed = { [weak self] in
+            guard let self = self else { return false }
+
+            if self.status == .recording {
+                self.cancelRecording()
+                return true  // Consume the Escape key
+            }
+            return false  // Let Escape pass through to other apps
+        }
+    }
+
+    /// Cancel recording without transcribing (called when user presses Escape)
+    func cancelRecording() {
+        audioRecorder?.cancelRecording()
+        audioRecorder = nil
+        status = .ready
+        audioFeedback.playErrorSound()  // Audio feedback that recording was cancelled
     }
 }
