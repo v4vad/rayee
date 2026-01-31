@@ -8,9 +8,13 @@
 
 import Foundation
 import SwiftUI
+import Combine
+import AVFoundation
 
 // What the app is currently doing
 enum AppStatus: String {
+    case startingServer = "Starting server..."  // Python server is starting up
+    case downloadingModels = "Downloading AI models..."  // First-time model download
     case ready = "Ready"              // Waiting for you to start recording
     case recording = "Listening..."   // Microphone active, listening to you
     case transcribing = "Transcribing..."  // Converting speech to text
@@ -46,7 +50,27 @@ class AppState: ObservableObject {
     // Timer for periodic health checks
     private var healthCheckTimer: Timer?
 
+    // For observing server manager state changes
+    private var cancellables = Set<AnyCancellable>()
+
+    // The server manager (only used in production builds with bundled server)
+    let serverManager = ServerManager.shared
+
+    // Audio recorder for Swift-side recording (fixes microphone permission in bundled app)
+    private var audioRecorder: AudioRecorder?
+
+    // Whether we should auto-paste after current transcription completes
+    private var pendingAutoPaste: Bool = false
+
     init() {
+        // Observe server manager state changes
+        serverManager.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] serverState in
+                self?.handleServerStateChange(serverState)
+            }
+            .store(in: &cancellables)
+
         // Start checking if the server is online every 10 seconds
         startHealthChecks()
 
@@ -69,17 +93,84 @@ class AppState: ObservableObject {
 
         // Clear previous error
         errorMessage = nil
+        pendingAutoPaste = autoPaste
+
+        // Request microphone permission if needed
+        Task { @MainActor in
+            let hasPermission = await AudioRecorder.requestMicrophonePermission()
+            if !hasPermission {
+                // Permission check says denied, but let's try anyway
+                // The audio engine will fail with a clear error if truly no permission
+                print("[AppState] Permission check returned false, attempting recording anyway...")
+            }
+
+            // Start recording with Swift AudioRecorder
+            self.startSwiftRecording()
+        }
+    }
+
+    /// Start recording using Swift's AVFoundation (not Python)
+    /// This uses the app's microphone permission, solving the bundled app issue
+    private func startSwiftRecording() {
         status = .recording
 
         // Play start sound to confirm recording has begun
         audioFeedback.playStartSound()
 
-        // Call the Python server to record and transcribe
+        // Create recorder with user's silence duration setting
+        audioRecorder = AudioRecorder(silenceDuration: settings.silenceDuration)
+
+        // Set up callbacks
+        audioRecorder?.onSpeechDetected = { [weak self] in
+            // Could update UI here if needed (e.g., show "Speech detected")
+            print("[AppState] Speech detected")
+        }
+
+        audioRecorder?.onRecordingComplete = { [weak self] result in
+            guard let self = self else { return }
+            self.handleRecordingComplete(result)
+        }
+
+        // Start recording
+        do {
+            try audioRecorder?.startRecording()
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.status = .error
+            self.audioFeedback.playErrorSound()
+            self.audioRecorder = nil
+        }
+    }
+
+    /// Handle when Swift recording is complete
+    private func handleRecordingComplete(_ result: Result<RecordingResult, AudioRecorderError>) {
+        switch result {
+        case .success(let recordingResult):
+            // Recording succeeded - now send to Python for transcription
+            status = .transcribing
+            transcribeAudioFile(recordingResult.audioPath)
+
+        case .failure(let error):
+            if case .noAudioRecorded = error {
+                // No speech detected - just go back to ready
+                status = .ready
+                audioFeedback.playStopSound()
+            } else {
+                // Real error
+                errorMessage = error.localizedDescription
+                status = .error
+                audioFeedback.playErrorSound()
+            }
+        }
+
+        audioRecorder = nil
+    }
+
+    /// Send recorded audio file to Python for transcription
+    private func transcribeAudioFile(_ audioPath: URL) {
         Task { @MainActor in
             do {
-                let text = try await pythonBridge.transcribe(
-                    silenceDuration: settings.silenceDuration
-                )
+                let text = try await pythonBridge.transcribeFile(audioPath: audioPath)
                 self.transcribedText = text
                 self.status = .ready
 
@@ -94,9 +185,8 @@ class AppState: ObservableObject {
                     )
                 }
 
-                // Auto-paste if enabled (both from settings and from the autoPaste parameter)
-                // The autoPaste parameter is true when triggered by hotkey
-                if autoPaste && settings.autoPasteEnabled && !text.isEmpty {
+                // Auto-paste if enabled
+                if self.pendingAutoPaste && self.settings.autoPasteEnabled && !text.isEmpty {
                     // Small delay to ensure the previous app is focused
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                         self.pasteManager.pasteText(text)
@@ -109,6 +199,10 @@ class AppState: ObservableObject {
             } catch PythonBridgeError.serverOffline {
                 self.errorMessage = "Server is not running."
                 self.isServerOnline = false
+                self.status = .error
+                self.audioFeedback.playErrorSound()
+            } catch PythonBridgeError.serverStarting {
+                self.errorMessage = "AI models are still loading. Please wait."
                 self.status = .error
                 self.audioFeedback.playErrorSound()
             } catch {
@@ -142,6 +236,10 @@ class AppState: ObservableObject {
     /// Icon to show in the menu bar (changes based on status)
     var menuBarIcon: String {
         switch status {
+        case .startingServer:
+            return "waveform.badge.ellipsis"
+        case .downloadingModels:
+            return "arrow.down.circle"
         case .ready:
             return "waveform"
         case .recording:
@@ -156,6 +254,10 @@ class AppState: ObservableObject {
     /// Color for the status indicator dot
     var statusColor: Color {
         switch status {
+        case .startingServer:
+            return .orange
+        case .downloadingModels:
+            return .blue
         case .ready:
             return .green
         case .recording:
@@ -168,6 +270,39 @@ class AppState: ObservableObject {
     }
 
     // MARK: - Private Methods
+
+    /// Handle changes to the server manager's state
+    private func handleServerStateChange(_ serverState: ServerManager.ServerState) {
+        switch serverState {
+        case .starting:
+            // Show "Starting server..." status unless we're actively doing something
+            if status == .ready || status == .error {
+                status = .startingServer
+            }
+        case .downloadingModels:
+            // Show "Downloading AI models..." unless we're actively recording/transcribing
+            if status == .startingServer || status == .ready || status == .error {
+                status = .downloadingModels
+            }
+        case .running:
+            // Server is ready - if we were waiting for it, show ready status
+            if status == .startingServer || status == .downloadingModels {
+                status = .ready
+                isServerOnline = true
+            }
+        case .failed:
+            // Server failed to start
+            if status == .startingServer || status == .downloadingModels {
+                status = .error
+                errorMessage = serverManager.errorMessage ?? "Server failed to start"
+                isServerOnline = false
+            }
+        case .notStarted, .stopped:
+            // In development mode, user runs server manually
+            // Just do normal health checks
+            break
+        }
+    }
 
     /// Set up the global hotkey callback
     private func setupHotkey() {

@@ -9,6 +9,10 @@
 import Foundation
 import SQLite3
 
+// SQLite destructor constant - tells SQLite to copy strings immediately
+// because Swift strings are temporary and may be deallocated
+private let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+
 // Manages reading and writing transcription history to a local database
 class HistoryManager: ObservableObject {
     // Singleton instance - one shared history manager for the whole app
@@ -63,10 +67,11 @@ class HistoryManager: ObservableObject {
 
         if sqlite3_prepare_v2(db, insertSQL, -1, &statement, nil) == SQLITE_OK {
             // Bind values to the placeholders (?)
-            sqlite3_bind_text(statement, 1, record.id.uuidString, -1, nil)
-            sqlite3_bind_text(statement, 2, record.text, -1, nil)
+            // Using SQLITE_TRANSIENT so SQLite copies the strings before Swift deallocates them
+            sqlite3_bind_text(statement, 1, record.id.uuidString, -1, SQLITE_TRANSIENT)
+            sqlite3_bind_text(statement, 2, record.text, -1, SQLITE_TRANSIENT)
             sqlite3_bind_double(statement, 3, record.timestamp.timeIntervalSince1970)
-            sqlite3_bind_text(statement, 4, record.modelUsed, -1, nil)
+            sqlite3_bind_text(statement, 4, record.modelUsed, -1, SQLITE_TRANSIENT)
 
             if sqlite3_step(statement) == SQLITE_DONE {
                 // Successfully saved - add to our in-memory list
@@ -108,7 +113,7 @@ class HistoryManager: ObservableObject {
         var statement: OpaquePointer?
 
         if sqlite3_prepare_v2(db, deleteSQL, -1, &statement, nil) == SQLITE_OK {
-            sqlite3_bind_text(statement, 1, id.uuidString, -1, nil)
+            sqlite3_bind_text(statement, 1, id.uuidString, -1, SQLITE_TRANSIENT)
 
             if sqlite3_step(statement) == SQLITE_DONE {
                 // Successfully deleted - remove from our in-memory list

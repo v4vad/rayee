@@ -8,6 +8,11 @@ Models are downloaded automatically on first use from Hugging Face.
 from faster_whisper import WhisperModel
 from typing import Optional, Literal
 import os
+import threading
+
+# Timeout for downloading the Whisper model (10 minutes)
+# Larger models can take a while to download
+WHISPER_DOWNLOAD_TIMEOUT = 600
 
 
 # Available model sizes - larger = more accurate but slower
@@ -71,7 +76,8 @@ class ModelManager:
         self,
         model_size: ModelSize = DEFAULT_MODEL,
         device: str = "auto",
-        compute_type: str = "auto"
+        compute_type: str = "auto",
+        timeout: int = WHISPER_DOWNLOAD_TIMEOUT
     ) -> WhisperModel:
         """
         Load a Whisper model.
@@ -80,9 +86,14 @@ class ModelManager:
             model_size: Size of model to load (tiny, base, small, medium, large-v3)
             device: "cpu", "cuda", or "auto" (auto detects best option)
             compute_type: Precision for computation ("auto" picks optimal)
+            timeout: Maximum seconds to wait for download (default: 10 minutes)
 
         Returns:
             Loaded WhisperModel ready for transcription
+
+        Raises:
+            TimeoutError: If download takes longer than timeout
+            ValueError: If model_size is not valid
         """
         # If we already have this model loaded, return it
         if self._current_model and self._current_model_name == model_size:
@@ -97,16 +108,39 @@ class ModelManager:
 
         model_info = AVAILABLE_MODELS[model_size]
         print(f"Loading model: {model_size} ({model_info['description']})")
-        print(f"This may take a moment on first run (downloading ~{model_info['size_mb']}MB)...")
+        print(f"This may take a few minutes on first run (downloading ~{model_info['size_mb']}MB)...")
 
-        # Load the model
-        # - device="auto" uses GPU if available, else CPU
-        # - compute_type="auto" picks optimal precision for the hardware
-        self._current_model = WhisperModel(
-            model_size,
-            device=device,
-            compute_type=compute_type
-        )
+        # Use a thread with timeout to prevent hanging forever during download
+        result = {"model": None, "error": None}
+
+        def download_model():
+            try:
+                # Load the model
+                # - device="auto" uses GPU if available, else CPU
+                # - compute_type="auto" picks optimal precision for the hardware
+                result["model"] = WhisperModel(
+                    model_size,
+                    device=device,
+                    compute_type=compute_type
+                )
+            except Exception as e:
+                result["error"] = e
+
+        download_thread = threading.Thread(target=download_model)
+        download_thread.start()
+        download_thread.join(timeout=timeout)
+
+        if download_thread.is_alive():
+            # Download timed out
+            raise TimeoutError(
+                f"Whisper model download timed out after {timeout} seconds. "
+                "Check your internet connection and try again."
+            )
+
+        if result["error"]:
+            raise result["error"]
+
+        self._current_model = result["model"]
         self._current_model_name = model_size
 
         print(f"Model '{model_size}' loaded successfully!")

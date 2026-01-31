@@ -25,17 +25,20 @@ enum SettingsKey {
 // MARK: - AI Model Options
 // The different transcription models available
 // Smaller models are faster but less accurate; larger models are more accurate but slower
+// Note: rawValue must match Python's AVAILABLE_MODELS exactly
 enum TranscriptionModel: String, CaseIterable, Identifiable {
     case tiny = "tiny"
+    case base = "base"
     case small = "small"
     case medium = "medium"
-    case large = "large"
+    case large = "large-v3"  // Python uses "large-v3" not "large"
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
         case .tiny: return "Tiny (Fastest)"
+        case .base: return "Base (Fast)"
         case .small: return "Small (Balanced)"
         case .medium: return "Medium (Better)"
         case .large: return "Large (Best Quality)"
@@ -45,6 +48,7 @@ enum TranscriptionModel: String, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .tiny: return "~1GB RAM, fastest transcription"
+        case .base: return "~1GB RAM, fast with good accuracy"
         case .small: return "~2GB RAM, good balance of speed and accuracy"
         case .medium: return "~5GB RAM, better accuracy"
         case .large: return "~10GB RAM, highest accuracy"

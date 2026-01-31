@@ -20,6 +20,8 @@
 		A100000D001 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000D000 /* HistoryManager.swift */; };
 		A100000E001 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E000 /* HistoryView.swift */; };
 		A100000F001 /* AudioFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000F000 /* AudioFeedback.swift */; };
+		A1000110001 /* ServerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000110000 /* ServerManager.swift */; };
+		A1000120001 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000120000 /* AudioRecorder.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,8 @@
 		A100000D000 /* HistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryManager.swift; sourceTree = "<group>"; };
 		A100000E000 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		A100000F000 /* AudioFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFeedback.swift; sourceTree = "<group>"; };
+		A1000110000 /* ServerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerManager.swift; sourceTree = "<group>"; };
+		A1000120000 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +80,8 @@
 				A100000D000 /* HistoryManager.swift */,
 				A100000E000 /* HistoryView.swift */,
 				A100000F000 /* AudioFeedback.swift */,
+				A1000110000 /* ServerManager.swift */,
+				A1000120000 /* AudioRecorder.swift */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
 			);
@@ -171,6 +177,8 @@
 				A100000D001 /* HistoryManager.swift in Sources */,
 				A100000E001 /* HistoryView.swift in Sources */,
 				A100000F001 /* AudioFeedback.swift in Sources */,
+				A1000110001 /* ServerManager.swift in Sources */,
+				A1000120001 /* AudioRecorder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

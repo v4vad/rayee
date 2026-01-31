@@ -12,9 +12,14 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, Literal
 from enum import Enum
+import asyncio
 import threading
+from concurrent.futures import ThreadPoolExecutor
+import os
+import numpy as np
+from scipy.io import wavfile
 
-from .vad import SmartRecorder
+from .vad import SmartRecorder, VoiceActivityDetector
 from .transcribe import Transcriber
 from .models import AVAILABLE_MODELS, DEFAULT_MODEL, ModelSize
 from .vocabulary import VocabularyManager
@@ -32,11 +37,25 @@ class ServerState(str, Enum):
     TRANSCRIBING = "transcribing"  # Processing audio to text
 
 
+# Startup state - tracks model download progress
+class StartupState(str, Enum):
+    NOT_STARTED = "not_started"           # Haven't started yet
+    DOWNLOADING_VAD = "downloading_vad"    # Downloading voice detection model
+    DOWNLOADING_WHISPER = "downloading_whisper"  # Downloading transcription model
+    READY = "ready"                        # All models loaded, ready to transcribe
+    FAILED = "failed"                      # Something went wrong during startup
+
+
 # Request/Response models (defines the shape of data we accept/return)
 
 class TranscribeRequest(BaseModel):
     """Optional parameters for the /transcribe endpoint."""
     silence_duration: float = 1.5  # How long to wait after speech stops (seconds)
+
+
+class TranscribeFileRequest(BaseModel):
+    """Request for the /transcribe_file endpoint."""
+    audio_path: str  # Path to the WAV file to transcribe
 
 
 class TranscribeResponse(BaseModel):
@@ -78,6 +97,13 @@ class ErrorResponse(BaseModel):
     detail: Optional[str] = None
 
 
+class StartupStatusResponse(BaseModel):
+    """Response from the /startup_status endpoint."""
+    state: str  # not_started, downloading_vad, downloading_whisper, ready, failed
+    message: str  # Human-readable status message
+    error: Optional[str] = None  # Error message if failed
+
+
 # Create the FastAPI app
 app = FastAPI(
     title="Rayee Transcription Server",
@@ -91,6 +117,17 @@ _state = ServerState.IDLE
 _state_lock = threading.Lock()  # Prevents race conditions
 _transcriber: Optional[Transcriber] = None
 _vocabulary = VocabularyManager()
+
+# Startup state for model downloads
+_startup_state = StartupState.NOT_STARTED
+_startup_message = "Server starting..."
+_startup_error: Optional[str] = None
+_models_ready = False  # True once both models are loaded
+
+# Dedicated executor for audio/transcription work
+# Using a single worker ensures audio operations don't compete for resources
+# and helps with macOS audio thread requirements
+_audio_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="rayee_audio")
 
 
 def _get_transcriber() -> Transcriber:
@@ -157,7 +194,21 @@ async def transcribe(request: TranscribeRequest = TranscribeRequest()):
 
     Errors:
         409: Server is already recording or transcribing
+        503: Models are still loading
     """
+    # Check if models are ready
+    if not _models_ready:
+        if _startup_state == StartupState.FAILED:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Model loading failed: {_startup_error}"
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Models are still loading ({_startup_state.value}). Please wait."
+            )
+
     # Try to start recording
     if not _set_state(ServerState.RECORDING):
         raise HTTPException(
@@ -172,7 +223,12 @@ async def transcribe(request: TranscribeRequest = TranscribeRequest()):
             silence_duration=request.silence_duration,
             max_duration=60.0,     # Maximum 60 seconds
         )
-        audio_data = recorder.record()
+        # Run recording in a dedicated thread so the server can still respond
+        # to health checks while waiting for the user to speak
+        # We use a dedicated executor (not the default thread pool) for better
+        # compatibility with macOS audio requirements
+        loop = asyncio.get_running_loop()
+        audio_data = await loop.run_in_executor(_audio_executor, recorder.record)
 
         # Check if we got any audio
         if len(audio_data) == 0:
@@ -188,17 +244,137 @@ async def transcribe(request: TranscribeRequest = TranscribeRequest()):
         # Get vocabulary prompt for better recognition of custom words
         vocab_prompt = _vocabulary.get_prompt()
 
-        # Transcribe the audio
+        # Transcribe the audio (also in the dedicated thread to keep server responsive)
         transcriber = _get_transcriber()
-        text = transcriber.transcribe(
-            audio_data,
-            initial_prompt=vocab_prompt if vocab_prompt else None
+        text = await loop.run_in_executor(
+            _audio_executor,
+            lambda: transcriber.transcribe(audio_data, initial_prompt=vocab_prompt if vocab_prompt else None)
         )
 
         return TranscribeResponse(
             text=text,
             status="success"
         )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transcription failed: {str(e)}"
+        )
+
+    finally:
+        # Always go back to idle
+        _set_state(ServerState.IDLE)
+
+
+@app.post("/transcribe_file", response_model=TranscribeResponse)
+async def transcribe_file(request: TranscribeFileRequest):
+    """
+    Transcribe audio from a WAV file.
+
+    This endpoint is used when the Swift app records audio directly
+    (instead of the Python server recording). This solves the macOS
+    microphone permission issue when running as a bundled app.
+
+    The audio file must be:
+    - WAV format
+    - 16kHz sample rate
+    - Mono (1 channel)
+    - Float32 or Int16 samples
+
+    Args:
+        request: Contains audio_path - path to the WAV file
+
+    Returns:
+        {"text": "transcribed text", "status": "success"}
+
+    Errors:
+        400: File not found or invalid format
+        409: Server is already transcribing
+        503: Models are still loading
+    """
+    # Check if models are ready
+    if not _models_ready:
+        if _startup_state == StartupState.FAILED:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Model loading failed: {_startup_error}"
+            )
+        else:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Models are still loading ({_startup_state.value}). Please wait."
+            )
+
+    # Validate file exists
+    audio_path = request.audio_path
+    if not os.path.exists(audio_path):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Audio file not found: {audio_path}"
+        )
+
+    # Try to enter transcribing state
+    if not _set_state(ServerState.TRANSCRIBING):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Server is busy ({_state.value}). Please wait."
+        )
+
+    try:
+        # Read the WAV file
+        try:
+            sample_rate, audio_data = wavfile.read(audio_path)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Failed to read WAV file: {str(e)}"
+            )
+
+        # Validate sample rate (Whisper expects 16kHz)
+        if sample_rate != 16000:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Expected 16kHz sample rate, got {sample_rate}Hz"
+            )
+
+        # Convert to float32 if needed (Whisper expects float32 in range -1 to 1)
+        if audio_data.dtype == np.int16:
+            audio_data = audio_data.astype(np.float32) / 32768.0
+        elif audio_data.dtype == np.int32:
+            audio_data = audio_data.astype(np.float32) / 2147483648.0
+        elif audio_data.dtype != np.float32:
+            audio_data = audio_data.astype(np.float32)
+
+        # Ensure mono (take first channel if stereo)
+        if len(audio_data.shape) > 1:
+            audio_data = audio_data[:, 0]
+
+        # Check if we got any audio
+        if len(audio_data) == 0:
+            return TranscribeResponse(
+                text="",
+                status="no_audio"
+            )
+
+        # Get vocabulary prompt for better recognition of custom words
+        vocab_prompt = _vocabulary.get_prompt()
+
+        # Transcribe the audio
+        loop = asyncio.get_running_loop()
+        transcriber = _get_transcriber()
+        text = await loop.run_in_executor(
+            _audio_executor,
+            lambda: transcriber.transcribe(audio_data, initial_prompt=vocab_prompt if vocab_prompt else None)
+        )
+
+        return TranscribeResponse(
+            text=text,
+            status="success"
+        )
+
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
 
     except Exception as e:
         raise HTTPException(
@@ -352,23 +528,101 @@ async def health_check():
     return {"status": "ok", "service": "rayee"}
 
 
-# Startup message
+@app.get("/startup_status", response_model=StartupStatusResponse)
+async def get_startup_status():
+    """
+    Get the current startup/model loading status.
+
+    This endpoint is used by the Swift app during startup to show
+    appropriate feedback while AI models are downloading.
+
+    Returns:
+        {
+            "state": "downloading_vad" | "downloading_whisper" | "ready" | "failed",
+            "message": "Human readable status...",
+            "error": null | "Error message if failed"
+        }
+    """
+    return StartupStatusResponse(
+        state=_startup_state.value,
+        message=_startup_message,
+        error=_startup_error
+    )
+
+
+# Startup message and model preloading
 @app.on_event("startup")
 async def startup_message():
-    """Print startup message."""
+    """Print startup message and preload AI models."""
+    global _startup_state, _startup_message, _startup_error, _models_ready
+
     print(f"\n{'='*50}")
     print("  Rayee Transcription Server Started")
     print(f"  Running on http://{HOST}:{PORT}")
     print(f"{'='*50}")
     print("\nEndpoints:")
-    print("  GET  /status       - Server status")
-    print("  POST /transcribe   - Record and transcribe")
-    print("  GET  /models       - List available models")
-    print("  POST /model        - Switch model")
-    print("  GET  /vocabulary   - List custom words")
-    print("  POST /vocabulary   - Add custom word")
+    print("  GET  /status         - Server status")
+    print("  GET  /startup_status - Model loading status")
+    print("  POST /transcribe     - Record and transcribe")
+    print("  GET  /models         - List available models")
+    print("  POST /model          - Switch model")
+    print("  GET  /vocabulary     - List custom words")
+    print("  POST /vocabulary     - Add custom word")
     print("  DELETE /vocabulary/{word} - Remove word")
-    print("\nReady for requests!\n")
+
+    # Pre-load AI models in background so they're ready when user first records
+    print("\nPreloading AI models (this may take a few minutes on first run)...")
+
+    def preload_models():
+        global _startup_state, _startup_message, _startup_error, _models_ready
+
+        try:
+            # Step 1: Load VAD model
+            _startup_state = StartupState.DOWNLOADING_VAD
+            _startup_message = "Downloading voice detection model..."
+            print(f"[Startup] {_startup_message}")
+
+            vad = VoiceActivityDetector()
+            vad.load_model()
+
+            # Step 2: Load Whisper model
+            _startup_state = StartupState.DOWNLOADING_WHISPER
+            _startup_message = "Downloading transcription model..."
+            print(f"[Startup] {_startup_message}")
+
+            transcriber = _get_transcriber()
+            transcriber.load_model()
+
+            # All done!
+            _startup_state = StartupState.READY
+            _startup_message = "All models loaded. Ready to transcribe!"
+            _models_ready = True
+            print(f"[Startup] {_startup_message}")
+            print("\nReady for requests!\n")
+
+        except TimeoutError as e:
+            _startup_state = StartupState.FAILED
+            _startup_message = "Model download timed out"
+            _startup_error = str(e)
+            print(f"[Startup] ERROR: {e}")
+
+        except Exception as e:
+            _startup_state = StartupState.FAILED
+            _startup_message = "Failed to load models"
+            _startup_error = str(e)
+            print(f"[Startup] ERROR: {e}")
+
+    # Run model loading in the audio executor thread
+    # This keeps the server responsive while models download
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(_audio_executor, preload_models)
+
+
+@app.on_event("shutdown")
+async def shutdown_cleanup():
+    """Clean up resources on shutdown."""
+    _audio_executor.shutdown(wait=False)
+    print("Server shutting down...")
 
 
 def run_server(host: str = HOST, port: int = PORT):

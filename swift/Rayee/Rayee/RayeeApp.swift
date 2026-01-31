@@ -54,11 +54,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // App has fully launched
         print("Rayee launched")
+
+        // Start the bundled Python server
+        // In development mode (no bundled server), this will detect that
+        // and let the user run the server manually
+        ServerManager.shared.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         // Clean up before quitting
         HotkeyManager.shared.stop()
+
+        // Stop the Python server
+        ServerManager.shared.stop()
+
         print("Rayee terminating")
     }
 }

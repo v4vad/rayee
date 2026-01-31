@@ -69,3 +69,82 @@ The project owner is not a developer. Explanations should be in plain language, 
 ## Git Commits
 
 Do NOT include "Co-Authored-By: Claude" or any mention of Claude in git commit messages.
+
+## Troubleshooting
+
+### Server won't start
+**Symptom:** Running `python run_server.py` fails or hangs
+
+**Check these:**
+1. Is the virtual environment activated? Run `source venv/bin/activate` first
+2. Are dependencies installed? Run `pip install -r requirements.txt`
+3. Is port 8765 already in use? Run `lsof -i :8765` to check
+4. Kill any existing server: `pkill -f run_server.py`
+
+### App says "Server not running"
+**Symptom:** The Swift app shows server offline
+
+**Check these:**
+1. Is the Python server actually running? Open Terminal and check
+2. Test the server directly: `curl http://localhost:8765/health`
+3. Check if firewall is blocking localhost connections
+
+### Microphone not working
+**Symptom:** Recording starts but no audio is captured
+
+**Check these:**
+1. System Preferences → Security & Privacy → Microphone → ensure Terminal/Python has access
+2. Test microphone in another app first
+3. Run `python test_mic.py` to diagnose
+
+### Hotkey not working
+**Symptom:** Pressing Option+Space does nothing
+
+**Check these:**
+1. System Preferences → Security & Privacy → Accessibility → ensure Rayee is enabled
+2. Another app might be using the same hotkey
+3. Try changing the hotkey in Settings
+
+### Auto-paste not working
+**Symptom:** Text transcribes but doesn't paste
+
+**Check these:**
+1. Accessibility permission must be granted (same as hotkey)
+2. Check if "Auto-paste" is enabled in Settings
+3. Some apps block simulated keyboard input
+
+## Testing & Verification
+
+### Quick health check
+```bash
+# Check if server responds
+curl http://localhost:8765/health
+
+# Check server status
+curl http://localhost:8765/status
+```
+
+### Test transcription manually
+```bash
+# Start recording (speak, then wait for it to finish)
+curl -X POST http://localhost:8765/transcribe
+```
+
+### Verify Python environment
+```bash
+cd python
+source venv/bin/activate
+python --version  # Should be 3.10+
+pip list | grep -E "faster-whisper|sounddevice|fastapi"
+```
+
+### Verify Swift build
+```bash
+xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
+```
+
+### Test full flow
+1. Start Python server: `cd python && source venv/bin/activate && python run_server.py`
+2. Run the Swift app from Xcode or build folder
+3. Click the menu bar icon → Start Recording
+4. Speak something → Text should appear

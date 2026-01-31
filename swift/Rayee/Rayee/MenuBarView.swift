@@ -194,6 +194,10 @@ struct MenuBarView: View {
 
     private var buttonIcon: String {
         switch appState.status {
+        case .startingServer:
+            return "hourglass"
+        case .downloadingModels:
+            return "arrow.down.circle"
         case .ready, .error:
             return "mic.fill"
         case .recording:
@@ -205,6 +209,10 @@ struct MenuBarView: View {
 
     private var buttonText: String {
         switch appState.status {
+        case .startingServer:
+            return "Starting server..."
+        case .downloadingModels:
+            return "Downloading AI models..."
         case .ready, .error:
             return "Start Recording"
         case .recording:
@@ -216,6 +224,10 @@ struct MenuBarView: View {
 
     private var buttonTint: Color {
         switch appState.status {
+        case .startingServer:
+            return .gray
+        case .downloadingModels:
+            return .blue
         case .ready, .error:
             return .accentColor
         case .recording:

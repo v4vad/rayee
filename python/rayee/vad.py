@@ -11,8 +11,12 @@ import sounddevice as sd
 from typing import Optional, Callable
 import threading
 import time
+import signal
 
 from .audio import SAMPLE_RATE, CHANNELS
+
+# Timeout for downloading the VAD model (5 minutes)
+VAD_DOWNLOAD_TIMEOUT = 300
 
 # Silero VAD requires exactly this many samples per call
 # 512 samples at 16kHz = 32 milliseconds
@@ -31,20 +35,56 @@ class VoiceActivityDetector:
         self._model = None
         self._utils = None
 
-    def load_model(self):
-        """Load the Silero VAD model (downloads on first use)."""
+    def load_model(self, timeout: int = VAD_DOWNLOAD_TIMEOUT):
+        """
+        Load the Silero VAD model (downloads on first use).
+
+        Args:
+            timeout: Maximum seconds to wait for download (default: 5 minutes)
+
+        Raises:
+            TimeoutError: If download takes longer than timeout
+            Exception: If download fails for other reasons
+        """
         if self._model is not None:
             return
 
         print("Loading voice activity detection model...")
-        # Load Silero VAD from torch hub
-        self._model, self._utils = torch.hub.load(
-            repo_or_dir='snakers4/silero-vad',
-            model='silero_vad',
-            force_reload=False,
-            onnx=False,
-            trust_repo=True
-        )
+        print("(This may take a few minutes on first run while the model downloads)")
+
+        # Use a thread with timeout to prevent hanging forever
+        result = {"model": None, "utils": None, "error": None}
+
+        def download_model():
+            try:
+                model, utils = torch.hub.load(
+                    repo_or_dir='snakers4/silero-vad',
+                    model='silero_vad',
+                    force_reload=False,
+                    onnx=False,
+                    trust_repo=True
+                )
+                result["model"] = model
+                result["utils"] = utils
+            except Exception as e:
+                result["error"] = e
+
+        download_thread = threading.Thread(target=download_model)
+        download_thread.start()
+        download_thread.join(timeout=timeout)
+
+        if download_thread.is_alive():
+            # Download timed out
+            raise TimeoutError(
+                f"VAD model download timed out after {timeout} seconds. "
+                "Check your internet connection and try again."
+            )
+
+        if result["error"]:
+            raise result["error"]
+
+        self._model = result["model"]
+        self._utils = result["utils"]
         print("VAD model loaded.")
 
     def is_speech(self, audio_chunk: np.ndarray, threshold: float = 0.5) -> bool:
@@ -174,6 +214,13 @@ class SmartRecorder:
         self._stop_requested = False
 
         print("Listening... (speak now)")
+
+        # Debug: show which audio device we're using
+        try:
+            default_device = sd.query_devices(kind='input')
+            print(f"[DEBUG] Using input device: {default_device['name']}")
+        except Exception as e:
+            print(f"[DEBUG] Could not query input device: {e}")
 
         # Open audio stream
         with sd.InputStream(

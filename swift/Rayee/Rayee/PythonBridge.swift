@@ -11,6 +11,7 @@ import Foundation
 // Errors that can occur when communicating with the server
 enum PythonBridgeError: LocalizedError {
     case serverOffline
+    case serverStarting
     case serverBusy
     case transcriptionFailed(String)
     case networkError(String)
@@ -19,6 +20,8 @@ enum PythonBridgeError: LocalizedError {
         switch self {
         case .serverOffline:
             return "Cannot connect to Python server. Is it running?"
+        case .serverStarting:
+            return "Server is still starting up. Please wait a moment."
         case .serverBusy:
             return "Server is busy. Please wait."
         case .transcriptionFailed(let message):
@@ -45,6 +48,13 @@ private struct HealthResponse: Codable {
     let status: String
 }
 
+// Response from /startup_status endpoint
+struct StartupStatusResponse: Codable {
+    let state: String   // not_started, downloading_vad, downloading_whisper, ready, failed
+    let message: String
+    let error: String?
+}
+
 // Error response from server
 private struct ErrorResponse: Codable {
     let detail: String?
@@ -57,6 +67,15 @@ private struct TranscribeRequest: Codable {
     // Maps Swift camelCase to Python snake_case
     enum CodingKeys: String, CodingKey {
         case silenceDuration = "silence_duration"
+    }
+}
+
+// Request body for /transcribe_file endpoint
+private struct TranscribeFileRequest: Codable {
+    let audioPath: String
+
+    enum CodingKeys: String, CodingKey {
+        case audioPath = "audio_path"
     }
 }
 
@@ -73,11 +92,41 @@ class PythonBridge {
     // Longer timeout for transcription (120 seconds - recording can take a while)
     private let transcriptionTimeout: TimeInterval = 120.0
 
+    // Retry configuration for startup
+    private let startupRetryAttempts = 15  // Retry up to 15 times during startup
+    private let startupRetryDelay: TimeInterval = 1.0  // Wait 1 second between retries
+
     // MARK: - Public Methods
 
     /// Check if the Python server is running
     /// Returns true if server responds to health check, false otherwise
     func checkHealth() async -> Bool {
+        return await performHealthCheck()
+    }
+
+    /// Check health with retries - used during startup when server may still be initializing
+    /// This will retry multiple times before giving up, allowing time for the server to start
+    func checkHealthWithRetry() async -> Bool {
+        for attempt in 1...startupRetryAttempts {
+            let isHealthy = await performHealthCheck()
+            if isHealthy {
+                print("[PythonBridge] Server healthy on attempt \(attempt)")
+                return true
+            }
+
+            // Don't wait after the last attempt
+            if attempt < startupRetryAttempts {
+                print("[PythonBridge] Health check attempt \(attempt)/\(startupRetryAttempts) failed, retrying...")
+                try? await Task.sleep(nanoseconds: UInt64(startupRetryDelay * 1_000_000_000))
+            }
+        }
+
+        print("[PythonBridge] Server did not become healthy after \(startupRetryAttempts) attempts")
+        return false
+    }
+
+    /// Perform a single health check request
+    private func performHealthCheck() async -> Bool {
         guard let url = URL(string: "\(baseURL)/health") else {
             return false
         }
@@ -101,6 +150,30 @@ class PythonBridge {
         } catch {
             // Any error means server is not reachable
             return false
+        }
+    }
+
+    /// Get the current startup/model loading status
+    /// Returns nil if the server is not reachable
+    func getStartupStatus() async -> StartupStatusResponse? {
+        guard let url = URL(string: "\(baseURL)/startup_status") else {
+            return nil
+        }
+
+        var request = URLRequest(url: url)
+        request.timeoutInterval = regularTimeout
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse,
+                  httpResponse.statusCode == 200 else {
+                return nil
+            }
+
+            return try decoder.decode(StartupStatusResponse.self, from: data)
+        } catch {
+            return nil
         }
     }
 
@@ -171,6 +244,73 @@ class PythonBridge {
             case 409:
                 // Server is busy (already recording or transcribing)
                 throw PythonBridgeError.serverBusy
+
+            case 500:
+                // Server error
+                if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) {
+                    throw PythonBridgeError.transcriptionFailed(errorResponse.detail ?? "Unknown error")
+                }
+                throw PythonBridgeError.transcriptionFailed("Server error")
+
+            default:
+                throw PythonBridgeError.networkError("Unexpected status: \(httpResponse.statusCode)")
+            }
+
+        } catch is URLError {
+            throw PythonBridgeError.serverOffline
+        } catch let error as PythonBridgeError {
+            throw error
+        } catch {
+            throw PythonBridgeError.networkError(error.localizedDescription)
+        }
+    }
+
+    /// Transcribe audio from a WAV file
+    /// This is used when Swift records the audio directly (instead of Python)
+    /// - Parameter audioPath: Path to the WAV file (16kHz, mono, float32)
+    /// Returns the transcribed text
+    func transcribeFile(audioPath: URL) async throws -> String {
+        guard let url = URL(string: "\(baseURL)/transcribe_file") else {
+            throw PythonBridgeError.networkError("Invalid URL")
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Transcription can take a while
+        request.timeoutInterval = transcriptionTimeout
+
+        // Send the file path to the server
+        let requestBody = TranscribeFileRequest(audioPath: audioPath.path)
+        request.httpBody = try JSONEncoder().encode(requestBody)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw PythonBridgeError.networkError("Invalid response")
+            }
+
+            switch httpResponse.statusCode {
+            case 200:
+                // Success - decode the transcribed text
+                let transcribeResponse = try decoder.decode(TranscribeResponse.self, from: data)
+                return transcribeResponse.text
+
+            case 400:
+                // Bad request (file not found, invalid format)
+                if let errorResponse = try? decoder.decode(ErrorResponse.self, from: data) {
+                    throw PythonBridgeError.transcriptionFailed(errorResponse.detail ?? "Invalid audio file")
+                }
+                throw PythonBridgeError.transcriptionFailed("Invalid audio file")
+
+            case 409:
+                // Server is busy
+                throw PythonBridgeError.serverBusy
+
+            case 503:
+                // Models still loading
+                throw PythonBridgeError.serverStarting
 
             case 500:
                 // Server error
