@@ -74,13 +74,16 @@ enum Config {
     // MARK: - Recording Panel
 
     /// Width of the floating recording panel
-    static let recordingPanelWidth: CGFloat = 280
+    static let recordingPanelWidth: CGFloat = 260
 
-    /// Height of the floating recording panel
-    static let recordingPanelHeight: CGFloat = 160
+    /// Height of the floating recording panel (normal mode)
+    static let recordingPanelHeight: CGFloat = 140
+
+    /// Height of the floating recording panel (with result text)
+    static let recordingPanelHeightWithResult: CGFloat = 200
 
     /// Number of bars in the waveform visualization
-    static let waveformBarCount = 20
+    static let waveformBarCount = 16
 
     // MARK: - UI Delays
 

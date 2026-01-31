@@ -15,7 +15,7 @@ import Combine
 
 /// Result of a transcription attempt
 enum TranscriptionResult {
-    case success(text: String)
+    case success(text: String, didPaste: Bool)  // didPaste indicates if text was pasted
     case cancelled           // Recording stopped with no speech
     case error(message: String)
 }
@@ -198,14 +198,19 @@ class TranscriptionCoordinator: ObservableObject {
             )
         }
 
-        // Auto-paste if enabled
+        // Determine if we should and can paste
+        var didPaste = false
         if pendingAutoPaste && settings.autoPasteEnabled && !text.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-                self.pasteManager.pasteText(text)
+            // Check if there's a valid place to paste
+            if PasteTargetDetector.hasValidPasteTarget() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
+                    self.pasteManager.pasteText(text)
+                }
+                didPaste = true
             }
         }
 
-        onTranscriptionComplete?(.success(text: text))
+        onTranscriptionComplete?(.success(text: text, didPaste: didPaste))
     }
 
     /// Handle transcription errors

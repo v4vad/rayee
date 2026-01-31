@@ -3,7 +3,7 @@
 //  Rayee
 //
 //  The floating panel that appears during recording.
-//  Shows recording status, waveform visualization, and control buttons.
+//  Features a modern design with title, waveform, and pill-shaped buttons.
 //
 
 import SwiftUI
@@ -19,86 +19,134 @@ struct RecordingPanelView: View {
     /// Audio level monitor for waveform
     @ObservedObject var audioLevelMonitor: AudioLevelMonitor
 
-    /// Transcribed text to display (for direct input mode)
-    let transcribedText: String
+    /// Transcribed text to display (for result mode)
+    @Binding var transcribedText: String
 
-    /// Called when user clicks Stop button
+    /// Whether to show result mode (editable text + copy)
+    let showResult: Bool
+
+    /// Called when user clicks Done button
     var onStop: () -> Void
 
     /// Called when user clicks Cancel button
     var onCancel: () -> Void
 
+    /// Called when user wants to open settings
+    var onSettings: () -> Void
+
+    /// Called when user copies text in result mode
+    var onCopy: () -> Void
+
     var body: some View {
-        VStack(spacing: 16) {
-            // Status indicator
-            statusView
+        VStack(spacing: 0) {
+            // Header with title and settings icon
+            headerView
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
 
-            // Waveform visualization (only during recording)
-            if isRecording {
-                WaveformView(levels: $audioLevelMonitor.levels)
-                    .frame(height: 40)
-            }
+            // Main content area
+            mainContentView
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
 
-            // Transcribed text (when available)
-            if !transcribedText.isEmpty && !isRecording && !isTranscribing {
-                Text(transcribedText)
-                    .font(.body)
-                    .lineLimit(3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 8)
-            }
-
-            // Control buttons
-            if isRecording || isTranscribing {
-                controlButtons
+            // Bottom buttons
+            if isRecording || isTranscribing || showResult {
+                buttonBar
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
             }
         }
-        .padding(16)
         .frame(width: Config.recordingPanelWidth)
         .background(panelBackground)
     }
 
     // MARK: - Subviews
 
-    private var statusView: some View {
-        HStack(spacing: 8) {
-            // Animated recording dot
-            if isRecording {
-                Circle()
-                    .fill(.red)
-                    .frame(width: 10, height: 10)
-                    .opacity(pulseAnimation ? 1.0 : 0.3)
-                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pulseAnimation)
-                    .onAppear { pulseAnimation = true }
-            } else if isTranscribing {
-                ProgressView()
-                    .scaleEffect(0.7)
-            }
+    private var headerView: some View {
+        HStack {
+            // Spacer to balance the settings button
+            Color.clear.frame(width: 20, height: 20)
 
-            Text(statusText)
-                .font(.headline)
+            Spacer()
+
+            // Title
+            Text("Rayee")
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(.primary)
+
+            Spacer()
+
+            // Settings button
+            Button(action: onSettings) {
+                Image(systemName: "gear")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .frame(width: 20, height: 20)
         }
     }
 
-    private var controlButtons: some View {
-        HStack(spacing: 12) {
-            // Cancel button
-            Button(action: onCancel) {
-                Label("Cancel", systemImage: "xmark.circle")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.bordered)
-            .controlSize(.regular)
+    @ViewBuilder
+    private var mainContentView: some View {
+        if showResult {
+            // Result mode: editable text with copy button
+            resultView
+        } else if isRecording {
+            // Recording mode: waveform
+            VStack(spacing: 8) {
+                ModernWaveformView(levels: $audioLevelMonitor.levels)
+                    .frame(height: 50)
 
-            // Stop button (only during recording)
-            if isRecording {
-                Button(action: onStop) {
-                    Label("Done", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
+                Text("Recording...")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+        } else if isTranscribing {
+            // Transcribing mode: bouncing dots
+            TranscribingIndicator()
+        }
+    }
+
+    private var resultView: some View {
+        VStack(spacing: 8) {
+            // Editable text area
+            TextEditor(text: $transcribedText)
+                .font(.system(size: 13))
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(NSColor.textBackgroundColor))
+                )
+                .frame(height: 60)
+
+            // Copy button
+            Button(action: onCopy) {
+                HStack(spacing: 4) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11))
+                    Text("Copy")
+                        .font(.system(size: 12, weight: .medium))
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.regular)
+            }
+            .buttonStyle(PillButtonStyle(isProminent: true))
+            .disabled(transcribedText.isEmpty)
+        }
+    }
+
+    private var buttonBar: some View {
+        HStack {
+            // Cancel button (always visible)
+            HotkeyButton("Cancel", hotkeySymbol: "⎋", action: onCancel)
+
+            Spacer()
+
+            // Done button (only during recording)
+            if isRecording {
+                HotkeyButton("Done", hotkeySymbol: "↵", isProminent: true, action: onStop)
             }
         }
     }
@@ -106,23 +154,7 @@ struct RecordingPanelView: View {
     private var panelBackground: some View {
         RoundedRectangle(cornerRadius: 12)
             .fill(.ultraThinMaterial)
-            .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 5)
-    }
-
-    // MARK: - State
-
-    @State private var pulseAnimation = false
-
-    // MARK: - Computed Properties
-
-    private var statusText: String {
-        if isRecording {
-            return "Recording..."
-        } else if isTranscribing {
-            return "Transcribing..."
-        } else {
-            return "Done"
-        }
+            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -131,11 +163,15 @@ struct RecordingPanelView: View {
         isRecording: true,
         isTranscribing: false,
         audioLevelMonitor: AudioLevelMonitor(),
-        transcribedText: "",
+        transcribedText: .constant(""),
+        showResult: false,
         onStop: {},
-        onCancel: {}
+        onCancel: {},
+        onSettings: {},
+        onCopy: {}
     )
-    .background(.gray)
+    .padding()
+    .background(Color.gray.opacity(0.3))
 }
 
 #Preview("Transcribing") {
@@ -143,9 +179,29 @@ struct RecordingPanelView: View {
         isRecording: false,
         isTranscribing: true,
         audioLevelMonitor: AudioLevelMonitor(),
-        transcribedText: "",
+        transcribedText: .constant(""),
+        showResult: false,
         onStop: {},
-        onCancel: {}
+        onCancel: {},
+        onSettings: {},
+        onCopy: {}
     )
-    .background(.gray)
+    .padding()
+    .background(Color.gray.opacity(0.3))
+}
+
+#Preview("Result") {
+    RecordingPanelView(
+        isRecording: false,
+        isTranscribing: false,
+        audioLevelMonitor: AudioLevelMonitor(),
+        transcribedText: .constant("Hello, this is transcribed text."),
+        showResult: true,
+        onStop: {},
+        onCancel: {},
+        onSettings: {},
+        onCopy: {}
+    )
+    .padding()
+    .background(Color.gray.opacity(0.3))
 }

@@ -10,29 +10,46 @@ import SwiftUI
 import Carbon.HIToolbox
 
 struct SettingsView: View {
+    @EnvironmentObject var appState: AppState
     @ObservedObject var settings = SettingsManager.shared
     @State private var isRecordingHotkey = false
     @State private var newVocabularyWord = ""
     @State private var showingAccessibilityAlert = false
+    @State private var selectedTab = 0
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             generalTab
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
+                .tag(0)
 
             vocabularyTab
                 .tabItem {
                     Label("Vocabulary", systemImage: "text.book.closed")
                 }
+                .tag(1)
 
             historyTab
                 .tabItem {
                     Label("History", systemImage: "clock.arrow.circlepath")
                 }
+                .tag(2)
         }
         .frame(width: 450, height: 350)
+        .onAppear {
+            // Check if we should open to a specific tab
+            if let requestedTab = UserDefaults.standard.string(forKey: "settingsTab") {
+                switch requestedTab {
+                case "vocabulary": selectedTab = 1
+                case "history": selectedTab = 2
+                default: break
+                }
+                // Clear the preference after using it
+                UserDefaults.standard.removeObject(forKey: "settingsTab")
+            }
+        }
         .alert("Accessibility Permission Required", isPresented: $showingAccessibilityAlert) {
             Button("Open System Settings") {
                 openAccessibilitySettings()
@@ -46,6 +63,21 @@ struct SettingsView: View {
     // MARK: - General Tab
     private var generalTab: some View {
         Form {
+            // Server Status Section
+            Section {
+                HStack {
+                    Circle()
+                        .fill(appState.isServerOnline ? Color.green : Color.red)
+                        .frame(width: 10, height: 10)
+                    Text("Server Status")
+                    Spacer()
+                    Text(appState.isServerOnline ? "Online" : "Offline")
+                        .foregroundColor(appState.isServerOnline ? .green : .red)
+                }
+            }
+
+            Divider()
+
             // Hotkey Section
             Section {
                 HStack {

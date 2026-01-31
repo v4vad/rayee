@@ -23,12 +23,17 @@ class RecordingPanelController: ObservableObject {
     /// Current transcribing state
     @Published var isTranscribing = false
 
-    /// Transcribed text to display
+    /// Transcribed text to display (for result mode)
     @Published var transcribedText = ""
+
+    /// Whether to show result mode (editable text + copy button)
+    @Published var showResult = false
 
     /// Callbacks
     var onStop: (() -> Void)?
     var onCancel: (() -> Void)?
+    var onSettings: (() -> Void)?
+    var onCopy: (() -> Void)?
 
     // MARK: - Public Methods
 
@@ -38,6 +43,7 @@ class RecordingPanelController: ObservableObject {
             createWindow()
         }
 
+        updateWindowSize()
         window?.center()
         window?.makeKeyAndOrderFront(nil)
 
@@ -48,6 +54,9 @@ class RecordingPanelController: ObservableObject {
     /// Hide the recording panel
     func hidePanel() {
         window?.orderOut(nil)
+        // Reset result mode when hiding
+        showResult = false
+        transcribedText = ""
     }
 
     /// Update recording state
@@ -55,39 +64,29 @@ class RecordingPanelController: ObservableObject {
         isRecording = recording
         if recording {
             audioLevelMonitor.reset()
+            showResult = false
         }
+        updateWindowSize()
     }
 
     /// Update transcribing state
     func setTranscribing(_ transcribing: Bool) {
         isTranscribing = transcribing
+        updateWindowSize()
     }
 
-    /// Update transcribed text
-    func setTranscribedText(_ text: String) {
+    /// Show result mode with transcribed text
+    func showResultMode(text: String) {
         transcribedText = text
+        showResult = true
+        isRecording = false
+        isTranscribing = false
+        updateWindowSize()
     }
 
     // MARK: - Private Methods
 
     private func createWindow() {
-        // Create the panel content view
-        let contentView = RecordingPanelView(
-            isRecording: isRecording,
-            isTranscribing: isTranscribing,
-            audioLevelMonitor: audioLevelMonitor,
-            transcribedText: transcribedText,
-            onStop: { [weak self] in
-                self?.onStop?()
-            },
-            onCancel: { [weak self] in
-                self?.onCancel?()
-            }
-        )
-
-        // Wrap in hosting view with observed state
-        let hostingView = NSHostingView(rootView: RecordingPanelHostView(controller: self))
-
         // Calculate window size
         let panelWidth = Config.recordingPanelWidth
         let panelHeight = Config.recordingPanelHeight
@@ -100,6 +99,9 @@ class RecordingPanelController: ObservableObject {
             defer: false
         )
 
+        // Wrap in hosting view with observed state
+        let hostingView = NSHostingView(rootView: RecordingPanelHostView(controller: self))
+
         panel.contentView = hostingView
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -110,23 +112,47 @@ class RecordingPanelController: ObservableObject {
 
         window = panel
     }
+
+    /// Update window size based on current mode
+    private func updateWindowSize() {
+        guard let window = window else { return }
+
+        let newHeight = showResult ? Config.recordingPanelHeightWithResult : Config.recordingPanelHeight
+
+        // Animate the size change
+        var frame = window.frame
+        let heightDiff = newHeight - frame.height
+        frame.size.height = newHeight
+        frame.origin.y -= heightDiff  // Keep the top of the window in place
+
+        window.setFrame(frame, display: true, animate: true)
+    }
 }
 
 /// Wrapper view that observes the controller's state
 struct RecordingPanelHostView: View {
     @ObservedObject var controller: RecordingPanelController
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         RecordingPanelView(
             isRecording: controller.isRecording,
             isTranscribing: controller.isTranscribing,
             audioLevelMonitor: controller.audioLevelMonitor,
-            transcribedText: controller.transcribedText,
+            transcribedText: $controller.transcribedText,
+            showResult: controller.showResult,
             onStop: {
                 controller.onStop?()
             },
             onCancel: {
                 controller.onCancel?()
+            },
+            onSettings: {
+                openWindow(id: "settings")
+                NSApplication.shared.activate(ignoringOtherApps: true)
+            },
+            onCopy: {
+                controller.onCopy?()
             }
         )
     }
