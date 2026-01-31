@@ -5,219 +5,84 @@
 //  Tracks the app's current state: what it's doing, transcribed text, errors, etc.
 //  This is the "brain" that all UI components read from.
 //
+//  Note: Recording and health check logic have been extracted to:
+//  - TranscriptionCoordinator: handles recording → transcription → paste
+//  - HealthMonitor: handles periodic server health checks
+//
 
 import Foundation
 import SwiftUI
 import Combine
-import AVFoundation
 
 // What the app is currently doing
 enum AppStatus: String {
-    case startingServer = "Starting server..."  // Python server is starting up
-    case downloadingModels = "Downloading AI models..."  // First-time model download
-    case ready = "Ready"              // Waiting for you to start recording
-    case recording = "Listening..."   // Microphone active, listening to you
-    case transcribing = "Transcribing..."  // Converting speech to text
-    case error = "Error"              // Something went wrong
+    case startingServer = "Starting server..."
+    case downloadingModels = "Downloading AI models..."
+    case ready = "Ready"
+    case recording = "Listening..."
+    case transcribing = "Transcribing..."
+    case error = "Error"
 }
 
-// Main state container - all UI components read from this
+/// Main state container - all UI components read from this
 class AppState: ObservableObject {
-    // @Published means: whenever this value changes, update the UI automatically
+    // MARK: - Published State
 
-    // Current status (ready, recording, etc.)
+    /// Current status (ready, recording, etc.)
     @Published var status: AppStatus = .ready
 
-    // The transcribed text from your speech
+    /// The transcribed text from your speech
     @Published var transcribedText: String = ""
 
-    // Error message if something goes wrong
+    /// Error message if something goes wrong
     @Published var errorMessage: String?
 
-    // Whether the Python server is reachable
+    /// Whether the Python server is reachable (from HealthMonitor)
     @Published var isServerOnline: Bool = false
 
-    // For communicating with the Python server
-    let pythonBridge = PythonBridge()
+    // MARK: - Dependencies
 
-    // Managers for hotkey and paste functionality
+    /// Handles recording → transcription → paste flow
+    private let transcriptionCoordinator = TranscriptionCoordinator()
+
+    /// Monitors server health periodically
+    private let healthMonitor = HealthMonitor.shared
+
+    /// Manages global hotkey listening
     let hotkeyManager = HotkeyManager.shared
-    let pasteManager = PasteManager.shared
-    let settings = SettingsManager.shared
-    let historyManager = HistoryManager.shared
-    let audioFeedback = AudioFeedback.shared
 
-    // Timer for periodic health checks
-    private var healthCheckTimer: Timer?
-
-    // For observing server manager state changes
-    private var cancellables = Set<AnyCancellable>()
-
-    // The server manager (only used in production builds with bundled server)
+    /// Manages the bundled Python server
     let serverManager = ServerManager.shared
 
-    // Audio recorder for Swift-side recording (fixes microphone permission in bundled app)
-    private var audioRecorder: AudioRecorder?
+    /// For observing state changes
+    private var cancellables = Set<AnyCancellable>()
 
-    // Whether we should auto-paste after current transcription completes
-    private var pendingAutoPaste: Bool = false
+    // MARK: - Initialization
 
     init() {
-        // Observe server manager state changes
-        serverManager.$state
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] serverState in
-                self?.handleServerStateChange(serverState)
-            }
-            .store(in: &cancellables)
-
-        // Start checking if the server is online every 10 seconds
-        startHealthChecks()
-
-        // Set up the global hotkey to trigger transcription
+        setupBindings()
         setupHotkey()
+        healthMonitor.start()
     }
 
     deinit {
-        healthCheckTimer?.invalidate()
         hotkeyManager.stop()
+        healthMonitor.stop()
     }
 
     // MARK: - Public Methods
 
     /// Start recording and transcription
-    /// When autoPaste is true (and settings allow it), text is automatically pasted where cursor is
+    /// When autoPaste is true (and settings allow), text is pasted where cursor is
     func startTranscription(autoPaste: Bool = false) {
-        // Don't start if already doing something
         guard status == .ready || status == .error else { return }
-
-        // Clear previous error
         errorMessage = nil
-        pendingAutoPaste = autoPaste
-
-        // Request microphone permission if needed
-        Task { @MainActor in
-            let hasPermission = await AudioRecorder.requestMicrophonePermission()
-            if !hasPermission {
-                // Permission check says denied, but let's try anyway
-                // The audio engine will fail with a clear error if truly no permission
-                print("[AppState] Permission check returned false, attempting recording anyway...")
-            }
-
-            // Start recording with Swift AudioRecorder
-            self.startSwiftRecording()
-        }
-    }
-
-    /// Start recording using Swift's AVFoundation (not Python)
-    /// This uses the app's microphone permission, solving the bundled app issue
-    private func startSwiftRecording() {
-        status = .recording
-
-        // Play start sound to confirm recording has begun
-        audioFeedback.playStartSound()
-
-        // Create recorder with user's silence duration setting
-        audioRecorder = AudioRecorder(silenceDuration: settings.silenceDuration)
-
-        // Set up callbacks
-        audioRecorder?.onSpeechDetected = { [weak self] in
-            // Could update UI here if needed (e.g., show "Speech detected")
-            print("[AppState] Speech detected")
-        }
-
-        audioRecorder?.onRecordingComplete = { [weak self] result in
-            guard let self = self else { return }
-            self.handleRecordingComplete(result)
-        }
-
-        // Start recording
-        do {
-            try audioRecorder?.startRecording()
-        } catch {
-            self.errorMessage = error.localizedDescription
-            self.status = .error
-            self.audioFeedback.playErrorSound()
-            self.audioRecorder = nil
-        }
-    }
-
-    /// Handle when Swift recording is complete
-    private func handleRecordingComplete(_ result: Result<RecordingResult, AudioRecorderError>) {
-        switch result {
-        case .success(let recordingResult):
-            // Recording succeeded - now send to Python for transcription
-            status = .transcribing
-            transcribeAudioFile(recordingResult.audioPath)
-
-        case .failure(let error):
-            if case .noAudioRecorded = error {
-                // No speech detected - just go back to ready
-                status = .ready
-                audioFeedback.playStopSound()
-            } else {
-                // Real error
-                errorMessage = error.localizedDescription
-                status = .error
-                audioFeedback.playErrorSound()
-            }
-        }
-
-        audioRecorder = nil
-    }
-
-    /// Send recorded audio file to Python for transcription
-    private func transcribeAudioFile(_ audioPath: URL) {
-        Task { @MainActor in
-            do {
-                let text = try await pythonBridge.transcribeFile(audioPath: audioPath)
-                self.transcribedText = text
-                self.status = .ready
-
-                // Play completion sound
-                self.audioFeedback.playStopSound()
-
-                // Save to history if we got any text
-                if !text.isEmpty {
-                    self.historyManager.saveTranscription(
-                        text: text,
-                        model: self.settings.selectedModel.rawValue
-                    )
-                }
-
-                // Auto-paste if enabled
-                if self.pendingAutoPaste && self.settings.autoPasteEnabled && !text.isEmpty {
-                    // Small delay to ensure the previous app is focused
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        self.pasteManager.pasteText(text)
-                    }
-                }
-            } catch PythonBridgeError.serverBusy {
-                self.errorMessage = "Server is busy. Please wait."
-                self.status = .error
-                self.audioFeedback.playErrorSound()
-            } catch PythonBridgeError.serverOffline {
-                self.errorMessage = "Server is not running."
-                self.isServerOnline = false
-                self.status = .error
-                self.audioFeedback.playErrorSound()
-            } catch PythonBridgeError.serverStarting {
-                self.errorMessage = "AI models are still loading. Please wait."
-                self.status = .error
-                self.audioFeedback.playErrorSound()
-            } catch {
-                self.errorMessage = "Transcription failed: \(error.localizedDescription)"
-                self.status = .error
-                self.audioFeedback.playErrorSound()
-            }
-        }
+        transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
     }
 
     /// Copy the transcribed text to the clipboard
     func copyToClipboard() {
         guard !transcribedText.isEmpty else { return }
-
-        // NSPasteboard is macOS's clipboard
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(transcribedText, forType: .string)
@@ -231,75 +96,137 @@ class AppState: ObservableObject {
         }
     }
 
+    /// Start listening for the global hotkey
+    func startHotkeyListening() {
+        if hotkeyManager.hasAccessibilityPermissionSilent() {
+            hotkeyManager.start()
+        } else {
+            _ = hotkeyManager.checkAccessibilityPermission()
+            DispatchQueue.main.asyncAfter(deadline: .now() + Config.hotkeyRetryDelay) { [weak self] in
+                self?.hotkeyManager.start()
+            }
+        }
+    }
+
     // MARK: - Computed Properties
 
-    /// Icon to show in the menu bar (changes based on status)
+    /// Icon to show in the menu bar
     var menuBarIcon: String {
         switch status {
-        case .startingServer:
-            return "waveform.badge.ellipsis"
-        case .downloadingModels:
-            return "arrow.down.circle"
-        case .ready:
-            return "waveform"
-        case .recording:
-            return "waveform.circle.fill"
-        case .transcribing:
-            return "waveform.badge.magnifyingglass"
-        case .error:
-            return "waveform.badge.exclamationmark"
+        case .startingServer: return "ellipsis.circle"
+        case .downloadingModels: return "arrow.down.circle"
+        case .ready: return "waveform"
+        case .recording: return "waveform.circle.fill"
+        case .transcribing: return "text.bubble"
+        case .error: return "exclamationmark.triangle"
         }
     }
 
     /// Color for the status indicator dot
     var statusColor: Color {
         switch status {
-        case .startingServer:
-            return .orange
-        case .downloadingModels:
-            return .blue
-        case .ready:
-            return .green
-        case .recording:
-            return .red
-        case .transcribing:
-            return .orange
-        case .error:
-            return .red
+        case .startingServer: return .orange
+        case .downloadingModels: return .blue
+        case .ready: return .green
+        case .recording: return .red
+        case .transcribing: return .orange
+        case .error: return .red
         }
     }
 
     // MARK: - Private Methods
 
+    /// Set up Combine bindings to observe child components
+    private func setupBindings() {
+        // Observe health monitor - when server comes online, ensure we're ready
+        healthMonitor.$isServerOnline
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isOnline in
+                guard let self = self else { return }
+                self.isServerOnline = isOnline
+                // If server is online and we're in a waiting state, transition to ready
+                if isOnline && (self.status == .startingServer || self.status == .downloadingModels) {
+                    self.status = .ready
+                }
+            }
+            .store(in: &cancellables)
+
+        // Observe transcription coordinator - recording state
+        transcriptionCoordinator.$isRecording
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isRecording in
+                if isRecording {
+                    self?.status = .recording
+                }
+            }
+            .store(in: &cancellables)
+
+        // Observe transcription coordinator - transcribing state
+        transcriptionCoordinator.$isTranscribing
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isTranscribing in
+                if isTranscribing {
+                    self?.status = .transcribing
+                }
+            }
+            .store(in: &cancellables)
+
+        // Handle transcription completion
+        transcriptionCoordinator.onTranscriptionComplete = { [weak self] result in
+            self?.handleTranscriptionResult(result)
+        }
+
+        // Observe server manager state
+        serverManager.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] serverState in
+                self?.handleServerStateChange(serverState)
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Handle transcription completion results
+    private func handleTranscriptionResult(_ result: TranscriptionResult) {
+        switch result {
+        case .success(let text):
+            transcribedText = text
+            status = .ready
+
+        case .cancelled:
+            status = .ready
+
+        case .error(let message):
+            errorMessage = message
+            status = .error
+            if message.contains("not running") {
+                isServerOnline = false
+            }
+        }
+    }
+
     /// Handle changes to the server manager's state
     private func handleServerStateChange(_ serverState: ServerManager.ServerState) {
         switch serverState {
         case .starting:
-            // Show "Starting server..." status unless we're actively doing something
             if status == .ready || status == .error {
                 status = .startingServer
             }
         case .downloadingModels:
-            // Show "Downloading AI models..." unless we're actively recording/transcribing
             if status == .startingServer || status == .ready || status == .error {
                 status = .downloadingModels
             }
         case .running:
-            // Server is ready - if we were waiting for it, show ready status
             if status == .startingServer || status == .downloadingModels {
                 status = .ready
                 isServerOnline = true
             }
         case .failed:
-            // Server failed to start
             if status == .startingServer || status == .downloadingModels {
                 status = .error
                 errorMessage = serverManager.errorMessage ?? "Server failed to start"
                 isServerOnline = false
             }
         case .notStarted, .stopped:
-            // In development mode, user runs server manually
-            // Just do normal health checks
             break
         }
     }
@@ -308,43 +235,9 @@ class AppState: ObservableObject {
     private func setupHotkey() {
         hotkeyManager.onHotkeyPressed = { [weak self] in
             guard let self = self else { return }
-            // Only start if we're in a state that allows it
             if self.status == .ready || self.status == .error {
-                // Start transcription with auto-paste enabled (since triggered by hotkey)
                 self.startTranscription(autoPaste: true)
             }
-        }
-    }
-
-    /// Start listening for the global hotkey (call after app is ready)
-    func startHotkeyListening() {
-        // Check for accessibility permission and start if granted
-        if hotkeyManager.hasAccessibilityPermissionSilent() {
-            hotkeyManager.start()
-        } else {
-            // Will prompt user for permission
-            _ = hotkeyManager.checkAccessibilityPermission()
-            // Try to start after a delay (user may have granted permission)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                self?.hotkeyManager.start()
-            }
-        }
-    }
-
-    private func startHealthChecks() {
-        // Check immediately
-        checkServerHealth()
-
-        // Then check every 10 seconds
-        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
-            self?.checkServerHealth()
-        }
-    }
-
-    private func checkServerHealth() {
-        Task { @MainActor in
-            let isOnline = await pythonBridge.checkHealth()
-            self.isServerOnline = isOnline
         }
     }
 }

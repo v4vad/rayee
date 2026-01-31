@@ -31,7 +31,6 @@ class ServerManager: ObservableObject {
 
     /// How many times we've tried to restart after a crash
     private var restartAttempts = 0
-    private let maxRestartAttempts = 3
 
     /// Bridge for checking startup status
     private let pythonBridge = PythonBridge()
@@ -218,13 +217,13 @@ class ServerManager: ObservableObject {
 
             DispatchQueue.main.async {
                 // If we didn't intentionally stop it and haven't exceeded restart attempts
-                if self.state == .running && self.restartAttempts < self.maxRestartAttempts {
+                if self.state == .running && self.restartAttempts < Config.maxServerRestartAttempts {
                     self.restartAttempts += 1
-                    print("[ServerManager] Attempting restart \(self.restartAttempts)/\(self.maxRestartAttempts)")
+                    print("[ServerManager] Attempting restart \(self.restartAttempts)/\(Config.maxServerRestartAttempts)")
                     self.state = .starting
 
                     // Wait a moment before restarting
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 1.0) {
+                    DispatchQueue.global().asyncAfter(deadline: .now() + Config.serverRestartDelay) {
                         self.launchServer()
                     }
                 } else if self.state != .stopped {
@@ -256,8 +255,8 @@ class ServerManager: ObservableObject {
 
     /// Periodically check if the server is responsive
     private func startHealthChecks() {
-        // Check every 2 seconds until server is confirmed running
-        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        // Check frequently until server is confirmed running
+        healthCheckTimer = Timer.scheduledTimer(withTimeInterval: Config.healthCheckIntervalDuringStartup, repeats: true) { [weak self] _ in
             self?.checkServerHealth()
         }
 
@@ -269,7 +268,7 @@ class ServerManager: ObservableObject {
         guard let url = URL(string: "http://127.0.0.1:8765/health") else { return }
 
         var request = URLRequest(url: url)
-        request.timeoutInterval = 2.0
+        request.timeoutInterval = Config.healthCheckIntervalDuringStartup
 
         URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
@@ -316,7 +315,7 @@ class ServerManager: ObservableObject {
                     // Slow down health checks now that it's running
                     self.healthCheckTimer?.invalidate()
                     self.healthCheckTimer = Timer.scheduledTimer(
-                        withTimeInterval: 30.0, repeats: true
+                        withTimeInterval: Config.healthCheckIntervalWhenRunning, repeats: true
                     ) { [weak self] _ in
                         self?.checkServerHealth()
                     }

@@ -70,6 +70,70 @@ The project owner is not a developer. Explanations should be in plain language, 
 
 Do NOT include "Co-Authored-By: Claude" or any mention of Claude in git commit messages.
 
+## Code Quality Rules
+
+Follow these rules when writing or modifying code:
+
+### File Size Limits
+- **Maximum 300 lines per file** - If a file exceeds this, split it into smaller focused files
+- This keeps code readable and maintainable
+
+### Single Responsibility
+- Each file should do **one main thing**
+- If you find yourself adding "and" when describing what a file does, it probably needs splitting
+- Examples:
+  - `PythonBridge.swift` → handles server communication
+  - `HealthMonitor.swift` → monitors server health
+  - `TranscriptionCoordinator.swift` → coordinates recording flow
+
+### No Duplicate Code
+- If you copy-paste code, extract it into a helper function
+- Look for patterns that repeat more than twice
+
+### Constants in Config
+- Magic numbers (timeouts, retry counts, thresholds) go in `Config.swift` (Swift) or a constants file (Python)
+- Don't scatter hardcoded values throughout the code
+
+### Code Review Checklist
+Before finishing any changes, verify:
+- [ ] Files under 300 lines?
+- [ ] No duplicate code?
+- [ ] Constants centralized?
+- [ ] Existing tests still pass?
+
+## Pre-commit Hooks
+
+This project uses pre-commit hooks to catch issues before commits:
+
+```bash
+# Install pre-commit (one time)
+pip install pre-commit
+pre-commit install
+
+# Run manually on all files
+pre-commit run --all-files
+```
+
+The hooks will:
+- Format Python code with `black`
+- Sort Python imports with `isort`
+- Check for large files, merge conflicts, and debug statements
+- Warn if files exceed 300 lines
+
+## Running Tests
+
+### Python Tests
+```bash
+cd python
+source venv/bin/activate
+pytest tests/ -v
+```
+
+### Swift Build Verification
+```bash
+xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
+```
+
 ## Troubleshooting
 
 ### Server won't start

@@ -22,6 +22,9 @@
 		A100000F001 /* AudioFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000F000 /* AudioFeedback.swift */; };
 		A1000110001 /* ServerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000110000 /* ServerManager.swift */; };
 		A1000120001 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000120000 /* AudioRecorder.swift */; };
+		A1000130001 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000130000 /* Config.swift */; };
+		A1000140001 /* HealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000140000 /* HealthMonitor.swift */; };
+		A1000150001 /* TranscriptionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000150000 /* TranscriptionCoordinator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +46,9 @@
 		A100000F000 /* AudioFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFeedback.swift; sourceTree = "<group>"; };
 		A1000110000 /* ServerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerManager.swift; sourceTree = "<group>"; };
 		A1000120000 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
+		A1000130000 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
+		A1000140000 /* HealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMonitor.swift; sourceTree = "<group>"; };
+		A1000150000 /* TranscriptionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCoordinator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -82,6 +88,9 @@
 				A100000F000 /* AudioFeedback.swift */,
 				A1000110000 /* ServerManager.swift */,
 				A1000120000 /* AudioRecorder.swift */,
+				A1000130000 /* Config.swift */,
+				A1000140000 /* HealthMonitor.swift */,
+				A1000150000 /* TranscriptionCoordinator.swift */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
 			);
@@ -179,6 +188,9 @@
 				A100000F001 /* AudioFeedback.swift in Sources */,
 				A1000110001 /* ServerManager.swift in Sources */,
 				A1000120001 /* AudioRecorder.swift in Sources */,
+				A1000130001 /* Config.swift in Sources */,
+				A1000140001 /* HealthMonitor.swift in Sources */,
+				A1000150001 /* TranscriptionCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
