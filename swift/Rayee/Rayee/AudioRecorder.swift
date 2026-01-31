@@ -38,13 +38,13 @@ struct RecordingResult {
 
 class AudioRecorder {
     // Audio format settings - must match what Python/Whisper expects
-    private let sampleRate: Double = 16000.0  // 16kHz
+    private let sampleRate: Double = Config.audioSampleRate
     private let channels: AVAudioChannelCount = 1  // Mono
 
     // Silence detection settings
-    private let silenceThreshold: Float = 0.01  // Audio level below this is "silence"
+    private let silenceThreshold: Float = Config.silenceThreshold
     private var silenceDuration: TimeInterval   // How long silence triggers stop
-    private let maxDuration: TimeInterval = 60.0  // Maximum recording length
+    private let maxDuration: TimeInterval = Config.maxRecordingDuration
 
     // Audio engine components
     private var audioEngine: AVAudioEngine?
@@ -62,7 +62,7 @@ class AudioRecorder {
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
 
-    init(silenceDuration: TimeInterval = 1.5) {
+    init(silenceDuration: TimeInterval = Config.defaultSilenceDuration) {
         self.silenceDuration = silenceDuration
     }
 

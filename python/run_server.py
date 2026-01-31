@@ -26,11 +26,11 @@ if __name__ == "__main__":
     # This must be set before any other multiprocessing code runs
     if sys.platform == "darwin":
         try:
-            multiprocessing.set_start_method('spawn', force=True)
+            multiprocessing.set_start_method("spawn", force=True)
         except RuntimeError:
             pass  # Already set
 
-    from rayee.server import run_server, HOST, PORT
+    from rayee.startup import HOST, PORT, run_server
 
     print(f"\nStarting Rayee Transcription Server...")
     print(f"Server will be available at: http://{HOST}:{PORT}")
