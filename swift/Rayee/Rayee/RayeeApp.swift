@@ -17,11 +17,11 @@ struct RayeeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // MenuBarExtra creates the menu bar icon and popup
-        // Instead of a regular window, this app lives in the menu bar
+        // MenuBarExtra creates the menu bar icon and dropdown menu
+        // This app lives in the menu bar with a simple dropdown
         MenuBarExtra {
-            // This is what appears when you click the menu bar icon
-            MenuBarView()
+            // Simple dropdown menu with basic actions
+            SimpleMenuView()
                 .environmentObject(appState)
                 .onAppear {
                     // Start listening for global hotkey when UI appears
@@ -29,13 +29,19 @@ struct RayeeApp: App {
                 }
         } label: {
             // The icon that appears in the menu bar
-            // Changes based on current status
-            Image(systemName: appState.menuBarIcon)
-                .symbolRenderingMode(.hierarchical)
+            // Changes based on current status and shows server status via color
+            if appState.isServerOnline {
+                Image(systemName: appState.menuBarIcon)
+                    .symbolRenderingMode(.hierarchical)
+            } else {
+                Image(systemName: appState.menuBarIcon)
+                    .symbolRenderingMode(.monochrome)
+                    .foregroundStyle(.red)
+            }
         }
-        .menuBarExtraStyle(.window)  // Shows a popup window instead of a dropdown menu
+        .menuBarExtraStyle(.menu)  // Simple dropdown menu
 
-        // Settings window - opens when user clicks the gear icon
+        // Settings window - opens from menu or floating panel
         Window("Rayee Settings", id: "settings") {
             SettingsView()
                 .environmentObject(appState)
@@ -49,11 +55,13 @@ struct RayeeApp: App {
 // MARK: - App Delegate
 // Handles app-level events like activation and termination
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var settingsWindowController: NSWindowController?
-
     func applicationDidFinishLaunching(_ notification: Notification) {
         // App has fully launched
         print("Rayee launched")
+
+        // Request permissions immediately on first launch
+        // This ensures the hotkey and recording work right away
+        requestPermissionsOnFirstLaunch()
 
         // Start the bundled Python server
         // In development mode (no bundled server), this will detect that
@@ -70,5 +78,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         print("Rayee terminating")
     }
-}
 
+    /// Request microphone and accessibility permissions on first launch
+    /// This improves the user experience by getting permissions out of the way early
+    private func requestPermissionsOnFirstLaunch() {
+        // Request microphone permission (for recording)
+        Task {
+            let granted = await AudioRecorder.requestMicrophonePermission()
+            print("Microphone permission: \(granted ? "granted" : "denied/pending")")
+        }
+
+        // Request accessibility permission (for hotkey and auto-paste)
+        // This shows the system dialog if permission hasn't been granted yet
+        _ = HotkeyManager.shared.checkAccessibilityPermission()
+    }
+}

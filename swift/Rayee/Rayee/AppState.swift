@@ -54,6 +54,9 @@ class AppState: ObservableObject {
     /// Manages the bundled Python server
     let serverManager = ServerManager.shared
 
+    /// Controls the floating recording panel
+    private let recordingPanelController = RecordingPanelController()
+
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
@@ -83,6 +86,11 @@ class AppState: ObservableObject {
         transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
     }
 
+    /// Stop recording and begin transcription (called from UI button)
+    func stopRecording() {
+        transcriptionCoordinator.stopRecording()
+    }
+
     /// Copy the transcribed text to the clipboard
     func copyToClipboard() {
         guard !transcribedText.isEmpty else { return }
@@ -100,15 +108,9 @@ class AppState: ObservableObject {
     }
 
     /// Start listening for the global hotkey
+    /// Note: Permissions are requested at app launch, so we just start listening here
     func startHotkeyListening() {
-        if hotkeyManager.hasAccessibilityPermissionSilent() {
-            hotkeyManager.start()
-        } else {
-            _ = hotkeyManager.checkAccessibilityPermission()
-            DispatchQueue.main.asyncAfter(deadline: .now() + Config.hotkeyRetryDelay) { [weak self] in
-                self?.hotkeyManager.start()
-            }
-        }
+        hotkeyManager.start()
     }
 
     // MARK: - Computed Properties
@@ -158,8 +160,14 @@ class AppState: ObservableObject {
         transcriptionCoordinator.$isRecording
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isRecording in
+                guard let self = self else { return }
                 if isRecording {
-                    self?.status = .recording
+                    self.status = .recording
+                    // Show the floating panel
+                    self.recordingPanelController.setRecording(true)
+                    self.recordingPanelController.showPanel()
+                } else {
+                    self.recordingPanelController.setRecording(false)
                 }
             }
             .store(in: &cancellables)
@@ -168,8 +176,12 @@ class AppState: ObservableObject {
         transcriptionCoordinator.$isTranscribing
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isTranscribing in
+                guard let self = self else { return }
                 if isTranscribing {
-                    self?.status = .transcribing
+                    self.status = .transcribing
+                    self.recordingPanelController.setTranscribing(true)
+                } else {
+                    self.recordingPanelController.setTranscribing(false)
                 }
             }
             .store(in: &cancellables)
@@ -177,6 +189,23 @@ class AppState: ObservableObject {
         // Handle transcription completion
         transcriptionCoordinator.onTranscriptionComplete = { [weak self] result in
             self?.handleTranscriptionResult(result)
+        }
+
+        // Forward audio levels to the panel's waveform
+        transcriptionCoordinator.onAudioLevelUpdate = { [weak self] level in
+            self?.recordingPanelController.audioLevelMonitor.addLevel(level)
+        }
+
+        // Set up panel button callbacks
+        recordingPanelController.onStop = { [weak self] in
+            self?.stopRecording()
+        }
+        recordingPanelController.onCancel = { [weak self] in
+            self?.cancelRecording()
+        }
+        // Note: onSettings is handled in RecordingPanelHostView with @Environment
+        recordingPanelController.onCopy = { [weak self] in
+            self?.copyFromPanel()
         }
 
         // Observe server manager state
@@ -191,16 +220,30 @@ class AppState: ObservableObject {
     /// Handle transcription completion results
     private func handleTranscriptionResult(_ result: TranscriptionResult) {
         switch result {
-        case .success(let text):
+        case .success(let text, let didPaste):
             transcribedText = text
             status = .ready
 
+            // If paste was attempted but there was no valid target,
+            // or auto-paste is disabled, show result in panel
+            if !didPaste && !text.isEmpty {
+                // Show result mode in the floating panel
+                recordingPanelController.showResultMode(text: text)
+            } else {
+                // Paste happened successfully, hide the panel
+                recordingPanelController.hidePanel()
+            }
+
         case .cancelled:
             status = .ready
+            // Hide the panel when cancelled
+            recordingPanelController.hidePanel()
 
         case .error(let message):
             errorMessage = message
             status = .error
+            // Hide the panel on error
+            recordingPanelController.hidePanel()
             if message.contains("not running") {
                 isServerOnline = false
             }
@@ -248,7 +291,7 @@ class AppState: ObservableObject {
 
             if self.status == .recording {
                 // Already recording - stop and transcribe
-                self.audioRecorder?.stopRecording()
+                self.transcriptionCoordinator.stopRecording()
             } else if self.status == .ready || self.status == .error {
                 // Not recording - start transcription
                 self.startTranscription(autoPaste: true)
@@ -271,9 +314,25 @@ class AppState: ObservableObject {
 
     /// Cancel recording without transcribing (called when user presses Escape)
     func cancelRecording() {
-        audioRecorder?.cancelRecording()
-        audioRecorder = nil
+        transcriptionCoordinator.cancel()
+        recordingPanelController.hidePanel()
         status = .ready
-        audioFeedback.playErrorSound()  // Audio feedback that recording was cancelled
+    }
+
+    /// Copy text from the result panel and dismiss it
+    private func copyFromPanel() {
+        let text = recordingPanelController.transcribedText
+        guard !text.isEmpty else { return }
+
+        // Copy to clipboard
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Also update the main transcribed text
+        transcribedText = text
+
+        // Hide the panel after copying
+        recordingPanelController.hidePanel()
     }
 }

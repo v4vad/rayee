@@ -62,8 +62,28 @@ enum Config {
     /// Maximum recording duration before auto-stop (seconds)
     static let maxRecordingDuration: TimeInterval = 60.0
 
-    /// Default silence duration before stopping (seconds) - user can override in settings
-    static let defaultSilenceDuration: TimeInterval = 1.5
+    /// Default timeout before stopping (seconds) - user can override in settings
+    static let defaultSilenceDuration: TimeInterval = 30.0
+
+    /// Minimum silence duration for the settings slider (seconds)
+    static let minSilenceDuration: TimeInterval = 5.0
+
+    /// Maximum silence duration for the settings slider (seconds)
+    static let maxSilenceDuration: TimeInterval = 60.0
+
+    // MARK: - Recording Panel
+
+    /// Width of the floating recording panel
+    static let recordingPanelWidth: CGFloat = 260
+
+    /// Height of the floating recording panel (normal mode)
+    static let recordingPanelHeight: CGFloat = 140
+
+    /// Height of the floating recording panel (with result text)
+    static let recordingPanelHeightWithResult: CGFloat = 200
+
+    /// Number of bars in the waveform visualization
+    static let waveformBarCount = 16
 
     // MARK: - UI Delays
 

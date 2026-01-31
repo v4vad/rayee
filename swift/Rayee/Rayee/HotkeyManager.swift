@@ -200,12 +200,21 @@ class HotkeyManager: ObservableObject {
 
         // Check for Escape key (keyCode 53) with no modifiers
         // This allows cancelling recording while letting normal Escape usage pass through
+        // Note: We dispatch async and always consume the key when recording to avoid deadlocks
         if keyCode == 53 && modifiers == 0 {
-            var consumed = false
-            DispatchQueue.main.sync { [weak self] in
-                consumed = self?.onEscapePressed?() ?? false
+            // Check if we should handle Escape (callback returns true if recording)
+            // We use a semaphore with timeout to safely check from the event tap
+            let semaphore = DispatchSemaphore(value: 0)
+            var shouldConsume = false
+
+            DispatchQueue.main.async { [weak self] in
+                shouldConsume = self?.onEscapePressed?() ?? false
+                semaphore.signal()
             }
-            if consumed {
+
+            // Wait briefly for the result (10ms max to avoid blocking)
+            let result = semaphore.wait(timeout: .now() + 0.01)
+            if result == .success && shouldConsume {
                 return nil  // Consume the event (don't pass to other apps)
             }
         }

@@ -20,6 +20,7 @@ enum SettingsKey {
     static let vocabularyList = "vocabularyList"
     static let soundsEnabled = "soundsEnabled"
     static let silenceDuration = "silenceDuration"
+    static let timeoutEnabled = "timeoutEnabled"
 }
 
 // MARK: - AI Model Options
@@ -177,10 +178,15 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(soundsEnabled, forKey: SettingsKey.soundsEnabled) }
     }
 
-    // How long to wait after speech stops before transcribing (in seconds)
-    // Shorter = faster but might cut you off; Longer = more pause time allowed
+    // How long to wait after speech stops before ending recording (in seconds)
     @Published var silenceDuration: Double {
         didSet { UserDefaults.standard.set(silenceDuration, forKey: SettingsKey.silenceDuration) }
+    }
+
+    // Whether to enforce a 60-second maximum recording time
+    // When false, recording continues until you stop it or silence is detected
+    @Published var timeoutEnabled: Bool {
+        didSet { UserDefaults.standard.set(timeoutEnabled, forKey: SettingsKey.timeoutEnabled) }
     }
 
     private init() {
@@ -221,11 +227,18 @@ class SettingsManager: ObservableObject {
             self.soundsEnabled = true
         }
 
-        // Load silence duration setting (default: 1.5 seconds)
+        // Load silence duration setting (default: 30 seconds)
         if let savedDuration = UserDefaults.standard.object(forKey: SettingsKey.silenceDuration) as? Double {
             self.silenceDuration = savedDuration
         } else {
-            self.silenceDuration = 1.5
+            self.silenceDuration = 30.0
+        }
+
+        // Load timeout enabled setting (default: true - 60 second limit enabled)
+        if UserDefaults.standard.object(forKey: SettingsKey.timeoutEnabled) != nil {
+            self.timeoutEnabled = UserDefaults.standard.bool(forKey: SettingsKey.timeoutEnabled)
+        } else {
+            self.timeoutEnabled = true
         }
     }
 
@@ -254,6 +267,7 @@ class SettingsManager: ObservableObject {
         autoPasteEnabled = true
         vocabularyList = []
         soundsEnabled = true
-        silenceDuration = 1.5
+        silenceDuration = 30.0
+        timeoutEnabled = true
     }
 }

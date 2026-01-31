@@ -15,7 +15,7 @@ import Combine
 
 /// Result of a transcription attempt
 enum TranscriptionResult {
-    case success(text: String)
+    case success(text: String, didPaste: Bool)  // didPaste indicates if text was pasted
     case cancelled           // Recording stopped with no speech
     case error(message: String)
 }
@@ -41,6 +41,9 @@ class TranscriptionCoordinator: ObservableObject {
 
     /// Callback when transcription completes
     var onTranscriptionComplete: ((TranscriptionResult) -> Void)?
+
+    /// Callback for audio level updates (for waveform visualization)
+    var onAudioLevelUpdate: ((Float) -> Void)?
 
     // MARK: - Initialization
 
@@ -72,12 +75,20 @@ class TranscriptionCoordinator: ObservableObject {
         startRecording()
     }
 
-    /// Cancel any in-progress transcription
+    /// Stop recording and send audio for transcription
+    func stopRecording() {
+        if isRecording {
+            audioRecorder?.stopRecording()
+        }
+    }
+
+    /// Cancel recording without transcribing (e.g., user pressed Escape)
     func cancel() {
         if isRecording {
             audioRecorder?.cancelRecording()
             audioRecorder = nil
             isRecording = false
+            audioFeedback.playErrorSound()
         }
         // Can't cancel transcription once audio is sent to server
     }
@@ -103,8 +114,11 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = true
         audioFeedback.playStartSound()
 
-        // Create recorder with user's silence duration setting
-        audioRecorder = AudioRecorder(silenceDuration: settings.silenceDuration)
+        // Create recorder with user's settings
+        audioRecorder = AudioRecorder(
+            silenceDuration: settings.silenceDuration,
+            timeoutEnabled: settings.timeoutEnabled
+        )
 
         // Set up callbacks
         audioRecorder?.onSpeechDetected = {
@@ -113,6 +127,11 @@ class TranscriptionCoordinator: ObservableObject {
 
         audioRecorder?.onRecordingComplete = { [weak self] result in
             self?.handleRecordingComplete(result)
+        }
+
+        // Forward audio levels to the UI for waveform visualization
+        audioRecorder?.onAudioLevel = { [weak self] level in
+            self?.onAudioLevelUpdate?(level)
         }
 
         // Start recording
@@ -179,14 +198,19 @@ class TranscriptionCoordinator: ObservableObject {
             )
         }
 
-        // Auto-paste if enabled
+        // Determine if we should and can paste
+        var didPaste = false
         if pendingAutoPaste && settings.autoPasteEnabled && !text.isEmpty {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-                self.pasteManager.pasteText(text)
+            // Check if there's a valid place to paste
+            if PasteTargetDetector.hasValidPasteTarget() {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
+                    self.pasteManager.pasteText(text)
+                }
+                didPaste = true
             }
         }
 
-        onTranscriptionComplete?(.success(text: text))
+        onTranscriptionComplete?(.success(text: text, didPaste: didPaste))
     }
 
     /// Handle transcription errors
