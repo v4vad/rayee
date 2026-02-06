@@ -8,81 +8,28 @@ All communication happens over HTTP on localhost:8765 - only your Mac can access
 """
 
 import asyncio
-import os
-from typing import Optional
 
-import numpy as np
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from scipy.io import wavfile
 
 from .models import AVAILABLE_MODELS, DEFAULT_MODEL
-from .startup import audio_executor, on_shutdown, on_startup
-from .state import ServerState, StartupState, state_manager
+from .server_helpers import (
+    ModelRequest,
+    ModelResponse,
+    StartupStatusResponse,
+    StatusResponse,
+    TranscribeFileRequest,
+    TranscribeRequest,
+    TranscribeResponse,
+    VocabularyRequest,
+    VocabularyResponse,
+    raise_models_not_ready,
+    read_wav_file,
+    transcribe_audio,
+)
+from .startup import audio_executor, on_shutdown, on_startup, upload_executor
+from .state import ServerState, state_manager
 from .transcribe import Transcriber
 from .vad import SmartRecorder
-
-# ============ Request/Response Models ============
-
-
-class TranscribeRequest(BaseModel):
-    """Optional parameters for the /transcribe endpoint."""
-
-    silence_duration: float = 1.5
-
-
-class TranscribeFileRequest(BaseModel):
-    """Request for the /transcribe_file endpoint."""
-
-    audio_path: str
-
-
-class TranscribeResponse(BaseModel):
-    """Response from the /transcribe endpoint."""
-
-    text: str
-    status: str
-
-
-class StatusResponse(BaseModel):
-    """Response from the /status endpoint."""
-
-    status: str
-
-
-class ModelRequest(BaseModel):
-    """Request to switch models."""
-
-    model: str
-
-
-class ModelResponse(BaseModel):
-    """Response from model-related endpoints."""
-
-    current_model: str
-    available_models: list
-
-
-class VocabularyRequest(BaseModel):
-    """Request to add a vocabulary word."""
-
-    word: str
-
-
-class VocabularyResponse(BaseModel):
-    """Response from vocabulary endpoints."""
-
-    words: list
-    count: int
-
-
-class StartupStatusResponse(BaseModel):
-    """Response from the /startup_status endpoint."""
-
-    state: str
-    message: str
-    error: Optional[str] = None
-
 
 # ============ FastAPI App ============
 
@@ -135,7 +82,7 @@ async def transcribe(request: TranscribeRequest = TranscribeRequest()):
     """
     # Check if models are ready
     if not state_manager.models_ready:
-        _raise_models_not_ready()
+        raise_models_not_ready()
 
     # Try to start recording
     if not state_manager.set_state(ServerState.RECORDING):
@@ -160,7 +107,7 @@ async def transcribe(request: TranscribeRequest = TranscribeRequest()):
 
         # Transcribe
         state_manager.set_state(ServerState.TRANSCRIBING)
-        text = await _transcribe_audio(audio_data)
+        text = await transcribe_audio(audio_data, audio_executor)
 
         return TranscribeResponse(text=text, status="success")
 
@@ -181,9 +128,11 @@ async def transcribe_file(request: TranscribeFileRequest):
     """
     # Check if models are ready
     if not state_manager.models_ready:
-        _raise_models_not_ready()
+        raise_models_not_ready()
 
     # Validate file exists
+    import os
+
     if not os.path.exists(request.audio_path):
         raise HTTPException(
             status_code=400, detail=f"Audio file not found: {request.audio_path}"
@@ -198,13 +147,13 @@ async def transcribe_file(request: TranscribeFileRequest):
 
     try:
         # Read and validate the WAV file
-        audio_data = _read_wav_file(request.audio_path)
+        audio_data = read_wav_file(request.audio_path)
 
         if len(audio_data) == 0:
             return TranscribeResponse(text="", status="no_audio")
 
         # Transcribe
-        text = await _transcribe_audio(audio_data)
+        text = await transcribe_audio(audio_data, audio_executor)
 
         return TranscribeResponse(text=text, status="success")
 
@@ -216,6 +165,41 @@ async def transcribe_file(request: TranscribeFileRequest):
 
     finally:
         state_manager.set_state(ServerState.IDLE)
+
+
+@app.post("/transcribe_upload", response_model=TranscribeResponse)
+async def transcribe_upload(request: TranscribeFileRequest):
+    """
+    Transcribe an uploaded audio file without blocking recording.
+
+    Unlike /transcribe_file, this does NOT touch the state machine,
+    so the hotkey recording flow still works while this runs.
+    Uses a separate thread pool (upload_executor) for processing.
+    """
+    if not state_manager.models_ready:
+        raise_models_not_ready()
+
+    import os
+
+    if not os.path.exists(request.audio_path):
+        raise HTTPException(
+            status_code=400, detail=f"Audio file not found: {request.audio_path}"
+        )
+
+    try:
+        audio_data = read_wav_file(request.audio_path)
+
+        if len(audio_data) == 0:
+            return TranscribeResponse(text="", status="no_audio")
+
+        text = await transcribe_audio(audio_data, upload_executor)
+        return TranscribeResponse(text=text, status="success")
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
 
 
 # ============ Model Endpoints ============
@@ -307,66 +291,3 @@ async def remove_vocabulary_word(word: str):
         "count": state_manager.vocabulary.count(),
         "removed": removed,
     }
-
-
-# ============ Helper Functions ============
-
-
-def _raise_models_not_ready():
-    """Raise appropriate error when models aren't loaded yet."""
-    if state_manager.startup_state == StartupState.FAILED:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Model loading failed: {state_manager.startup_error}",
-        )
-    else:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Models are still loading ({state_manager.startup_state.value}). Please wait.",
-        )
-
-
-def _read_wav_file(audio_path: str) -> np.ndarray:
-    """Read and validate a WAV file, returning normalized float32 audio."""
-    try:
-        sample_rate, audio_data = wavfile.read(audio_path)
-    except Exception as e:
-        raise HTTPException(
-            status_code=400, detail=f"Failed to read WAV file: {str(e)}"
-        )
-
-    # Validate sample rate (Whisper expects 16kHz)
-    if sample_rate != 16000:
-        raise HTTPException(
-            status_code=400, detail=f"Expected 16kHz sample rate, got {sample_rate}Hz"
-        )
-
-    # Convert to float32 if needed
-    if audio_data.dtype == np.int16:
-        audio_data = audio_data.astype(np.float32) / 32768.0
-    elif audio_data.dtype == np.int32:
-        audio_data = audio_data.astype(np.float32) / 2147483648.0
-    elif audio_data.dtype != np.float32:
-        audio_data = audio_data.astype(np.float32)
-
-    # Ensure mono (take first channel if stereo)
-    if len(audio_data.shape) > 1:
-        audio_data = audio_data[:, 0]
-
-    return audio_data
-
-
-async def _transcribe_audio(audio_data: np.ndarray) -> str:
-    """Transcribe audio data using the loaded model."""
-    vocab_prompt = state_manager.vocabulary.get_prompt()
-    transcriber = state_manager.get_transcriber()
-
-    loop = asyncio.get_running_loop()
-    text = await loop.run_in_executor(
-        audio_executor,
-        lambda: transcriber.transcribe(
-            audio_data, initial_prompt=vocab_prompt if vocab_prompt else None
-        ),
-    )
-
-    return text

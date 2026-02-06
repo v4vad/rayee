@@ -43,6 +43,11 @@ struct SimpleMenuView: View {
             openSettingsWindow(tab: "history")
         }
 
+        // Upload Audio - opens Settings to Uploads tab
+        Button("Upload Audio...") {
+            openSettingsWindow(tab: "uploads")
+        }
+
         Divider()
 
         // Settings
