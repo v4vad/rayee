@@ -19,6 +19,10 @@ PORT = 8765
 # and helps with macOS audio thread requirements
 audio_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="rayee_audio")
 
+# Separate executor for upload transcription work
+# This lets uploads run in their own thread without competing with recording
+upload_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="rayee_upload")
+
 
 def print_startup_banner():
     """Print the startup message with available endpoints."""
@@ -31,6 +35,7 @@ def print_startup_banner():
     print("  GET  /startup_status - Model loading status")
     print("  POST /transcribe     - Record and transcribe")
     print("  POST /transcribe_file - Transcribe WAV file")
+    print("  POST /transcribe_upload - Transcribe uploaded file (background)")
     print("  GET  /models         - List available models")
     print("  POST /model          - Switch model")
     print("  GET  /vocabulary     - List custom words")
@@ -98,6 +103,7 @@ async def on_startup():
 async def on_shutdown():
     """Called when the FastAPI server shuts down."""
     audio_executor.shutdown(wait=False)
+    upload_executor.shutdown(wait=False)
     print("Server shutting down...")
 
 

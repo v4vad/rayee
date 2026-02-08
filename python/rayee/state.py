@@ -39,6 +39,10 @@ class ServerStateManager:
         self._state = ServerState.IDLE
         self._lock = threading.Lock()
 
+        # Lock to prevent the AI model from being used by two things at once
+        # (recording transcription and upload transcription share the same model)
+        self.transcription_lock = threading.Lock()
+
         # Startup tracking
         self.startup_state = StartupState.NOT_STARTED
         self.startup_message = "Server starting..."

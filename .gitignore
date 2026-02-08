@@ -40,3 +40,6 @@ DerivedData/
 *.mp3
 *.m4a
 *.dmg
+
+# Claude Code
+.claude/

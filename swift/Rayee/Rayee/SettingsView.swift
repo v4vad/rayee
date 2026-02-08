@@ -2,12 +2,46 @@
 //  SettingsView.swift
 //  Rayee
 //
-//  Settings window UI for configuring hotkeys, model selection,
-//  auto-paste behavior, and custom vocabulary.
+//  Settings window UI with a two-pane sidebar layout.
+//  Left sidebar shows section icons, right pane shows settings content.
 //
 
 import SwiftUI
 import Carbon.HIToolbox
+
+// MARK: - Settings Tab Enum
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general
+    case models
+    case vocabulary
+    case history
+    case uploads
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .general: return "General"
+        case .models: return "Models"
+        case .vocabulary: return "Vocabulary"
+        case .history: return "History"
+        case .uploads: return "Uploads"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general: return "gear"
+        case .models: return "cpu"
+        case .vocabulary: return "text.book.closed"
+        case .history: return "clock.arrow.circlepath"
+        case .uploads: return "square.and.arrow.up"
+        }
+    }
+}
+
+// MARK: - Settings View
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -15,40 +49,39 @@ struct SettingsView: View {
     @State private var isRecordingHotkey = false
     @State private var newVocabularyWord = ""
     @State private var showingAccessibilityAlert = false
-    @State private var selectedTab = 0
+    @State private var selectedTab: SettingsTab = .general
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            generalTab
-                .tabItem {
-                    Label("General", systemImage: "gear")
-                }
-                .tag(0)
-
-            vocabularyTab
-                .tabItem {
-                    Label("Vocabulary", systemImage: "text.book.closed")
-                }
-                .tag(1)
-
-            historyTab
-                .tabItem {
-                    Label("History", systemImage: "clock.arrow.circlepath")
-                }
-                .tag(2)
+        NavigationSplitView {
+            List(SettingsTab.allCases, selection: $selectedTab) { tab in
+                Label(tab.label, systemImage: tab.icon)
+                    .tag(tab)
+            }
+            .navigationSplitViewColumnWidth(170)
+        } detail: {
+            detailView
         }
-        .frame(width: 450, height: 350)
+        .frame(minWidth: Config.settingsWindowWidth, minHeight: Config.settingsWindowMinHeight)
         .onAppear {
             // Check if we should open to a specific tab
             if let requestedTab = UserDefaults.standard.string(forKey: "settingsTab") {
                 switch requestedTab {
-                case "vocabulary": selectedTab = 1
-                case "history": selectedTab = 2
-                default: break
+                case "models":
+                    selectedTab = .models
+                case "vocabulary":
+                    selectedTab = .vocabulary
+                case "history":
+                    selectedTab = .history
+                case "uploads":
+                    selectedTab = .uploads
+                default:
+                    break
                 }
                 // Clear the preference after using it
                 UserDefaults.standard.removeObject(forKey: "settingsTab")
             }
+
+            setupHotkeyRecording()
         }
         .alert("Accessibility Permission Required", isPresented: $showingAccessibilityAlert) {
             Button("Open System Settings") {
@@ -60,134 +93,29 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - General Tab
-    private var generalTab: some View {
-        Form {
-            // Server Status Section
-            Section {
-                HStack {
-                    Circle()
-                        .fill(appState.isServerOnline ? Color.green : Color.red)
-                        .frame(width: 10, height: 10)
-                    Text("Server Status")
-                    Spacer()
-                    Text(appState.isServerOnline ? "Online" : "Offline")
-                        .foregroundColor(appState.isServerOnline ? .green : .red)
-                }
-            }
+    // MARK: - Detail View
 
-            Divider()
-
-            // Hotkey Section
-            Section {
-                HStack {
-                    Text("Global Hotkey")
-                    Spacer()
-                    hotkeyRecorderButton
-                }
-                Text("Press this keyboard shortcut anywhere to start transcription")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Divider()
-
-            // Model Selection Section
-            Section {
-                Picker("AI Model", selection: $settings.selectedModel) {
-                    ForEach(TranscriptionModel.allCases) { model in
-                        VStack(alignment: .leading) {
-                            Text(model.displayName)
-                        }
-                        .tag(model)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Text(settings.selectedModel.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Divider()
-
-            // Auto-Paste Section
-            Section {
-                Toggle("Auto-paste after transcription", isOn: $settings.autoPasteEnabled)
-                    .onChange(of: settings.autoPasteEnabled) { newValue in
-                        if newValue {
-                            checkAccessibilityPermission()
-                        }
-                    }
-
-                Text("Automatically paste transcribed text where your cursor is")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                if settings.autoPasteEnabled {
-                    accessibilityStatusView
-                }
-            }
-
-            Divider()
-
-            // Sound Feedback Section
-            Section {
-                Toggle("Play sounds", isOn: $settings.soundsEnabled)
-
-                Text("Play audio feedback when recording starts and stops")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Divider()
-
-            // Recording Timeout Section
-            Section {
-                Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
-
-                Text("When enabled, recording stops after 60 seconds")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Divider()
-
-            // Silence Detection Section
-            Section {
-                HStack {
-                    Text("Silence detection")
-                    Spacer()
-                    Text(String(format: "%.0fs", settings.silenceDuration))
-                        .foregroundColor(.secondary)
-                }
-
-                Slider(
-                    value: $settings.silenceDuration,
-                    in: Config.minSilenceDuration...Config.maxSilenceDuration,
-                    step: 5
-                )
-
-                Text("After you stop speaking, recording ends after this many seconds of silence")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            // Reset Button
-            HStack {
-                Spacer()
-                Button("Reset to Defaults") {
-                    settings.resetToDefaults()
-                }
-                .foregroundColor(.secondary)
-            }
+    @ViewBuilder
+    private var detailView: some View {
+        switch selectedTab {
+        case .general:
+            GeneralSettingsTab(
+                isRecordingHotkey: $isRecordingHotkey,
+                showingAccessibilityAlert: $showingAccessibilityAlert
+            )
+        case .models:
+            ModelsSettingsTab()
+        case .vocabulary:
+            vocabularyTab
+        case .history:
+            HistoryView()
+        case .uploads:
+            UploadsView()
         }
-        .padding()
     }
 
     // MARK: - Vocabulary Tab
+
     private var vocabularyTab: some View {
         VStack(spacing: 16) {
             // Header explanation
@@ -255,78 +183,11 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - History Tab
-    private var historyTab: some View {
-        HistoryView()
-    }
-
-    // MARK: - Hotkey Recorder Button
-    private var hotkeyRecorderButton: some View {
-        Button(action: {
-            isRecordingHotkey.toggle()
-        }) {
-            HStack(spacing: 4) {
-                if isRecordingHotkey {
-                    Text("Press keys...")
-                        .foregroundColor(.orange)
-                } else {
-                    Text(settings.hotkeyConfig.displayString)
-                        .fontWeight(.medium)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isRecordingHotkey ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isRecordingHotkey ? Color.orange : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(.plain)
-        .onAppear {
-            setupHotkeyRecording()
-        }
-    }
-
-    // MARK: - Accessibility Status View
-    private var accessibilityStatusView: some View {
-        HStack {
-            if PasteManager.shared.hasAccessibilityPermission() {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text("Accessibility permission granted")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            } else {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-                Text("Accessibility permission needed")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                Spacer()
-                Button("Grant Access") {
-                    openAccessibilitySettings()
-                }
-                .font(.caption)
-            }
-        }
-        .padding(.top, 4)
-    }
-
     // MARK: - Helper Methods
 
     private func addWord() {
         settings.addVocabularyWord(newVocabularyWord)
         newVocabularyWord = ""
-    }
-
-    private func checkAccessibilityPermission() {
-        if !PasteManager.shared.hasAccessibilityPermission() {
-            showingAccessibilityAlert = true
-        }
     }
 
     private func openAccessibilitySettings() {

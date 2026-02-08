@@ -21,12 +21,11 @@ enum SettingsKey {
     static let soundsEnabled = "soundsEnabled"
     static let silenceDuration = "silenceDuration"
     static let timeoutEnabled = "timeoutEnabled"
+    static let backgroundUploadEnabled = "backgroundUploadEnabled"
 }
 
 // MARK: - AI Model Options
-// The different transcription models available
-// Smaller models are faster but less accurate; larger models are more accurate but slower
-// Note: rawValue must match Python's AVAILABLE_MODELS exactly
+// rawValue must match Python's AVAILABLE_MODELS keys exactly
 enum TranscriptionModel: String, CaseIterable, Identifiable {
     case tiny = "tiny"
     case base = "base"
@@ -55,13 +54,29 @@ enum TranscriptionModel: String, CaseIterable, Identifiable {
         case .large: return "~10GB RAM, highest accuracy"
         }
     }
+
+    var sizeMB: Int {
+        switch self {
+        case .tiny: return 75
+        case .base: return 145
+        case .small: return 488
+        case .medium: return 1500
+        case .large: return 3000
+        }
+    }
+
+    var formattedSize: String {
+        if sizeMB >= 1000 {
+            return String(format: "%.1f GB", Double(sizeMB) / 1000.0)
+        }
+        return "\(sizeMB) MB"
+    }
 }
 
 // MARK: - Hotkey Configuration
-// Stores the keyboard shortcut as modifier flags (Option, Command, etc.) + a key code
 struct HotkeyConfig: Equatable, Codable {
-    var modifiers: UInt32  // Modifier keys (Option, Command, Shift, Control)
-    var keyCode: UInt32    // The main key (Space, A, B, etc.)
+    var modifiers: UInt32
+    var keyCode: UInt32
 
     // Default: Option + Space
     static let `default` = HotkeyConfig(
@@ -147,10 +162,7 @@ struct HotkeyConfig: Equatable, Codable {
 }
 
 // MARK: - Settings Manager
-// Central manager for all app settings
-// Uses @Published so SwiftUI views automatically update when settings change
 class SettingsManager: ObservableObject {
-    // Singleton instance - one shared settings manager for the whole app
     static let shared = SettingsManager()
 
     // The hotkey combination for starting transcription
@@ -187,6 +199,12 @@ class SettingsManager: ObservableObject {
     // When false, recording continues until you stop it or silence is detected
     @Published var timeoutEnabled: Bool {
         didSet { UserDefaults.standard.set(timeoutEnabled, forKey: SettingsKey.timeoutEnabled) }
+    }
+
+    // Whether upload transcription runs in the background (allows recording during upload)
+    // When false (default), uploading blocks recording until it finishes
+    @Published var backgroundUploadEnabled: Bool {
+        didSet { UserDefaults.standard.set(backgroundUploadEnabled, forKey: SettingsKey.backgroundUploadEnabled) }
     }
 
     private init() {
@@ -240,6 +258,13 @@ class SettingsManager: ObservableObject {
         } else {
             self.timeoutEnabled = true
         }
+
+        // Load background upload setting (default: false - blocking mode)
+        if UserDefaults.standard.object(forKey: SettingsKey.backgroundUploadEnabled) != nil {
+            self.backgroundUploadEnabled = UserDefaults.standard.bool(forKey: SettingsKey.backgroundUploadEnabled)
+        } else {
+            self.backgroundUploadEnabled = Config.defaultBackgroundUpload
+        }
     }
 
     // Save hotkey configuration to UserDefaults
@@ -269,5 +294,6 @@ class SettingsManager: ObservableObject {
         soundsEnabled = true
         silenceDuration = 30.0
         timeoutEnabled = true
+        backgroundUploadEnabled = Config.defaultBackgroundUpload
     }
 }

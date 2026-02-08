@@ -93,4 +93,24 @@ enum Config {
 
     /// Delay before retrying hotkey registration after permission prompt (seconds)
     static let hotkeyRetryDelay: TimeInterval = 1.0
+
+    // MARK: - File Upload
+
+    /// Timeout for file upload transcription (10 minutes for long audio files)
+    static let fileUploadTranscriptionTimeout: TimeInterval = 600.0
+
+    /// Audio file types the user can select in the file picker
+    static let allowedAudioExtensions = ["mp3", "m4a", "aac", "wav", "aiff", "flac", "caf"]
+
+    /// Whether background upload transcription is enabled by default
+    static let defaultBackgroundUpload = false
+
+    // MARK: - Settings Window
+
+    /// Width of the Settings window
+    static let settingsWindowWidth: CGFloat = 650
+
+    /// Minimum height of the Settings window
+    static let settingsWindowMinHeight: CGFloat = 500
+
 }

@@ -157,6 +157,32 @@ class PythonBridge {
         return response.text
     }
 
+    /// Transcribe an uploaded audio file in the background (doesn't block recording).
+    /// Calls /transcribe_upload which bypasses the state machine.
+    func transcribeUploadedFile(audioPath: URL) async throws -> String {
+        let requestBody = TranscribeFileRequest(audioPath: audioPath.path)
+        let response: TranscribeResponse = try await performRequest(
+            endpoint: "/transcribe_upload",
+            method: "POST",
+            body: requestBody,
+            timeout: Config.fileUploadTranscriptionTimeout
+        )
+        return response.text
+    }
+
+    /// Transcribe an uploaded audio file in blocking mode (blocks recording).
+    /// Calls /transcribe_file which uses the state machine.
+    func transcribeUploadedFileBlocking(audioPath: URL) async throws -> String {
+        let requestBody = TranscribeFileRequest(audioPath: audioPath.path)
+        let response: TranscribeResponse = try await performRequest(
+            endpoint: "/transcribe_file",
+            method: "POST",
+            body: requestBody,
+            timeout: Config.fileUploadTranscriptionTimeout
+        )
+        return response.text
+    }
+
     // MARK: - Private Helpers
 
     /// Perform a single health check request

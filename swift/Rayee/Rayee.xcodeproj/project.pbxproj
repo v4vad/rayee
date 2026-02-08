@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A10001E0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10001E0000 /* Assets.xcassets */; };
 		A1000001001 /* RayeeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RayeeApp.swift */; };
 		A1000002001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* AppState.swift */; };
 		A1000003001 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003000 /* SimpleMenuView.swift */; };
@@ -32,6 +33,17 @@
 		A10001A0001 /* TranscribingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001A0000 /* TranscribingIndicator.swift */; };
 		A10001B0001 /* PanelButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001B0000 /* PanelButtonStyles.swift */; };
 		A10001C0001 /* PasteTargetDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001C0000 /* PasteTargetDetector.swift */; };
+		A10001D0001 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001D0000 /* AppLogger.swift */; };
+		A10002A0001 /* AudioFileConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002A0000 /* AudioFileConverter.swift */; };
+		A10002B0001 /* UploadRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002B0000 /* UploadRecord.swift */; };
+		A10002C0001 /* UploadHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002C0000 /* UploadHistoryManager.swift */; };
+		A10002D0001 /* UploadManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002D0000 /* UploadManager.swift */; };
+		A10002E0001 /* UploadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002E0000 /* UploadsView.swift */; };
+		A10002F0001 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002F0000 /* GeneralSettingsTab.swift */; };
+		A1000300001 /* UploadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000300000 /* UploadRow.swift */; };
+		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
+		A1000360001 /* FasterWhisperManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000360000 /* FasterWhisperManager.swift */; };
+		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +75,18 @@
 		A10001A0000 /* TranscribingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscribingIndicator.swift; sourceTree = "<group>"; };
 		A10001B0000 /* PanelButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelButtonStyles.swift; sourceTree = "<group>"; };
 		A10001C0000 /* PasteTargetDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTargetDetector.swift; sourceTree = "<group>"; };
+		A10001D0000 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		A10001E0000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A10002A0000 /* AudioFileConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileConverter.swift; sourceTree = "<group>"; };
+		A10002B0000 /* UploadRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadRecord.swift; sourceTree = "<group>"; };
+		A10002C0000 /* UploadHistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadHistoryManager.swift; sourceTree = "<group>"; };
+		A10002D0000 /* UploadManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadManager.swift; sourceTree = "<group>"; };
+		A10002E0000 /* UploadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadsView.swift; sourceTree = "<group>"; };
+		A10002F0000 /* GeneralSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsTab.swift; sourceTree = "<group>"; };
+		A1000300000 /* UploadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadRow.swift; sourceTree = "<group>"; };
+		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
+		A1000360000 /* FasterWhisperManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FasterWhisperManager.swift; sourceTree = "<group>"; };
+		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -112,6 +136,18 @@
 				A10001A0000 /* TranscribingIndicator.swift */,
 				A10001B0000 /* PanelButtonStyles.swift */,
 				A10001C0000 /* PasteTargetDetector.swift */,
+				A10001D0000 /* AppLogger.swift */,
+				A10002A0000 /* AudioFileConverter.swift */,
+				A10002B0000 /* UploadRecord.swift */,
+				A10002C0000 /* UploadHistoryManager.swift */,
+				A10002D0000 /* UploadManager.swift */,
+				A10002E0000 /* UploadsView.swift */,
+				A10002F0000 /* GeneralSettingsTab.swift */,
+				A1000300000 /* UploadRow.swift */,
+				A1000330000 /* ModelsSettingsTab.swift */,
+				A1000360000 /* FasterWhisperManager.swift */,
+				A1000370000 /* ModelRow.swift */,
+				A10001E0000 /* Assets.xcassets */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
 			);
@@ -184,6 +220,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10001E0001 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +256,17 @@
 				A10001A0001 /* TranscribingIndicator.swift in Sources */,
 				A10001B0001 /* PanelButtonStyles.swift in Sources */,
 				A10001C0001 /* PasteTargetDetector.swift in Sources */,
+				A10001D0001 /* AppLogger.swift in Sources */,
+				A10002A0001 /* AudioFileConverter.swift in Sources */,
+				A10002B0001 /* UploadRecord.swift in Sources */,
+				A10002C0001 /* UploadHistoryManager.swift in Sources */,
+				A10002D0001 /* UploadManager.swift in Sources */,
+				A10002E0001 /* UploadsView.swift in Sources */,
+				A10002F0001 /* GeneralSettingsTab.swift in Sources */,
+				A1000300001 /* UploadRow.swift in Sources */,
+				A1000330001 /* ModelsSettingsTab.swift in Sources */,
+				A1000360001 /* FasterWhisperManager.swift in Sources */,
+				A1000370001 /* ModelRow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

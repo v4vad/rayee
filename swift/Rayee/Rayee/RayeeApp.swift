@@ -46,8 +46,8 @@ struct RayeeApp: App {
             SettingsView()
                 .environmentObject(appState)
         }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: Config.settingsWindowWidth, height: Config.settingsWindowMinHeight)
         .defaultPosition(.center)
     }
 }
@@ -56,8 +56,8 @@ struct RayeeApp: App {
 // Handles app-level events like activation and termination
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // App has fully launched
-        print("Rayee launched")
+        // Initialize logging first so we capture everything
+        AppLogger.initialize()
 
         // Request permissions immediately on first launch
         // This ensures the hotkey and recording work right away
@@ -76,7 +76,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Stop the Python server
         ServerManager.shared.stop()
 
-        print("Rayee terminating")
+        // Log shutdown and close the log file
+        AppLogger.shutdown()
     }
 
     /// Request microphone and accessibility permissions on first launch
