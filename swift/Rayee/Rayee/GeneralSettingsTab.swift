@@ -46,25 +46,6 @@ struct GeneralSettingsTab: View {
 
             Divider()
 
-            // Model Selection Section
-            Section {
-                Picker("AI Model", selection: $settings.selectedModel) {
-                    ForEach(TranscriptionModel.allCases) { model in
-                        VStack(alignment: .leading) {
-                            Text(model.displayName)
-                        }
-                        .tag(model)
-                    }
-                }
-                .pickerStyle(.menu)
-
-                Text(settings.selectedModel.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            Divider()
-
             // Auto-Paste Section
             Section {
                 Toggle("Auto-paste after transcription", isOn: $settings.autoPasteEnabled)

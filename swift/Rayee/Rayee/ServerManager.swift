@@ -62,6 +62,8 @@ class ServerManager: ObservableObject {
         errorMessage = nil
         restartAttempts = 0
 
+        AppLogger.logServer("Starting Python server...")
+
         // Run on background thread so we don't block the UI
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.launchServer()
@@ -72,6 +74,7 @@ class ServerManager: ObservableObject {
     /// Call this when the app quits
     func stop() {
         print("[ServerManager] Stopping server...")
+        AppLogger.logServer("Stopping Python server...")
         healthCheckTimer?.invalidate()
         healthCheckTimer = nil
 
@@ -83,6 +86,7 @@ class ServerManager: ObservableObject {
             DispatchQueue.global().async {
                 self.serverProcess?.waitUntilExit()
                 print("[ServerManager] Server stopped")
+                AppLogger.logServer("Server stopped gracefully")
             }
         }
 
@@ -214,12 +218,15 @@ class ServerManager: ObservableObject {
 
             let exitCode = process.terminationStatus
             print("[ServerManager] Server exited with code: \(exitCode)")
+            AppLogger.logServer("Server exited with code: \(exitCode)")
 
             DispatchQueue.main.async {
                 // If we didn't intentionally stop it and haven't exceeded restart attempts
                 if self.state == .running && self.restartAttempts < Config.maxServerRestartAttempts {
                     self.restartAttempts += 1
-                    print("[ServerManager] Attempting restart \(self.restartAttempts)/\(Config.maxServerRestartAttempts)")
+                    let message = "Server crashed, attempting restart \(self.restartAttempts)/\(Config.maxServerRestartAttempts)"
+                    print("[ServerManager] \(message)")
+                    AppLogger.logServer(message)
                     self.state = .starting
 
                     // Wait a moment before restarting
@@ -229,6 +236,7 @@ class ServerManager: ObservableObject {
                 } else if self.state != .stopped {
                     self.state = .failed
                     self.errorMessage = "Server crashed (exit code: \(exitCode))"
+                    AppLogger.logError("Server crashed permanently (exit code: \(exitCode))")
                 }
             }
         }
@@ -238,6 +246,7 @@ class ServerManager: ObservableObject {
             try process.run()
             serverProcess = process
             print("[ServerManager] Server process started (PID: \(process.processIdentifier))")
+            AppLogger.logServer("Server process started (PID: \(process.processIdentifier))")
 
             // Start health checks to confirm server is responsive
             DispatchQueue.main.async {
@@ -249,6 +258,7 @@ class ServerManager: ObservableObject {
                 self.state = .failed
                 self.errorMessage = "Failed to start server: \(error.localizedDescription)"
                 print("[ServerManager] Failed to start: \(error)")
+                AppLogger.logError("Failed to start server", error: error)
             }
         }
     }

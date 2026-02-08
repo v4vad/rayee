@@ -17,7 +17,6 @@ A local voice-to-text transcription app for macOS. Press a hotkey, speak, and te
 - **Swift/SwiftUI** - Native macOS interface
 - **Python** - AI transcription engine
 - **Faster-Whisper** - Fast, accurate speech recognition
-- **MLX-Whisper** - Optimized for Apple Silicon
 
 ## Status
 

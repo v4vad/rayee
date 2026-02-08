@@ -58,7 +58,7 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 2. **Visual UI** - Shows "Listening..." and "Transcribing..." status
 3. **Auto-paste** - Automatically types text into your current app
 4. **Custom vocabulary** - Add names, terms, jargon for better recognition
-5. **Multiple models** - Faster-Whisper + MLX-Whisper (can add more later)
+5. **Multiple models** - Faster-Whisper (tiny, small, medium, large)
 
 ### Extra Features
 6. **Global hotkey** - Trigger recording from any app (e.g., Option+Space)
@@ -85,7 +85,7 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 ┌─────────────────────────────────────────┐
 │         Python (The AI Engine)          │
 │  • Audio recording (sounddevice)        │
-│  • Transcription (faster-whisper, mlx)  │
+│  • Transcription (faster-whisper)        │
 │  • Voice activity detection (silero)    │
 │  • Custom vocabulary handling           │
 │  • Model management                     │
@@ -94,7 +94,6 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 
 ### Models
 - **Faster-Whisper** (small, medium, large) - Fast and accurate
-- **MLX-Whisper** - Optimized for Apple Silicon (M1/M2/M3/M4)
 
 ---
 
@@ -240,7 +239,6 @@ rayee/
 
 ### Python Packages
 - `faster-whisper` - Fast transcription
-- `mlx-whisper` - Apple Silicon optimized
 - `sounddevice` - Audio recording
 - `numpy` - Audio processing
 - `silero-vad` - Voice activity detection

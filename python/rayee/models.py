@@ -5,10 +5,12 @@ Handles loading and switching between different Whisper models.
 Models are downloaded automatically on first use from Hugging Face.
 """
 
-from faster_whisper import WhisperModel
-from typing import Optional, Literal
-import os
+import shutil
 import threading
+from pathlib import Path
+from typing import Literal, Optional
+
+from faster_whisper import WhisperModel
 
 # Timeout for downloading the Whisper model (10 minutes)
 # Larger models can take a while to download
@@ -54,6 +56,98 @@ AVAILABLE_MODELS = {
 
 DEFAULT_MODEL = "small"
 
+# Faster-Whisper models are hosted on HuggingFace under this org
+FW_REPO_PREFIX = "Systran/faster-whisper-"
+
+# Track download state for Faster-Whisper models
+_fw_download_progress: dict[str, str] = (
+    {}
+)  # model_name -> "downloading"/"ready"/"error"
+_fw_download_errors: dict[str, str] = {}  # model_name -> error message
+_fw_download_lock = threading.Lock()
+
+
+def get_fw_repo_id(model_name: str) -> str:
+    """Get the HuggingFace repo ID for a Faster-Whisper model."""
+    return f"{FW_REPO_PREFIX}{model_name}"
+
+
+def is_fw_model_downloaded(model_name: str) -> bool:
+    """Check if a Faster-Whisper model exists in the HuggingFace cache."""
+    repo_id = get_fw_repo_id(model_name)
+    cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+    model_dir = cache_dir / f"models--{repo_id.replace('/', '--')}"
+    snapshots_dir = model_dir / "snapshots"
+    return snapshots_dir.is_dir() and any(snapshots_dir.iterdir())
+
+
+def get_fw_model_status(model_name: str) -> str:
+    """Get the current download status of a Faster-Whisper model."""
+    with _fw_download_lock:
+        if model_name in _fw_download_progress:
+            return _fw_download_progress[model_name]
+    if is_fw_model_downloaded(model_name):
+        return "ready"
+    if model_name in _fw_download_errors:
+        return "error"
+    return "not_downloaded"
+
+
+def get_fw_download_error(model_name: str) -> Optional[str]:
+    """Get the download error for a Faster-Whisper model, if any."""
+    return _fw_download_errors.get(model_name)
+
+
+def download_fw_model(model_name: str) -> bool:
+    """Download a Faster-Whisper model to the HuggingFace cache."""
+    if model_name not in AVAILABLE_MODELS:
+        _fw_download_errors[model_name] = f"Unknown model: {model_name}"
+        return False
+
+    with _fw_download_lock:
+        _fw_download_progress[model_name] = "downloading"
+        _fw_download_errors.pop(model_name, None)
+
+    try:
+        from huggingface_hub import snapshot_download
+
+        repo_id = get_fw_repo_id(model_name)
+        print(f"Downloading Faster-Whisper model: {model_name} from {repo_id}")
+        snapshot_download(repo_id=repo_id)
+
+        with _fw_download_lock:
+            _fw_download_progress[model_name] = "ready"
+
+        print(f"Model {model_name} downloaded successfully")
+        return True
+
+    except Exception as e:
+        error_msg = str(e)
+        _fw_download_errors[model_name] = error_msg
+        with _fw_download_lock:
+            _fw_download_progress.pop(model_name, None)
+        print(f"Error downloading model {model_name}: {error_msg}")
+        return False
+
+
+def delete_fw_model(model_name: str) -> bool:
+    """Delete a Faster-Whisper model from the HuggingFace cache."""
+    repo_id = get_fw_repo_id(model_name)
+    cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+    model_dir = cache_dir / f"models--{repo_id.replace('/', '--')}"
+    if model_dir.is_dir():
+        try:
+            shutil.rmtree(model_dir)
+            print(f"Deleted Faster-Whisper model: {model_name}")
+            with _fw_download_lock:
+                _fw_download_progress.pop(model_name, None)
+                _fw_download_errors.pop(model_name, None)
+            return True
+        except Exception as e:
+            print(f"Error deleting model {model_name}: {e}")
+            return False
+    return True  # Already gone
+
 
 class ModelManager:
     """
@@ -77,7 +171,7 @@ class ModelManager:
         model_size: ModelSize = DEFAULT_MODEL,
         device: str = "auto",
         compute_type: str = "auto",
-        timeout: int = WHISPER_DOWNLOAD_TIMEOUT
+        timeout: int = WHISPER_DOWNLOAD_TIMEOUT,
     ) -> WhisperModel:
         """
         Load a Whisper model.
@@ -108,7 +202,9 @@ class ModelManager:
 
         model_info = AVAILABLE_MODELS[model_size]
         print(f"Loading model: {model_size} ({model_info['description']})")
-        print(f"This may take a few minutes on first run (downloading ~{model_info['size_mb']}MB)...")
+        print(
+            f"This may take a few minutes on first run (downloading ~{model_info['size_mb']}MB)..."
+        )
 
         # Use a thread with timeout to prevent hanging forever during download
         result = {"model": None, "error": None}
@@ -119,9 +215,7 @@ class ModelManager:
                 # - device="auto" uses GPU if available, else CPU
                 # - compute_type="auto" picks optimal precision for the hardware
                 result["model"] = WhisperModel(
-                    model_size,
-                    device=device,
-                    compute_type=compute_type
+                    model_size, device=device, compute_type=compute_type
                 )
             except Exception as e:
                 result["error"] = e

@@ -2,12 +2,46 @@
 //  SettingsView.swift
 //  Rayee
 //
-//  Settings window UI for configuring hotkeys, model selection,
-//  auto-paste behavior, custom vocabulary, and file uploads.
+//  Settings window UI with a two-pane sidebar layout.
+//  Left sidebar shows section icons, right pane shows settings content.
 //
 
 import SwiftUI
 import Carbon.HIToolbox
+
+// MARK: - Settings Tab Enum
+
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general
+    case models
+    case vocabulary
+    case history
+    case uploads
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .general: return "General"
+        case .models: return "Models"
+        case .vocabulary: return "Vocabulary"
+        case .history: return "History"
+        case .uploads: return "Uploads"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .general: return "gear"
+        case .models: return "cpu"
+        case .vocabulary: return "text.book.closed"
+        case .history: return "clock.arrow.circlepath"
+        case .uploads: return "square.and.arrow.up"
+        }
+    }
+}
+
+// MARK: - Settings View
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
@@ -15,46 +49,33 @@ struct SettingsView: View {
     @State private var isRecordingHotkey = false
     @State private var newVocabularyWord = ""
     @State private var showingAccessibilityAlert = false
-    @State private var selectedTab = 0
+    @State private var selectedTab: SettingsTab = .general
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            GeneralSettingsTab(
-                isRecordingHotkey: $isRecordingHotkey,
-                showingAccessibilityAlert: $showingAccessibilityAlert
-            )
-                .tabItem {
-                    Label("General", systemImage: "gear")
-                }
-                .tag(0)
-
-            vocabularyTab
-                .tabItem {
-                    Label("Vocabulary", systemImage: "text.book.closed")
-                }
-                .tag(1)
-
-            historyTab
-                .tabItem {
-                    Label("History", systemImage: "clock.arrow.circlepath")
-                }
-                .tag(2)
-
-            UploadsView()
-                .tabItem {
-                    Label("Uploads", systemImage: "square.and.arrow.up")
-                }
-                .tag(3)
+        NavigationSplitView {
+            List(SettingsTab.allCases, selection: $selectedTab) { tab in
+                Label(tab.label, systemImage: tab.icon)
+                    .tag(tab)
+            }
+            .navigationSplitViewColumnWidth(170)
+        } detail: {
+            detailView
         }
         .frame(minWidth: Config.settingsWindowWidth, minHeight: Config.settingsWindowMinHeight)
         .onAppear {
             // Check if we should open to a specific tab
             if let requestedTab = UserDefaults.standard.string(forKey: "settingsTab") {
                 switch requestedTab {
-                case "vocabulary": selectedTab = 1
-                case "history": selectedTab = 2
-                case "uploads": selectedTab = 3
-                default: break
+                case "models":
+                    selectedTab = .models
+                case "vocabulary":
+                    selectedTab = .vocabulary
+                case "history":
+                    selectedTab = .history
+                case "uploads":
+                    selectedTab = .uploads
+                default:
+                    break
                 }
                 // Clear the preference after using it
                 UserDefaults.standard.removeObject(forKey: "settingsTab")
@@ -72,7 +93,29 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: - Detail View
+
+    @ViewBuilder
+    private var detailView: some View {
+        switch selectedTab {
+        case .general:
+            GeneralSettingsTab(
+                isRecordingHotkey: $isRecordingHotkey,
+                showingAccessibilityAlert: $showingAccessibilityAlert
+            )
+        case .models:
+            ModelsSettingsTab()
+        case .vocabulary:
+            vocabularyTab
+        case .history:
+            HistoryView()
+        case .uploads:
+            UploadsView()
+        }
+    }
+
     // MARK: - Vocabulary Tab
+
     private var vocabularyTab: some View {
         VStack(spacing: 16) {
             // Header explanation
@@ -138,11 +181,6 @@ struct SettingsView: View {
                 }
             }
         }
-    }
-
-    // MARK: - History Tab
-    private var historyTab: some View {
-        HistoryView()
     }
 
     // MARK: - Helper Methods

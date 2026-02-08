@@ -11,8 +11,17 @@ import asyncio
 
 from fastapi import FastAPI, HTTPException
 
-from .models import AVAILABLE_MODELS, DEFAULT_MODEL
+from .models import (
+    AVAILABLE_MODELS,
+    DEFAULT_MODEL,
+    delete_fw_model,
+    download_fw_model,
+    get_fw_download_error,
+    get_fw_model_status,
+)
 from .server_helpers import (
+    FWActionResponse,
+    FWDownloadResponse,
     ModelRequest,
     ModelResponse,
     StartupStatusResponse,
@@ -221,6 +230,8 @@ async def list_models():
                 "is_current": name == current.get("model_size"),
                 "is_loaded": current.get("is_loaded", False)
                 and name == current.get("model_size"),
+                "status": get_fw_model_status(name),
+                "error": get_fw_download_error(name),
             }
         )
 
@@ -252,6 +263,74 @@ async def switch_model(request: ModelRequest):
         "current_model": request.model,
         "message": f"Model switched to '{request.model}'. Will be loaded on next transcription.",
     }
+
+
+# ============ Faster-Whisper Download/Delete Endpoints ============
+
+
+@app.post("/models/download/{model_name}", response_model=FWDownloadResponse)
+async def download_fw_model_endpoint(model_name: str):
+    """Start downloading a Faster-Whisper model in the background."""
+    if model_name not in AVAILABLE_MODELS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown model: {model_name}. Available: {list(AVAILABLE_MODELS.keys())}",
+        )
+
+    status = get_fw_model_status(model_name)
+    if status == "downloading":
+        return FWDownloadResponse(model_name=model_name, status="downloading")
+    if status == "ready":
+        return FWDownloadResponse(model_name=model_name, status="ready")
+
+    import threading
+
+    def do_download():
+        download_fw_model(model_name)
+
+    thread = threading.Thread(target=do_download, daemon=True)
+    thread.start()
+
+    return FWDownloadResponse(model_name=model_name, status="downloading")
+
+
+@app.get("/models/download_status/{model_name}", response_model=FWDownloadResponse)
+async def get_fw_download_status(model_name: str):
+    """Get the download status of a Faster-Whisper model."""
+    status = get_fw_model_status(model_name)
+    error = get_fw_download_error(model_name)
+    return FWDownloadResponse(model_name=model_name, status=status, error=error)
+
+
+@app.delete("/models/{model_name}", response_model=FWActionResponse)
+async def delete_fw_model_endpoint(model_name: str):
+    """Delete a downloaded Faster-Whisper model to free disk space."""
+    if model_name not in AVAILABLE_MODELS:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown model: {model_name}",
+        )
+
+    status = get_fw_model_status(model_name)
+    if status == "downloading":
+        raise HTTPException(
+            status_code=409,
+            detail="Cannot delete model while it's downloading",
+        )
+
+    # Unload if this is the currently loaded model
+    transcriber = state_manager.get_transcriber()
+    current = transcriber.get_model_info()
+    if current.get("model_size") == model_name and current.get("is_loaded"):
+        transcriber._model_manager.unload_model()
+        transcriber._model = None
+
+    success = delete_fw_model(model_name)
+    return FWActionResponse(
+        success=success,
+        message="Model deleted successfully" if success else "Failed to delete model",
+        model_name=model_name,
+    )
 
 
 # ============ Vocabulary Endpoints ============

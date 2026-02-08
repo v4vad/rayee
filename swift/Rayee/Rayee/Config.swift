@@ -108,8 +108,9 @@ enum Config {
     // MARK: - Settings Window
 
     /// Width of the Settings window
-    static let settingsWindowWidth: CGFloat = 500
+    static let settingsWindowWidth: CGFloat = 650
 
     /// Minimum height of the Settings window
     static let settingsWindowMinHeight: CGFloat = 500
+
 }

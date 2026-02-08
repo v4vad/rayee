@@ -78,6 +78,25 @@ class StartupStatusResponse(BaseModel):
     error: Optional[str] = None
 
 
+# ============ Faster-Whisper Download Models ============
+
+
+class FWDownloadResponse(BaseModel):
+    """Response from Faster-Whisper download endpoints."""
+
+    model_name: str
+    status: str
+    error: Optional[str] = None
+
+
+class FWActionResponse(BaseModel):
+    """Generic response for Faster-Whisper actions (delete)."""
+
+    success: bool
+    message: str
+    model_name: Optional[str] = None
+
+
 # ============ Helper Functions ============
 
 
@@ -126,17 +145,17 @@ def read_wav_file(audio_path: str) -> np.ndarray:
 
 
 async def transcribe_audio(audio_data: np.ndarray, executor) -> str:
-    """Transcribe audio data using the loaded model.
+    """Transcribe audio data using the loaded Faster-Whisper model.
 
     Args:
         audio_data: The audio to transcribe as a numpy array.
         executor: Which thread pool to run in (audio_executor or upload_executor).
     """
     vocab_prompt = state_manager.vocabulary.get_prompt()
-    transcriber = state_manager.get_transcriber()
 
     def do_transcribe():
         with state_manager.transcription_lock:
+            transcriber = state_manager.get_transcriber()
             return transcriber.transcribe(
                 audio_data, initial_prompt=vocab_prompt if vocab_prompt else None
             )

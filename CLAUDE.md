@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rayee is a local voice-to-text transcription app for macOS. It uses a two-component architecture:
 - **Swift/SwiftUI frontend** (`swift/`) - Native macOS menu bar app handling UI, hotkeys, and auto-paste
-- **Python backend** (`python/`) - AI transcription engine using Faster-Whisper and MLX-Whisper
+- **Python backend** (`python/`) - AI transcription engine using Faster-Whisper
 
 The Swift app communicates with the Python server via local HTTP/Unix socket. All processing happens locally—no cloud services.
 
@@ -20,7 +20,7 @@ The Swift app communicates with the Python server via local HTTP/Unix socket. Al
 ```
 Swift App (UI layer)          Python Server (AI layer)
 ├── Global hotkey listening   ├── Audio recording (sounddevice)
-├── Menu bar + status window  ├── Transcription (faster-whisper, mlx-whisper)
+├── Menu bar + status window  ├── Transcription (faster-whisper)
 ├── Auto-paste via a11y APIs  ├── Voice activity detection (silero-vad)
 └── Settings management       └── Custom vocabulary handling
 ```
@@ -52,7 +52,6 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 
 **Python:**
 - `faster-whisper` - Primary transcription engine
-- `mlx-whisper` - Apple Silicon optimized alternative
 - `sounddevice` - Audio capture
 - `silero-vad` - Voice activity detection
 - `fastapi` or `flask` - Local API server
@@ -176,6 +175,16 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 1. Accessibility permission must be granted (same as hotkey)
 2. Check if "Auto-paste" is enabled in Settings
 3. Some apps block simulated keyboard input
+
+## Agent Delegation
+
+Use subagents for cost-effective model selection:
+
+| Task Type | Agent | Model | Examples |
+|-----------|-------|-------|----------|
+| Quick commands | `quick-executor` | Haiku | `git status`, `python run_server.py`, `pytest`, `pre-commit run` |
+| Coding work | `coder` | Sonnet | Writing Swift/Python code, fixing bugs, adding features |
+| Deep thinking | `architect` | Opus | Architecture decisions, complex debugging, code review |
 
 ## Testing & Verification
 

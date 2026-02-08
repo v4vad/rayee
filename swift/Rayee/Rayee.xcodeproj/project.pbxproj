@@ -41,6 +41,9 @@
 		A10002E0001 /* UploadsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002E0000 /* UploadsView.swift */; };
 		A10002F0001 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002F0000 /* GeneralSettingsTab.swift */; };
 		A1000300001 /* UploadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000300000 /* UploadRow.swift */; };
+		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
+		A1000360001 /* FasterWhisperManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000360000 /* FasterWhisperManager.swift */; };
+		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +84,9 @@
 		A10002E0000 /* UploadsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadsView.swift; sourceTree = "<group>"; };
 		A10002F0000 /* GeneralSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsTab.swift; sourceTree = "<group>"; };
 		A1000300000 /* UploadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadRow.swift; sourceTree = "<group>"; };
+		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
+		A1000360000 /* FasterWhisperManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FasterWhisperManager.swift; sourceTree = "<group>"; };
+		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +144,9 @@
 				A10002E0000 /* UploadsView.swift */,
 				A10002F0000 /* GeneralSettingsTab.swift */,
 				A1000300000 /* UploadRow.swift */,
+				A1000330000 /* ModelsSettingsTab.swift */,
+				A1000360000 /* FasterWhisperManager.swift */,
+				A1000370000 /* ModelRow.swift */,
 				A10001E0000 /* Assets.xcassets */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
@@ -255,6 +264,9 @@
 				A10002E0001 /* UploadsView.swift in Sources */,
 				A10002F0001 /* GeneralSettingsTab.swift in Sources */,
 				A1000300001 /* UploadRow.swift in Sources */,
+				A1000330001 /* ModelsSettingsTab.swift in Sources */,
+				A1000360001 /* FasterWhisperManager.swift in Sources */,
+				A1000370001 /* ModelRow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
