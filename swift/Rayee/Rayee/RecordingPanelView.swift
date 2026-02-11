@@ -124,6 +124,24 @@ struct RecordingPanelView: View {
                 .frame(height: 60)
 
             // Copy button
+            copyButton
+        }
+    }
+
+    @ViewBuilder
+    private var copyButton: some View {
+        if #available(macOS 26, *) {
+            Button(action: onCopy) {
+                HStack(spacing: 4) {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 11))
+                    Text("Copy")
+                        .font(.system(size: 12, weight: .medium))
+                }
+            }
+            .buttonStyle(.glassProminent)
+            .disabled(transcribedText.isEmpty)
+        } else {
             Button(action: onCopy) {
                 HStack(spacing: 4) {
                     Image(systemName: "doc.on.doc")
@@ -137,24 +155,39 @@ struct RecordingPanelView: View {
         }
     }
 
+    @ViewBuilder
     private var buttonBar: some View {
-        HStack {
-            // Cancel button (always visible)
-            HotkeyButton("Cancel", hotkeySymbol: "⎋", action: onCancel)
-
-            Spacer()
-
-            // Done button (only during recording)
-            if isRecording {
-                HotkeyButton("Done", hotkeySymbol: "↵", isProminent: true, action: onStop)
+        if #available(macOS 26, *) {
+            GlassEffectContainer {
+                HStack {
+                    GlassHotkeyButton("Cancel", hotkeySymbol: "⎋", action: onCancel)
+                    Spacer()
+                    if isRecording {
+                        GlassHotkeyButton("Done", hotkeySymbol: "↵", isProminent: true, action: onStop)
+                    }
+                }
+            }
+        } else {
+            HStack {
+                HotkeyButton("Cancel", hotkeySymbol: "⎋", action: onCancel)
+                Spacer()
+                if isRecording {
+                    HotkeyButton("Done", hotkeySymbol: "↵", isProminent: true, action: onStop)
+                }
             }
         }
     }
 
+    @ViewBuilder
     private var panelBackground: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .fill(.ultraThinMaterial)
-            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+        if #available(macOS 26, *) {
+            Color.clear
+                .glassEffect(.regular, in: .rect(cornerRadius: Config.panelCornerRadiusGlass))
+        } else {
+            RoundedRectangle(cornerRadius: Config.panelCornerRadiusLegacy)
+                .fill(.ultraThinMaterial)
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+        }
     }
 }
 

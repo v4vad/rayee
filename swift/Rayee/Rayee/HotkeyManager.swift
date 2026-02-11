@@ -65,14 +65,14 @@ class HotkeyManager: ObservableObject {
     func start() {
         // Check permission first
         guard hasAccessibilityPermissionSilent() else {
-            print("HotkeyManager: Cannot start - no accessibility permission")
+            AppLogger.log("Cannot start - no accessibility permission", category: "hotkey")
             isEnabled = false
             return
         }
 
         // Don't start twice
         guard eventTap == nil else {
-            print("HotkeyManager: Already running")
+            AppLogger.log("Already running", category: "hotkey")
             return
         }
 
@@ -102,7 +102,7 @@ class HotkeyManager: ObservableObject {
         )
 
         guard let eventTap = eventTap else {
-            print("HotkeyManager: Failed to create event tap")
+            AppLogger.log("Failed to create event tap", category: "hotkey")
             isEnabled = false
             return
         }
@@ -111,7 +111,7 @@ class HotkeyManager: ObservableObject {
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
 
         guard let runLoopSource = runLoopSource else {
-            print("HotkeyManager: Failed to create run loop source")
+            AppLogger.log("Failed to create run loop source", category: "hotkey")
             self.eventTap = nil
             isEnabled = false
             return
@@ -123,7 +123,7 @@ class HotkeyManager: ObservableObject {
         CGEvent.tapEnable(tap: eventTap, enable: true)
 
         isEnabled = true
-        print("HotkeyManager: Started listening for \(SettingsManager.shared.hotkeyConfig.displayString)")
+        AppLogger.log("Started listening for \(SettingsManager.shared.hotkeyConfig.displayString)", category: "hotkey")
     }
 
     /// Stop listening for the global hotkey
@@ -190,6 +190,7 @@ class HotkeyManager: ObservableObject {
 
         if keyCode == config.keyCode && modifiers == config.modifiers {
             // Hotkey matched! Execute the callback on the main thread
+            AppLogger.log("Hotkey matched! keyCode=\(keyCode) modifiers=\(modifiers)", category: "hotkey")
             DispatchQueue.main.async { [weak self] in
                 self?.onHotkeyPressed?()
             }

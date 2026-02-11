@@ -178,6 +178,14 @@ fi
 success "Python server bundled successfully"
 echo ""
 
+# Re-sign the app after modifying the bundle
+# Adding the Python server invalidates Xcode's original signature
+info "Re-signing app bundle..."
+codesign --force --deep --sign - "$APP_PATH"
+codesign --verify --deep --strict "$APP_PATH"
+success "App re-signed successfully"
+echo ""
+
 # ==========================================
 # Step 4: Create DMG
 # ==========================================
