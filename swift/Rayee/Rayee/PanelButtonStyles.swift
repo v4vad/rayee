@@ -70,6 +70,50 @@ struct HotkeyButton: View {
     }
 }
 
+/// Glass-styled button with keyboard hint for macOS 26 Liquid Glass
+/// Uses .glassEffect() instead of the custom PillButtonStyle
+@available(macOS 26, *)
+struct GlassHotkeyButton: View {
+    let title: String
+    let hotkeySymbol: String
+    let isProminent: Bool
+    let action: () -> Void
+
+    init(
+        _ title: String,
+        hotkeySymbol: String,
+        isProminent: Bool = false,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.hotkeySymbol = hotkeySymbol
+        self.isProminent = isProminent
+        self.action = action
+    }
+
+    var body: some View {
+        if isProminent {
+            buttonLabel
+                .buttonStyle(.glassProminent)
+        } else {
+            buttonLabel
+                .buttonStyle(.glass)
+        }
+    }
+
+    private var buttonLabel: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Text(hotkeySymbol)
+                    .font(.system(size: 11))
+                    .opacity(0.7)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+            }
+        }
+    }
+}
+
 #Preview("Buttons") {
     HStack(spacing: 12) {
         HotkeyButton("Cancel", hotkeySymbol: "⎋") {}

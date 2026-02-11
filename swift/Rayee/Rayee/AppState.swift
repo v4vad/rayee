@@ -69,6 +69,9 @@ class AppState: ObservableObject {
         setupBindings()
         setupHotkey()
         healthMonitor.start()
+        // Start hotkey listening immediately (works if permission is already granted)
+        // Also retried in MenuBarExtra .onAppear as a fallback for first-launch
+        startHotkeyListening()
     }
 
     deinit {
@@ -108,9 +111,24 @@ class AppState: ObservableObject {
     }
 
     /// Start listening for the global hotkey
-    /// Note: Permissions are requested at app launch, so we just start listening here
+    /// Called at init() and again in .onAppear as a retry if permission wasn't ready yet
     func startHotkeyListening() {
+        guard !hotkeyManager.isEnabled else { return }  // Already running
+        AppLogger.log("startHotkeyListening() called", category: "hotkey")
         hotkeyManager.start()
+
+        // If it failed (permission not ready yet), retry a few times with delays
+        // macOS can take a moment to load the permission database after launch
+        if !hotkeyManager.isEnabled {
+            for attempt in 1...5 {
+                let delay = Double(attempt) * 1.0  // 1s, 2s, 3s, 4s, 5s
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                    guard let self = self, !self.hotkeyManager.isEnabled else { return }
+                    AppLogger.log("Retry #\(attempt) starting hotkey listener", category: "hotkey")
+                    self.hotkeyManager.start()
+                }
+            }
+        }
     }
 
     // MARK: - Computed Properties
@@ -288,6 +306,7 @@ class AppState: ObservableObject {
         // Now works as a toggle: press to start, press again to stop and transcribe
         hotkeyManager.onHotkeyPressed = { [weak self] in
             guard let self = self else { return }
+            AppLogger.log("Hotkey pressed! Current status: \(self.status.rawValue)", category: "hotkey")
 
             if self.status == .recording {
                 // Already recording - stop and transcribe
@@ -295,6 +314,8 @@ class AppState: ObservableObject {
             } else if self.status == .ready || self.status == .error {
                 // Not recording - start transcription
                 self.startTranscription(autoPaste: true)
+            } else {
+                AppLogger.log("Hotkey ignored - status is \(self.status.rawValue)", category: "hotkey")
             }
         }
 

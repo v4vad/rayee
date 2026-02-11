@@ -73,6 +73,12 @@ enum Config {
 
     // MARK: - Recording Panel
 
+    /// Corner radius for Liquid Glass panels (slightly larger for the glass look)
+    static let panelCornerRadiusGlass: CGFloat = 16
+
+    /// Corner radius for legacy material panels (pre-macOS 26)
+    static let panelCornerRadiusLegacy: CGFloat = 12
+
     /// Width of the floating recording panel
     static let recordingPanelWidth: CGFloat = 260
 
