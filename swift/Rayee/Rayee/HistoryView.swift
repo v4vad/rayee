@@ -183,20 +183,26 @@ struct TranscriptionRow: View {
     let onDelete: () -> Void
 
     @State private var isHovering = false
+    @State private var showOriginal = false
+
+    /// The text to display (final or original)
+    private var displayText: String {
+        if showOriginal, let original = record.originalText {
+            return original
+        }
+        return isExpanded ? record.text : record.textPreview
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Main row content
             HStack(alignment: .top, spacing: 12) {
-                // Text content (clickable to expand)
                 VStack(alignment: .leading, spacing: 4) {
-                    // Show full text if expanded, preview if not
-                    Text(isExpanded ? record.text : record.textPreview)
+                    Text(displayText)
                         .font(.body)
                         .lineLimit(isExpanded ? nil : 2)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    // Metadata: timestamp and model
+                    // Metadata row
                     HStack(spacing: 8) {
                         Text(record.formattedTimestamp)
                             .font(.caption)
@@ -213,16 +219,34 @@ struct TranscriptionRow: View {
                             .padding(.vertical, 2)
                             .background(Color.secondary.opacity(0.15))
                             .cornerRadius(4)
+
+                        // Transformation tags
+                        ForEach(record.transformationTags, id: \.self) { tag in
+                            Text(tag.capitalized)
+                                .font(.caption2)
+                                .foregroundColor(.purple)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(Color.purple.opacity(0.12))
+                                .cornerRadius(3)
+                        }
+                    }
+
+                    // Show original toggle
+                    if record.wasTransformed && isExpanded {
+                        Button(action: { showOriginal.toggle() }) {
+                            Text(showOriginal ? "Show transformed" : "Show original")
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    onToggleExpand()
-                }
+                .onTapGesture { onToggleExpand() }
 
                 Spacer()
 
-                // Action buttons (show on hover or when expanded)
                 if isHovering || isExpanded {
                     HStack(spacing: 8) {
                         Button(action: onCopy) {
@@ -244,9 +268,7 @@ struct TranscriptionRow: View {
         }
         .padding(12)
         .background(isHovering ? Color(NSColor.controlBackgroundColor) : Color.clear)
-        .onHover { hovering in
-            isHovering = hovering
-        }
+        .onHover { hovering in isHovering = hovering }
     }
 }
 
