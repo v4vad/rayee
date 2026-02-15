@@ -11,6 +11,7 @@ import SwiftUI
 struct SimpleMenuView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.openWindow) private var openWindow
+    @State private var hasCheckedFirstLaunch = false
 
     var body: some View {
         // Record button with hotkey hint
@@ -50,6 +51,12 @@ struct SimpleMenuView: View {
 
         Divider()
 
+        // System Status (setup guide)
+        Button("System Status...") {
+            openWindow(id: "setup-guide")
+            NSApplication.shared.activate(ignoringOtherApps: true)
+        }
+
         // Settings
         Button("Settings...") {
             openSettingsWindow(tab: nil)
@@ -63,6 +70,18 @@ struct SimpleMenuView: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q", modifiers: .command)
+        .onAppear {
+            // Show setup guide on first launch
+            if !hasCheckedFirstLaunch {
+                hasCheckedFirstLaunch = true
+                if !SettingsManager.shared.hasCompletedSetup {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        openWindow(id: "setup-guide")
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Computed Properties

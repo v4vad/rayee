@@ -42,6 +42,9 @@ class AppState: ObservableObject {
 
     // MARK: - Dependencies
 
+    /// Bridge for communicating with the Python server
+    private let pythonBridge = PythonBridge()
+
     /// Handles recording → transcription → paste flow
     private let transcriptionCoordinator = TranscriptionCoordinator()
 
@@ -221,6 +224,17 @@ class AppState: ObservableObject {
             self?.copyFromPanel()
         }
 
+        // Transformation callbacks
+        recordingPanelController.onTransform = { [weak self] type in
+            self?.handleTransformation(type: type)
+        }
+        recordingPanelController.onUseTransformed = { [weak self] text in
+            self?.handleUseTransformed(text: text)
+        }
+        recordingPanelController.onUseOriginal = { [weak self] in
+            self?.handleUseOriginal()
+        }
+
         // Observe server manager state
         serverManager.$state
             .receive(on: DispatchQueue.main)
@@ -326,6 +340,47 @@ class AppState: ObservableObject {
             }
             return false  // Let Escape pass through to other apps
         }
+    }
+
+    // MARK: - Transformation Handling
+
+    /// Handle a transformation request from the recording panel
+    private func handleTransformation(type: TransformationType) {
+        let text = recordingPanelController.transcribedText
+        guard !text.isEmpty else { return }
+
+        let transformState = recordingPanelController.transformState
+        transformState.startTransformation(text: text, type: type)
+        recordingPanelController.updateWindowSizeForTransform()
+
+        Task { @MainActor in
+            do {
+                let response = try await pythonBridge.transformText(text: text, type: type.rawValue)
+                transformState.completeTransformation(transformedText: response.transformedText)
+                recordingPanelController.updateWindowSizeForTransform()
+            } catch {
+                transformState.failTransformation(message: error.localizedDescription)
+            }
+        }
+    }
+
+    /// Handle user accepting the transformed text
+    private func handleUseTransformed(text: String) {
+        recordingPanelController.transcribedText = text
+        transcribedText = text
+        recordingPanelController.transformState.reset()
+        recordingPanelController.updateWindowSizeForTransform()
+    }
+
+    /// Handle user reverting to original text
+    private func handleUseOriginal() {
+        let originalText = recordingPanelController.transformState.previewOriginal
+        if !originalText.isEmpty {
+            recordingPanelController.transcribedText = originalText
+            transcribedText = originalText
+        }
+        recordingPanelController.transformState.reset()
+        recordingPanelController.updateWindowSizeForTransform()
     }
 
     /// Cancel recording without transcribing (called when user presses Escape)

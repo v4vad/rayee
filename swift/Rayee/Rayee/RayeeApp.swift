@@ -49,6 +49,14 @@ struct RayeeApp: App {
         .windowResizability(.contentMinSize)
         .defaultSize(width: Config.settingsWindowWidth, height: Config.settingsWindowMinHeight)
         .defaultPosition(.center)
+
+        // Setup guide window - shown on first launch or from menu
+        Window("System Status", id: "setup-guide") {
+            SetupGuideView()
+                .environmentObject(appState)
+        }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }
 
@@ -67,6 +75,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // In development mode (no bundled server), this will detect that
         // and let the user run the server manually
         ServerManager.shared.start()
+
     }
 
     func applicationWillTerminate(_ notification: Notification) {

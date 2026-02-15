@@ -14,6 +14,7 @@ import Carbon.HIToolbox
 enum SettingsTab: String, CaseIterable, Identifiable {
     case general
     case models
+    case transformations
     case vocabulary
     case history
     case uploads
@@ -24,6 +25,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "General"
         case .models: return "Models"
+        case .transformations: return "Transforms"
         case .vocabulary: return "Vocabulary"
         case .history: return "History"
         case .uploads: return "Uploads"
@@ -34,6 +36,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         switch self {
         case .general: return "gear"
         case .models: return "cpu"
+        case .transformations: return "wand.and.stars"
         case .vocabulary: return "text.book.closed"
         case .history: return "clock.arrow.circlepath"
         case .uploads: return "square.and.arrow.up"
@@ -68,6 +71,8 @@ struct SettingsView: View {
                 switch requestedTab {
                 case "models":
                     selectedTab = .models
+                case "transformations":
+                    selectedTab = .transformations
                 case "vocabulary":
                     selectedTab = .vocabulary
                 case "history":
@@ -105,6 +110,8 @@ struct SettingsView: View {
             )
         case .models:
             ModelsSettingsTab()
+        case .transformations:
+            TransformationsSettingsTab()
         case .vocabulary:
             vocabularyTab
         case .history:
@@ -232,9 +239,10 @@ struct SettingsView: View {
     }
 }
 
-// MARK: - Notification for hotkey changes
+// MARK: - Notification Names
 extension Notification.Name {
     static let hotkeyConfigChanged = Notification.Name("hotkeyConfigChanged")
+    static let openSetupGuide = Notification.Name("openSetupGuide")
 }
 
 #Preview {

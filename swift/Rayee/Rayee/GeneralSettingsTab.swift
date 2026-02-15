@@ -34,14 +34,7 @@ struct GeneralSettingsTab: View {
 
             // Hotkey Section
             Section {
-                HStack {
-                    Text("Global Hotkey")
-                    Spacer()
-                    hotkeyRecorderButton
-                }
-                Text("Press this keyboard shortcut anywhere to start transcription")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HotkeyPickerView()
             }
 
             Divider()
@@ -120,34 +113,6 @@ struct GeneralSettingsTab: View {
             }
         }
         .padding()
-    }
-
-    // MARK: - Hotkey Recorder Button
-    private var hotkeyRecorderButton: some View {
-        Button(action: {
-            isRecordingHotkey.toggle()
-        }) {
-            HStack(spacing: 4) {
-                if isRecordingHotkey {
-                    Text("Press keys...")
-                        .foregroundColor(.orange)
-                } else {
-                    Text(settings.hotkeyConfig.displayString)
-                        .fontWeight(.medium)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isRecordingHotkey ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isRecordingHotkey ? Color.orange : Color.clear, lineWidth: 2)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Accessibility Status View

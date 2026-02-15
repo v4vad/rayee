@@ -137,6 +137,14 @@ enum Config {
     /// Whether background upload transcription is enabled by default
     static let defaultBackgroundUpload = false
 
+    // MARK: - Text Transformations
+
+    /// Timeout for transformation requests (LLM inference can take a few seconds)
+    static let transformationTimeout: TimeInterval = 30.0
+
+    /// Height of the recording panel when showing transformation preview
+    static let recordingPanelHeightWithTransform: CGFloat = 360
+
     // MARK: - Settings Window
 
     /// Width of the Settings window

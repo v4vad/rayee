@@ -47,7 +47,7 @@ struct SetupGuideView: View {
             footerView
                 .padding(16)
         }
-        .frame(width: 480, minHeight: 500)
+        .frame(width: 480, height: 560)
         .onAppear { refreshStatus() }
         .onReceive(timer) { _ in refreshStatus() }
     }
