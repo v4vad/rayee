@@ -22,6 +22,8 @@ struct TransformationPreviewView: View {
         VStack(spacing: 10) {
             if transformState.isTransforming {
                 loadingView
+            } else if let error = transformState.error {
+                errorView(message: error)
             } else if transformState.showPreview {
                 previewContent
             }
@@ -37,9 +39,55 @@ struct TransformationPreviewView: View {
             Text("Transforming...")
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
+
+            Button("Cancel") {
+                onUseOriginal()
+            }
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
+    }
+
+    // MARK: - Error State
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(.orange)
+
+            Text(userFriendlyError(message))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            Button("Dismiss") {
+                onUseOriginal()
+            }
+            .font(.system(size: 11))
+            .buttonStyle(.plain)
+            .foregroundColor(.accentColor)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+    }
+
+    /// Convert technical errors into plain language
+    private func userFriendlyError(_ message: String) -> String {
+        let lower = message.lowercased()
+        if lower.contains("connect") || lower.contains("server") {
+            return "Server not running. Check System Status."
+        }
+        if lower.contains("not downloaded") || lower.contains("model") {
+            return "Transform model not downloaded. Download it in Settings."
+        }
+        if lower.contains("timeout") || lower.contains("timed out") {
+            return "Transformation timed out. Try again?"
+        }
+        return message
     }
 
     // MARK: - Preview Content

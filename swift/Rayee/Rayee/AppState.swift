@@ -360,6 +360,7 @@ class AppState: ObservableObject {
                 recordingPanelController.updateWindowSizeForTransform()
             } catch {
                 transformState.failTransformation(message: error.localizedDescription)
+                recordingPanelController.updateWindowSizeForTransform()
             }
         }
     }

@@ -70,6 +70,11 @@ class TransformationState: ObservableObject {
     /// Whether to show the preview (original vs transformed)
     @Published var showPreview = false
 
+    /// Whether any transformation UI is active (loading, preview, or error)
+    var isActive: Bool {
+        isTransforming || showPreview || error != nil
+    }
+
     /// Reset all state
     func reset() {
         isTransforming = false

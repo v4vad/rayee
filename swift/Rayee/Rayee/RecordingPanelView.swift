@@ -135,8 +135,8 @@ struct RecordingPanelView: View {
 
     private var resultView: some View {
         VStack(spacing: 8) {
-            // Show transformation preview if active
-            if let tState = transformState, tState.showPreview || tState.isTransforming {
+            // Show transformation preview if active (loading, preview, or error)
+            if let tState = transformState, tState.isActive {
                 TransformationPreviewView(
                     transformState: tState,
                     onUseTransformed: { text in onUseTransformed?(text) },
