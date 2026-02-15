@@ -3,15 +3,15 @@
 Simple microphone test - records 3 seconds and shows if it captured anything.
 """
 
-import sounddevice as sd
 import numpy as np
+import sounddevice as sd
 
 print("Available audio devices:")
 print(sd.query_devices())
 print()
 
 # Get default input device info
-default_input = sd.query_devices(kind='input')
+default_input = sd.query_devices(kind="input")
 print(f"Default input device: {default_input['name']}")
 print(f"  Max input channels: {default_input['max_input_channels']}")
 print()
@@ -24,15 +24,15 @@ audio = sd.rec(
     int(3 * 16000),  # 3 seconds at 16kHz
     samplerate=16000,
     channels=1,
-    dtype='float32',
-    device=None  # Use default
+    dtype="float32",
+    device=None,  # Use default
 )
 sd.wait()
 
 # Check what we got
 audio = audio.flatten()
 max_level = np.max(np.abs(audio))
-rms = np.sqrt(np.mean(audio ** 2))
+rms = np.sqrt(np.mean(audio**2))
 
 print(f"Recording complete!")
 print(f"  Max amplitude: {max_level:.6f}")

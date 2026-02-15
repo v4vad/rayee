@@ -10,16 +10,16 @@ This script tests the complete voice-to-text pipeline:
 Run with: python test_rayee.py
 """
 
-import sys
 import os
+import sys
 
 # Add the rayee package to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from rayee.audio import AudioRecorder, record_for_duration, list_audio_devices
+from rayee.audio import AudioRecorder, list_audio_devices, record_for_duration
+from rayee.models import list_available_models
 from rayee.transcribe import Transcriber
 from rayee.vad import SmartRecorder
-from rayee.models import list_available_models
 
 
 def test_fixed_duration():
@@ -31,6 +31,7 @@ def test_fixed_duration():
     # Record for 5 seconds
     print("\nGet ready to speak! Recording starts in 2 seconds...")
     import time
+
     time.sleep(2)
 
     audio = record_for_duration(5.0)
@@ -63,7 +64,7 @@ def test_smart_recording():
     # Record with VAD
     recorder = SmartRecorder(
         silence_duration=1.5,  # Stop after 1.5 seconds of silence
-        max_duration=30.0,     # Maximum 30 seconds
+        max_duration=30.0,  # Maximum 30 seconds
     )
 
     audio = recorder.record()
@@ -141,13 +142,13 @@ def main():
         print()
         choice = input("Enter choice (1/2/3/q): ").strip().lower()
 
-        if choice == '1':
+        if choice == "1":
             test_fixed_duration()
-        elif choice == '2':
+        elif choice == "2":
             test_smart_recording()
-        elif choice == '3':
+        elif choice == "3":
             test_manual_recording()
-        elif choice == 'q':
+        elif choice == "q":
             print("Goodbye!")
             break
         else:

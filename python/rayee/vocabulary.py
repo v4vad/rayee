@@ -13,7 +13,6 @@ import os
 from pathlib import Path
 from typing import List, Set
 
-
 # Where vocabulary is stored - in your home directory so it persists
 DEFAULT_VOCAB_PATH = Path.home() / ".rayee" / "vocabulary.json"
 
@@ -49,7 +48,7 @@ class VocabularyManager:
         """Load vocabulary from the JSON file."""
         if self.vocab_path.exists():
             try:
-                with open(self.vocab_path, 'r') as f:
+                with open(self.vocab_path, "r") as f:
                     data = json.load(f)
                     self._words = set(data.get("words", []))
             except (json.JSONDecodeError, IOError) as e:
@@ -63,7 +62,7 @@ class VocabularyManager:
         # Create the directory if it doesn't exist
         self.vocab_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(self.vocab_path, 'w') as f:
+        with open(self.vocab_path, "w") as f:
             json.dump({"words": sorted(list(self._words))}, f, indent=2)
 
     def add_word(self, word: str) -> bool:

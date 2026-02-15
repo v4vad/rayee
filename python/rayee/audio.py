@@ -4,16 +4,16 @@ Audio Recording Module
 Handles recording audio from the microphone using sounddevice.
 """
 
+import queue
+import threading
+from typing import Optional
+
 import numpy as np
 import sounddevice as sd
-from typing import Optional
-import threading
-import queue
-
 
 # Audio settings - these values work well for speech recognition
 SAMPLE_RATE = 16000  # 16kHz is what Whisper expects
-CHANNELS = 1         # Mono audio (one channel)
+CHANNELS = 1  # Mono audio (one channel)
 
 
 class AudioRecorder:
@@ -54,8 +54,8 @@ class AudioRecorder:
         self._stream = sd.InputStream(
             samplerate=self.sample_rate,
             channels=CHANNELS,
-            dtype='float32',
-            callback=self._audio_callback
+            dtype="float32",
+            callback=self._audio_callback,
         )
         self._stream.start()
         print("Recording started...")
@@ -69,7 +69,7 @@ class AudioRecorder:
         """
         if not self.is_recording:
             print("Not currently recording!")
-            return np.array([], dtype='float32')
+            return np.array([], dtype="float32")
 
         self.is_recording = False
 
@@ -86,7 +86,7 @@ class AudioRecorder:
         print("Recording stopped.")
 
         if not self._recorded_chunks:
-            return np.array([], dtype='float32')
+            return np.array([], dtype="float32")
 
         # Combine all chunks into one array
         audio_data = np.concatenate(self._recorded_chunks, axis=0)
@@ -123,7 +123,7 @@ def record_for_duration(duration: float, sample_rate: int = SAMPLE_RATE) -> np.n
         int(duration * sample_rate),
         samplerate=sample_rate,
         channels=CHANNELS,
-        dtype='float32'
+        dtype="float32",
     )
     sd.wait()  # Wait until recording is finished
     print("Recording complete.")

@@ -4,9 +4,11 @@ Transcription Module
 Converts audio to text using Faster-Whisper models.
 """
 
+from typing import List, Optional, Tuple
+
 import numpy as np
-from typing import Optional, List, Tuple
-from .models import ModelManager, ModelSize, DEFAULT_MODEL
+
+from .models import DEFAULT_MODEL, ModelManager, ModelSize
 
 
 class Transcriber:
@@ -68,8 +70,8 @@ class Transcriber:
             audio,
             language=language,
             initial_prompt=initial_prompt,
-            beam_size=5,       # Higher = more accurate but slower
-            vad_filter=True,   # Filter out silence
+            beam_size=5,  # Higher = more accurate but slower
+            vad_filter=True,  # Filter out silence
         )
 
         # Combine all segments into one text string
@@ -105,11 +107,7 @@ class Transcriber:
 
         results = []
         for segment in segments:
-            results.append((
-                segment.start,
-                segment.end,
-                segment.text.strip()
-            ))
+            results.append((segment.start, segment.end, segment.text.strip()))
 
         return results
 
