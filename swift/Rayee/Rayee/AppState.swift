@@ -69,9 +69,8 @@ class AppState: ObservableObject {
         setupBindings()
         setupHotkey()
         healthMonitor.start()
-        // Start hotkey listening immediately (works if permission is already granted)
-        // Also retried in MenuBarExtra .onAppear as a fallback for first-launch
-        startHotkeyListening()
+        // Hotkey listening is started from RayeeApp.swift .onAppear
+        // This ensures it happens after the UI is ready and permissions are loaded
     }
 
     deinit {
@@ -111,22 +110,18 @@ class AppState: ObservableObject {
     }
 
     /// Start listening for the global hotkey
-    /// Called at init() and again in .onAppear as a retry if permission wasn't ready yet
+    /// Called from .onAppear in RayeeApp when the UI is ready
     func startHotkeyListening() {
-        guard !hotkeyManager.isEnabled else { return }  // Already running
         AppLogger.log("startHotkeyListening() called", category: "hotkey")
         hotkeyManager.start()
 
-        // If it failed (permission not ready yet), retry a few times with delays
-        // macOS can take a moment to load the permission database after launch
+        // If it failed (permission not ready yet), try once more after a delay
+        // This handles the edge case where .onAppear happens before macOS loads permissions
         if !hotkeyManager.isEnabled {
-            for attempt in 1...5 {
-                let delay = Double(attempt) * 1.0  // 1s, 2s, 3s, 4s, 5s
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                    guard let self = self, !self.hotkeyManager.isEnabled else { return }
-                    AppLogger.log("Retry #\(attempt) starting hotkey listener", category: "hotkey")
-                    self.hotkeyManager.start()
-                }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+                guard let self = self, !self.hotkeyManager.isEnabled else { return }
+                AppLogger.log("Delayed retry starting hotkey listener", category: "hotkey")
+                self.hotkeyManager.start()
             }
         }
     }

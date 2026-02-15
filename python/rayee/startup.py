@@ -102,9 +102,12 @@ async def on_startup():
 
 async def on_shutdown():
     """Called when the FastAPI server shuts down."""
-    audio_executor.shutdown(wait=False)
-    upload_executor.shutdown(wait=False)
     print("Server shutting down...")
+    # Wait for executors to finish their current tasks before shutting down
+    # This prevents "cannot schedule new futures" errors during model loading
+    audio_executor.shutdown(wait=True, cancel_futures=False)
+    upload_executor.shutdown(wait=True, cancel_futures=False)
+    print("All background tasks completed.")
 
 
 def run_server(host: str = HOST, port: int = PORT):

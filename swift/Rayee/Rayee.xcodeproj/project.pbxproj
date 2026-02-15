@@ -26,11 +26,10 @@
 		A1000130001 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000130000 /* Config.swift */; };
 		A1000140001 /* HealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000140000 /* HealthMonitor.swift */; };
 		A1000150001 /* TranscriptionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000150000 /* TranscriptionCoordinator.swift */; };
-		A1000160001 /* ModernWaveformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000160000 /* ModernWaveformView.swift */; };
+		A1000380001 /* DotGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000380000 /* DotGridView.swift */; };
 		A1000170001 /* AudioLevelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000170000 /* AudioLevelMonitor.swift */; };
 		A1000180001 /* RecordingPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000180000 /* RecordingPanelView.swift */; };
 		A1000190001 /* RecordingPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000190000 /* RecordingPanelController.swift */; };
-		A10001A0001 /* TranscribingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001A0000 /* TranscribingIndicator.swift */; };
 		A10001B0001 /* PanelButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001B0000 /* PanelButtonStyles.swift */; };
 		A10001C0001 /* PasteTargetDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001C0000 /* PasteTargetDetector.swift */; };
 		A10001D0001 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001D0000 /* AppLogger.swift */; };
@@ -68,11 +67,10 @@
 		A1000130000 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1000140000 /* HealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMonitor.swift; sourceTree = "<group>"; };
 		A1000150000 /* TranscriptionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCoordinator.swift; sourceTree = "<group>"; };
-		A1000160000 /* ModernWaveformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModernWaveformView.swift; sourceTree = "<group>"; };
+		A1000380000 /* DotGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridView.swift; sourceTree = "<group>"; };
 		A1000170000 /* AudioLevelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelMonitor.swift; sourceTree = "<group>"; };
 		A1000180000 /* RecordingPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelView.swift; sourceTree = "<group>"; };
 		A1000190000 /* RecordingPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelController.swift; sourceTree = "<group>"; };
-		A10001A0000 /* TranscribingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscribingIndicator.swift; sourceTree = "<group>"; };
 		A10001B0000 /* PanelButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelButtonStyles.swift; sourceTree = "<group>"; };
 		A10001C0000 /* PasteTargetDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTargetDetector.swift; sourceTree = "<group>"; };
 		A10001D0000 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
@@ -129,11 +127,10 @@
 				A1000130000 /* Config.swift */,
 				A1000140000 /* HealthMonitor.swift */,
 				A1000150000 /* TranscriptionCoordinator.swift */,
-				A1000160000 /* ModernWaveformView.swift */,
+				A1000380000 /* DotGridView.swift */,
 				A1000170000 /* AudioLevelMonitor.swift */,
 				A1000180000 /* RecordingPanelView.swift */,
 				A1000190000 /* RecordingPanelController.swift */,
-				A10001A0000 /* TranscribingIndicator.swift */,
 				A10001B0000 /* PanelButtonStyles.swift */,
 				A10001C0000 /* PasteTargetDetector.swift */,
 				A10001D0000 /* AppLogger.swift */,
@@ -249,11 +246,10 @@
 				A1000130001 /* Config.swift in Sources */,
 				A1000140001 /* HealthMonitor.swift in Sources */,
 				A1000150001 /* TranscriptionCoordinator.swift in Sources */,
-				A1000160001 /* ModernWaveformView.swift in Sources */,
+				A1000380001 /* DotGridView.swift in Sources */,
 				A1000170001 /* AudioLevelMonitor.swift in Sources */,
 				A1000180001 /* RecordingPanelView.swift in Sources */,
 				A1000190001 /* RecordingPanelController.swift in Sources */,
-				A10001A0001 /* TranscribingIndicator.swift in Sources */,
 				A10001B0001 /* PanelButtonStyles.swift in Sources */,
 				A10001C0001 /* PasteTargetDetector.swift in Sources */,
 				A10001D0001 /* AppLogger.swift in Sources */,
