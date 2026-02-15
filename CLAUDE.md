@@ -22,7 +22,9 @@ Swift App (UI layer)          Python Server (AI layer)
 ├── Global hotkey listening   ├── Audio recording (sounddevice)
 ├── Menu bar + status window  ├── Transcription (faster-whisper)
 ├── Auto-paste via a11y APIs  ├── Voice activity detection (silero-vad)
-└── Settings management       └── Custom vocabulary handling
+├── Text transform UI         ├── Text transformations (MLX + Llama 3.2)
+├── Setup guide / checklist   ├── Custom vocabulary handling
+└── Settings management       └── Model management (download, load, unload)
 ```
 
 ## Commands
@@ -54,12 +56,14 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 - `faster-whisper` - Primary transcription engine
 - `sounddevice` - Audio capture
 - `silero-vad` - Voice activity detection
-- `fastapi` or `flask` - Local API server
+- `fastapi` - Local API server
+- `mlx` + `mlx-lm` - Apple Silicon LLM inference for text transformations
 
 **Swift:**
 - SwiftUI for interface
 - Accessibility APIs for auto-paste
 - Carbon/CGEvent for global hotkeys
+- SQLite3 for transcription history
 
 ## User Context
 
@@ -176,6 +180,15 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 2. Check if "Auto-paste" is enabled in Settings
 3. Some apps block simulated keyboard input
 
+### Text transformations not working
+**Symptom:** Transformation buttons do nothing or show errors
+
+**Check these:**
+1. Is the transform model downloaded? Check Settings → Transformations
+2. Test the endpoint directly: `curl http://localhost:8765/transform/status`
+3. MLX requires Apple Silicon (M1+) — won't work on Intel Macs
+4. The model uses ~800MB RAM when loaded; check available memory
+
 ## Agent Delegation
 
 Use subagents for cost-effective model selection:
@@ -216,8 +229,21 @@ pip list | grep -E "faster-whisper|sounddevice|fastapi"
 xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 ```
 
+### Test text transformation
+```bash
+# Check if transform model is ready
+curl http://localhost:8765/transform/status
+
+# Test a transformation
+curl -X POST http://localhost:8765/transform \
+  -H "Content-Type: application/json" \
+  -d '{"text": "lets go too the store", "transformation_type": "grammar"}'
+```
+
 ### Test full flow
 1. Start Python server: `cd python && source venv/bin/activate && python run_server.py`
 2. Run the Swift app from Xcode or build folder
 3. Click the menu bar icon → Start Recording
 4. Speak something → Text should appear
+5. Click a transformation button (Grammar, Bullets, etc.) → Preview appears
+6. Click "Use This" to accept or "Original" to revert

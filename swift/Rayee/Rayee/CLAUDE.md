@@ -8,28 +8,70 @@ The Swift app handles everything the user sees and interacts with:
 - **Menu bar icon** that shows current status
 - **Global hotkey** (Option+Space) to start recording from any app
 - **Auto-paste** - automatically types transcribed text where your cursor is
-- **Settings** - configure hotkey, model, vocabulary, sounds
-- **History** - saves and searches past transcriptions
+- **Text transformations** - fix grammar, rephrase, format as bullets, change tone
+- **Setup guide** - first-launch checklist showing what's ready and what needs attention
+- **Settings** - configure hotkey, model, vocabulary, sounds, transformations
+- **History** - saves and searches past transcriptions with transformation tracking
 
 The app talks to the Python server to do the actual transcription work.
 
 ## File Overview
 
+### Core
 | File | Purpose |
 |------|---------|
-| `RayeeApp.swift` | Main app entry point - sets up the menu bar |
+| `RayeeApp.swift` | Main app entry point - sets up the menu bar and windows |
 | `AppState.swift` | Central state management - the "brain" of the app |
-| `MenuBarView.swift` | The dropdown menu when you click the icon |
-| `StatusIndicator.swift` | Animated dots showing current status |
+| `Config.swift` | All constants (timeouts, sizes, URLs) in one place |
 | `PythonBridge.swift` | HTTP client that talks to the Python server |
+| `ServerManager.swift` | Manages the bundled Python server |
+| `HealthMonitor.swift` | Checks server health on a timer |
+
+### UI
+| File | Purpose |
+|------|---------|
+| `SimpleMenuView.swift` | The dropdown menu when you click the menu bar icon |
+| `StatusIndicator.swift` | Animated dots showing current status |
+| `RecordingPanelView.swift` | Floating panel during recording/transcription |
+| `RecordingPanelController.swift` | Manages the floating panel window |
+| `DotGridView.swift` | Animated dot grid visualization for recording |
+| `PanelButtonStyles.swift` | Shared button styles for the floating panel |
+| `SettingsView.swift` | Settings window with tabs |
+| `GeneralSettingsTab.swift` | General settings (hotkey, model, sounds) |
+
+### Text Transformations
+| File | Purpose |
+|------|---------|
+| `TransformationState.swift` | UI state for the transform flow |
+| `TransformationBar.swift` | Row of transform buttons (Cmd+1-5 shortcuts) |
+| `TransformationButton.swift` | Pill-shaped button with loading/success states |
+| `TransformationPreviewView.swift` | Before/after text comparison with error display |
+| `TransformationsSettingsTab.swift` | Settings for model management and enabled types |
+| `TransformAPITypes.swift` | Codable types for transform API responses |
+
+### Setup & Onboarding
+| File | Purpose |
+|------|---------|
+| `SetupGuideView.swift` | First-launch checklist (server, permissions, models) |
+| `HotkeyPickerView.swift` | Key recorder with conflict detection |
+
+### Services
+| File | Purpose |
+|------|---------|
 | `HotkeyManager.swift` | Listens for global keyboard shortcuts |
 | `PasteManager.swift` | Types text into other apps via accessibility |
 | `SettingsManager.swift` | Saves/loads user preferences |
-| `SettingsView.swift` | Settings window UI |
-| `HistoryManager.swift` | SQLite database for past transcriptions |
-| `HistoryView.swift` | History tab UI with search |
+| `TranscriptionCoordinator.swift` | Coordinates the record → transcribe flow |
+| `AudioRecorder.swift` | Records audio from the microphone |
+| `AudioLevelMonitor.swift` | Monitors audio levels for the waveform |
 | `AudioFeedback.swift` | Plays sounds for start/stop/error |
-| `ServerManager.swift` | Manages the bundled Python server |
+
+### History
+| File | Purpose |
+|------|---------|
+| `HistoryManager.swift` | SQLite database for past transcriptions |
+| `HistoryView.swift` | History tab UI with search, copy, delete |
+| `TranscriptionRecord.swift` | Data model with transformation tracking |
 
 ## Key Patterns
 
@@ -68,13 +110,23 @@ ready → recording → transcribing → ready
 error ←←←←←←←←←←←←←←←←←←←
 ```
 
+## Transformation Flow
+
+```
+Transcription result → [Transform button / Cmd+1-5]
+  → Loading spinner → Preview (original vs transformed)
+  → "Use This" (accept) or "Original" (revert)
+  → Error display if server/model/timeout issue
+```
+
 ## Data Storage
 
 | Data | Location |
 |------|----------|
 | Settings | UserDefaults (managed by macOS) |
-| History | `~/.rayee/history.db` (SQLite) |
+| History | `~/.rayee/history.db` (SQLite, includes transformation data) |
 | Vocabulary | `~/.rayee/vocabulary.json` (via Python) |
+| LLM models | `~/.rayee/llm_models/` (via Python) |
 
 ## macOS Permissions Required
 
@@ -98,4 +150,6 @@ open swift/Rayee/Rayee.xcodeproj
 The `PythonBridge` class sends HTTP requests to `http://localhost:8765`:
 - Checks server health every 10 seconds
 - Sends transcription requests with silence duration setting
+- Sends text transformation requests (grammar, bullets, rephrase, etc.)
+- Manages transform model downloads and status checks
 - Handles errors gracefully (shows user-friendly messages)
