@@ -38,6 +38,7 @@ from .server_helpers import (
 from .startup import audio_executor, on_shutdown, on_startup, upload_executor
 from .state import ServerState, state_manager
 from .transcribe import Transcriber
+from .transform_routes import router as transform_router
 from .vad import SmartRecorder
 
 # ============ FastAPI App ============
@@ -51,6 +52,9 @@ app = FastAPI(
 # Register startup/shutdown handlers
 app.add_event_handler("startup", on_startup)
 app.add_event_handler("shutdown", on_shutdown)
+
+# Include text transformation routes
+app.include_router(transform_router)
 
 
 # ============ Health & Status Endpoints ============

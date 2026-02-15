@@ -23,6 +23,12 @@ audio_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="rayee_aud
 # This lets uploads run in their own thread without competing with recording
 upload_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="rayee_upload")
 
+# Separate executor for text transformations (LLM inference)
+# Keeps transformations from blocking transcription or recording
+transform_executor = ThreadPoolExecutor(
+    max_workers=1, thread_name_prefix="rayee_transform"
+)
+
 
 def print_startup_banner():
     """Print the startup message with available endpoints."""
@@ -41,6 +47,10 @@ def print_startup_banner():
     print("  GET  /vocabulary     - List custom words")
     print("  POST /vocabulary     - Add custom word")
     print("  DELETE /vocabulary/{word} - Remove word")
+    print("  POST /transform          - Transform text with LLM")
+    print("  GET  /transform/status   - LLM model status")
+    print("  POST /transform/download - Download LLM model")
+    print("  GET  /transform/download_status - Download progress")
 
 
 def preload_models():
@@ -107,6 +117,7 @@ async def on_shutdown():
     # This prevents "cannot schedule new futures" errors during model loading
     audio_executor.shutdown(wait=True, cancel_futures=False)
     upload_executor.shutdown(wait=True, cancel_futures=False)
+    transform_executor.shutdown(wait=True, cancel_futures=False)
     print("All background tasks completed.")
 
 
