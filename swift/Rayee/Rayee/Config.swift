@@ -83,13 +83,39 @@ enum Config {
     static let recordingPanelWidth: CGFloat = 260
 
     /// Height of the floating recording panel (normal mode)
-    static let recordingPanelHeight: CGFloat = 140
+    static let recordingPanelHeight: CGFloat = 155
 
     /// Height of the floating recording panel (with result text)
     static let recordingPanelHeightWithResult: CGFloat = 200
 
-    /// Number of bars in the waveform visualization
+    /// Number of audio level readings to keep in the buffer
     static let waveformBarCount = 16
+
+    // MARK: - Dot Grid Animation
+
+    /// Number of columns in the dot grid
+    static let dotGridColumns = 11
+
+    /// Number of rows in the dot grid
+    static let dotGridRows = 7
+
+    /// Default dot diameter (points)
+    static let dotGridDotSize: CGFloat = 6.0
+
+    /// Maximum dot diameter when audio is loud (points)
+    static let dotGridMaxDotSize: CGFloat = 8.0
+
+    /// Height of the dot grid area
+    static let dotGridHeight: CGFloat = 56.0
+
+    /// Time for one full radar sweep rotation (seconds)
+    static let dotGridSweepDuration: TimeInterval = 2.0
+
+    /// Width of the radar sweep wedge (degrees)
+    static let dotGridSweepWidth: Double = 60.0
+
+    /// Multiplier to boost audio levels for visual effect
+    static let dotGridAudioBoost: Float = 8.0
 
     // MARK: - UI Delays
 

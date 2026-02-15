@@ -95,18 +95,23 @@ struct RecordingPanelView: View {
             // Result mode: editable text with copy button
             resultView
         } else if isRecording {
-            // Recording mode: waveform
+            // Recording mode: dot grid that blooms with your voice
             VStack(spacing: 8) {
-                ModernWaveformView(levels: $audioLevelMonitor.levels)
-                    .frame(height: 50)
+                DotGridView(levels: $audioLevelMonitor.levels, mode: .listening)
 
                 Text("Recording...")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
         } else if isTranscribing {
-            // Transcribing mode: bouncing dots
-            TranscribingIndicator()
+            // Transcribing mode: rotating radar sweep on dot grid
+            VStack(spacing: 8) {
+                DotGridView(levels: .constant([]), mode: .transcribing)
+
+                Text("Transcribing...")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
         }
     }
 
