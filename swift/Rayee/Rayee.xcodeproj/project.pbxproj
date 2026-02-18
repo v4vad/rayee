@@ -43,6 +43,14 @@
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
 		A1000360001 /* FasterWhisperManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000360000 /* FasterWhisperManager.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
+		A1000390001 /* TransformationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000390000 /* TransformationState.swift */; };
+		A10003A0001 /* TransformationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003A0000 /* TransformationButton.swift */; };
+		A10003B0001 /* TransformationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003B0000 /* TransformationBar.swift */; };
+		A10003C0001 /* TransformationPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003C0000 /* TransformationPreviewView.swift */; };
+		A10003D0001 /* TransformationsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003D0000 /* TransformationsSettingsTab.swift */; };
+		A10003E0001 /* TransformAPITypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003E0000 /* TransformAPITypes.swift */; };
+		A10003F0001 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003F0000 /* SetupGuideView.swift */; };
+		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -85,6 +93,14 @@
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
 		A1000360000 /* FasterWhisperManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FasterWhisperManager.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
+		A1000390000 /* TransformationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationState.swift; sourceTree = "<group>"; };
+		A10003A0000 /* TransformationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationButton.swift; sourceTree = "<group>"; };
+		A10003B0000 /* TransformationBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationBar.swift; sourceTree = "<group>"; };
+		A10003C0000 /* TransformationPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationPreviewView.swift; sourceTree = "<group>"; };
+		A10003D0000 /* TransformationsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationsSettingsTab.swift; sourceTree = "<group>"; };
+		A10003E0000 /* TransformAPITypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformAPITypes.swift; sourceTree = "<group>"; };
+		A10003F0000 /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
+		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -144,6 +160,14 @@
 				A1000330000 /* ModelsSettingsTab.swift */,
 				A1000360000 /* FasterWhisperManager.swift */,
 				A1000370000 /* ModelRow.swift */,
+				A1000390000 /* TransformationState.swift */,
+				A10003A0000 /* TransformationButton.swift */,
+				A10003B0000 /* TransformationBar.swift */,
+				A10003C0000 /* TransformationPreviewView.swift */,
+				A10003D0000 /* TransformationsSettingsTab.swift */,
+				A10003E0000 /* TransformAPITypes.swift */,
+				A10003F0000 /* SetupGuideView.swift */,
+				A1000400000 /* HotkeyPickerView.swift */,
 				A10001E0000 /* Assets.xcassets */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
@@ -263,6 +287,14 @@
 				A1000330001 /* ModelsSettingsTab.swift in Sources */,
 				A1000360001 /* FasterWhisperManager.swift in Sources */,
 				A1000370001 /* ModelRow.swift in Sources */,
+				A1000390001 /* TransformationState.swift in Sources */,
+				A10003A0001 /* TransformationButton.swift in Sources */,
+				A10003B0001 /* TransformationBar.swift in Sources */,
+				A10003C0001 /* TransformationPreviewView.swift in Sources */,
+				A10003D0001 /* TransformationsSettingsTab.swift in Sources */,
+				A10003E0001 /* TransformAPITypes.swift in Sources */,
+				A10003F0001 /* SetupGuideView.swift in Sources */,
+				A1000400001 /* HotkeyPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -97,6 +97,42 @@ class FWActionResponse(BaseModel):
     model_name: Optional[str] = None
 
 
+# ============ Text Transformation Models ============
+
+
+class TransformRequest(BaseModel):
+    """Request for the /transform endpoint."""
+
+    text: str
+    transformation_type: str
+
+
+class TransformResponse(BaseModel):
+    """Response from the /transform endpoint."""
+
+    original_text: str
+    transformed_text: str
+    transformation_type: str
+    status: str
+
+
+class TransformStatusResponse(BaseModel):
+    """Response from /transform/status."""
+
+    model_loaded: bool
+    model_downloaded: bool
+    model_downloading: bool
+    available_types: list
+    download_error: Optional[str] = None
+
+
+class TransformDownloadResponse(BaseModel):
+    """Response from /transform/download endpoints."""
+
+    status: str
+    error: Optional[str] = None
+
+
 # ============ Helper Functions ============
 
 

@@ -12,24 +12,42 @@ import Foundation
 // Stores the transcribed text along with when it happened and which AI model was used
 struct TranscriptionRecord: Identifiable, Codable {
     let id: UUID           // Unique identifier for this record
-    let text: String       // The transcribed text
+    let text: String       // The transcribed text (final version, may be transformed)
     let timestamp: Date    // When the transcription was created
     let modelUsed: String  // Which AI model was used (tiny, small, medium, large)
+    let originalText: String?           // Original text before transformation (nil if not transformed)
+    let transformationsApplied: String? // Comma-separated list of transforms applied
 
     // Create a new record with current timestamp
-    init(text: String, modelUsed: String) {
+    init(text: String, modelUsed: String, originalText: String? = nil, transformationsApplied: String? = nil) {
         self.id = UUID()
         self.text = text
         self.timestamp = Date()
         self.modelUsed = modelUsed
+        self.originalText = originalText
+        self.transformationsApplied = transformationsApplied
     }
 
     // Create a record with all fields (used when loading from database)
-    init(id: UUID, text: String, timestamp: Date, modelUsed: String) {
+    init(id: UUID, text: String, timestamp: Date, modelUsed: String,
+         originalText: String? = nil, transformationsApplied: String? = nil) {
         self.id = id
         self.text = text
         self.timestamp = timestamp
         self.modelUsed = modelUsed
+        self.originalText = originalText
+        self.transformationsApplied = transformationsApplied
+    }
+
+    /// Whether this transcription was transformed
+    var wasTransformed: Bool {
+        originalText != nil && !originalText!.isEmpty
+    }
+
+    /// Transformation types applied as an array
+    var transformationTags: [String] {
+        guard let applied = transformationsApplied, !applied.isEmpty else { return [] }
+        return applied.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
     // Formatted timestamp for display (e.g., "Today at 2:34 PM" or "Jan 15 at 9:20 AM")

@@ -123,8 +123,11 @@ enum Config {
     /// Gives time for the previous app to regain focus
     static let autoPasteDelay: TimeInterval = 0.1
 
-    /// Delay before retrying hotkey registration after permission prompt (seconds)
-    static let hotkeyRetryDelay: TimeInterval = 1.0
+    /// Delay before backup hotkey start attempt from AppDelegate (seconds)
+    static let hotkeyBackupStartDelay: TimeInterval = 2.0
+
+    /// How often to poll for accessibility permission when not yet granted (seconds)
+    static let hotkeyPermissionPollInterval: TimeInterval = 3.0
 
     // MARK: - File Upload
 
@@ -136,6 +139,14 @@ enum Config {
 
     /// Whether background upload transcription is enabled by default
     static let defaultBackgroundUpload = false
+
+    // MARK: - Text Transformations
+
+    /// Timeout for transformation requests (LLM inference can take a few seconds)
+    static let transformationTimeout: TimeInterval = 30.0
+
+    /// Height of the recording panel when showing transformation preview
+    static let recordingPanelHeightWithTransform: CGFloat = 360
 
     // MARK: - Settings Window
 

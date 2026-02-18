@@ -183,6 +183,60 @@ class PythonBridge {
         return response.text
     }
 
+    // MARK: - Generic Model Action
+
+    /// Perform a model action (download, delete) by endpoint path
+    func performModelAction(endpoint: String, method: String = "POST") async throws -> Data {
+        guard let url = URL(string: "\(Config.serverBaseURL)\(endpoint)") else {
+            throw PythonBridgeError.networkError("Invalid URL")
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.timeoutInterval = Config.regularTimeout
+
+        let (data, _) = try await URLSession.shared.data(for: request)
+        return data
+    }
+
+    // MARK: - Text Transformation Methods
+
+    /// Transform text using the local LLM
+    func transformText(text: String, type: String) async throws -> TransformAPIResponse {
+        let requestBody = TransformRequestBody(text: text, transformationType: type)
+        return try await performRequest(
+            endpoint: "/transform",
+            method: "POST",
+            body: requestBody,
+            timeout: Config.transformationTimeout
+        )
+    }
+
+    /// Get the transform model status
+    func getTransformStatus() async throws -> TransformStatusAPIResponse {
+        return try await performRequest(
+            endpoint: "/transform/status",
+            timeout: Config.regularTimeout
+        )
+    }
+
+    /// Trigger download of the transform model
+    func downloadTransformModel() async throws -> TransformDownloadAPIResponse {
+        return try await performRequest(
+            endpoint: "/transform/download",
+            method: "POST",
+            timeout: Config.regularTimeout
+        )
+    }
+
+    /// Get download status of the transform model
+    func getTransformDownloadStatus() async throws -> TransformDownloadAPIResponse {
+        return try await performRequest(
+            endpoint: "/transform/download_status",
+            timeout: Config.regularTimeout
+        )
+    }
+
     // MARK: - Private Helpers
 
     /// Perform a single health check request

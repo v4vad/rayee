@@ -4,7 +4,7 @@
 
 ---
 
-## CURRENT STATUS (January 22, 2026)
+## CURRENT STATUS (February 15, 2026)
 
 ### What's Done
 - Phase 0: Project setup complete
@@ -13,9 +13,11 @@
 - Phase 3: Swift/macOS menu bar app complete
 - Phase 4: Global hotkey, auto-paste, and settings complete
 - Phase 5: History & polish complete
+- Phase 6: Text transformations (Grammar, Bullets, Rephrase, Formal, Casual) using Llama 3.2 via MLX
+- Phase 7: Setup guide with hotkey picker and system status checklist
 
 ### Next Step
-- **Project complete!** All core features implemented.
+- **Project complete!** All core features + text transformations implemented.
 
 ### How to Run the Server
 ```bash
@@ -41,7 +43,11 @@ python/
     ├── models.py           # AI model management
     ├── vad.py              # Voice activity detection (auto-stop)
     ├── server.py           # FastAPI server with endpoints
-    └── vocabulary.py       # Custom word management
+    ├── vocabulary.py       # Custom word management
+    ├── transform.py        # Text transformer using MLX
+    ├── transform_prompts.py # Prompt templates for transformations
+    ├── transform_routes.py  # FastAPI router for /transform endpoints
+    └── mlx_model.py        # MLX model manager (Llama 3.2 1B)
 ```
 
 ---
@@ -188,6 +194,44 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 - `swift/Rayee/Rayee/HistoryView.swift` - History UI with search, copy, delete
 - `swift/Rayee/Rayee/AudioFeedback.swift` - Sound playback using NSSound
 
+### Phase 6: Text Transformations ✅
+**Goal:** Transform transcribed text locally using Llama 3.2 via MLX
+
+- [x] Python backend: MLX model manager, prompt templates, transformer class
+- [x] Python API: POST /transform, GET /transform/status, POST /transform/download
+- [x] Swift UI: TransformationBar with 5 pill-shaped buttons (Cmd+1-5)
+- [x] Swift UI: TransformationPreviewView with before/after comparison
+- [x] Settings tab for managing transform model and enabled types
+- [x] History integration: stores original + transformed text, shows toggle
+- [x] Error handling: user-friendly messages for server/model/timeout errors
+- [x] Cancel button during transformation loading state
+
+**New Python files:**
+- `python/rayee/mlx_model.py` - MLX model loading/unloading with 30s timeout
+- `python/rayee/transform_prompts.py` - 5 prompt templates
+- `python/rayee/transform.py` - TextTransformer with validation and cleaning
+- `python/rayee/transform_routes.py` - FastAPI router for /transform endpoints
+
+**New Swift files:**
+- `swift/Rayee/Rayee/TransformationState.swift` - UI state for transform flow
+- `swift/Rayee/Rayee/TransformationButton.swift` - Pill button with loading/success states
+- `swift/Rayee/Rayee/TransformationBar.swift` - Horizontal row with Cmd+1-5 shortcuts
+- `swift/Rayee/Rayee/TransformationPreviewView.swift` - Original vs transformed preview
+- `swift/Rayee/Rayee/TransformationsSettingsTab.swift` - Model + type management
+- `swift/Rayee/Rayee/TransformAPITypes.swift` - Codable response types
+
+### Phase 7: Setup Guide ✅
+**Goal:** First-launch experience and system status
+
+- [x] Setup guide checklist (server, mic, accessibility, whisper model, transform model)
+- [x] Hotkey picker with key recorder and conflict detection
+- [x] Auto-opens on first launch, accessible from "System Status..." menu
+- [x] "Done" button marks setup as complete
+
+**New Swift files:**
+- `swift/Rayee/Rayee/SetupGuideView.swift` - Checklist with auto-refresh
+- `swift/Rayee/Rayee/HotkeyPickerView.swift` - Key combination recorder
+
 ---
 
 ## Project Structure
@@ -222,7 +266,15 @@ rayee/
 │           ├── AudioFeedback.swift
 │           ├── PythonBridge.swift
 │           ├── HotkeyManager.swift
-│           └── PasteManager.swift
+│           ├── PasteManager.swift
+│           ├── TransformationState.swift
+│           ├── TransformationButton.swift
+│           ├── TransformationBar.swift
+│           ├── TransformationPreviewView.swift
+│           ├── TransformationsSettingsTab.swift
+│           ├── TransformAPITypes.swift
+│           ├── SetupGuideView.swift
+│           └── HotkeyPickerView.swift
 │
 ├── PLAN.md                    # This file
 └── README.md

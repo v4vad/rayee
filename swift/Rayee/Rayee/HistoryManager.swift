@@ -36,9 +36,10 @@ class HistoryManager: ObservableObject {
         // Create the .rayee directory if it doesn't exist
         try? FileManager.default.createDirectory(at: rayeeDir, withIntermediateDirectories: true)
 
-        // Open database connection and create table
+        // Open database connection, create table, and run migrations
         openDatabase()
         createTable()
+        migrateAddTransformColumns()
 
         // Load existing transcriptions
         loadAllTranscriptions()
@@ -53,30 +54,45 @@ class HistoryManager: ObservableObject {
 
     /// Save a new transcription to history
     /// - Parameters:
-    ///   - text: The transcribed text
+    ///   - text: The transcribed text (final version, possibly transformed)
     ///   - model: The AI model that was used (e.g., "small", "medium")
-    func saveTranscription(text: String, model: String) {
-        let record = TranscriptionRecord(text: text, modelUsed: model)
+    ///   - originalText: The original text before transformation (nil if not transformed)
+    ///   - transformations: Comma-separated list of transformations applied (nil if none)
+    func saveTranscription(text: String, model: String,
+                           originalText: String? = nil, transformations: String? = nil) {
+        let record = TranscriptionRecord(
+            text: text, modelUsed: model,
+            originalText: originalText, transformationsApplied: transformations
+        )
 
         let insertSQL = """
-            INSERT INTO transcriptions (id, text, timestamp, model)
-            VALUES (?, ?, ?, ?);
+            INSERT INTO transcriptions (id, text, timestamp, model, original_text, transformations_applied)
+            VALUES (?, ?, ?, ?, ?, ?);
             """
 
         var statement: OpaquePointer?
 
         if sqlite3_prepare_v2(db, insertSQL, -1, &statement, nil) == SQLITE_OK {
-            // Bind values to the placeholders (?)
-            // Using SQLITE_TRANSIENT so SQLite copies the strings before Swift deallocates them
             sqlite3_bind_text(statement, 1, record.id.uuidString, -1, SQLITE_TRANSIENT)
             sqlite3_bind_text(statement, 2, record.text, -1, SQLITE_TRANSIENT)
             sqlite3_bind_double(statement, 3, record.timestamp.timeIntervalSince1970)
             sqlite3_bind_text(statement, 4, record.modelUsed, -1, SQLITE_TRANSIENT)
 
+            if let original = originalText {
+                sqlite3_bind_text(statement, 5, original, -1, SQLITE_TRANSIENT)
+            } else {
+                sqlite3_bind_null(statement, 5)
+            }
+
+            if let transforms = transformations {
+                sqlite3_bind_text(statement, 6, transforms, -1, SQLITE_TRANSIENT)
+            } else {
+                sqlite3_bind_null(statement, 6)
+            }
+
             if sqlite3_step(statement) == SQLITE_DONE {
-                // Successfully saved - add to our in-memory list
                 DispatchQueue.main.async {
-                    self.transcriptions.insert(record, at: 0)  // Add to beginning (newest first)
+                    self.transcriptions.insert(record, at: 0)
                 }
             } else {
                 print("Failed to save transcription: \(String(cString: sqlite3_errmsg(db)))")
@@ -180,29 +196,55 @@ class HistoryManager: ObservableObject {
         sqlite3_finalize(statement)
     }
 
+    /// Add original_text and transformations_applied columns if they don't exist
+    private func migrateAddTransformColumns() {
+        // SQLite ALTER TABLE ADD COLUMN is safe to run even if column exists would fail,
+        // so we attempt and ignore errors (column already exists)
+        let columns = [
+            "ALTER TABLE transcriptions ADD COLUMN original_text TEXT;",
+            "ALTER TABLE transcriptions ADD COLUMN transformations_applied TEXT;",
+        ]
+
+        for sql in columns {
+            var statement: OpaquePointer?
+            if sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK {
+                sqlite3_step(statement)
+            }
+            sqlite3_finalize(statement)
+        }
+    }
+
     /// Load all transcriptions from the database into memory
     private func loadAllTranscriptions() {
-        let querySQL = "SELECT id, text, timestamp, model FROM transcriptions ORDER BY timestamp DESC;"
+        let querySQL = """
+            SELECT id, text, timestamp, model, original_text, transformations_applied
+            FROM transcriptions ORDER BY timestamp DESC;
+            """
 
         var statement: OpaquePointer?
         var loadedRecords: [TranscriptionRecord] = []
 
         if sqlite3_prepare_v2(db, querySQL, -1, &statement, nil) == SQLITE_OK {
-            // Loop through all rows in the result
             while sqlite3_step(statement) == SQLITE_ROW {
-                // Read each column
                 let idString = String(cString: sqlite3_column_text(statement, 0))
                 let text = String(cString: sqlite3_column_text(statement, 1))
                 let timestamp = sqlite3_column_double(statement, 2)
                 let model = String(cString: sqlite3_column_text(statement, 3))
 
-                // Create the record if we have a valid UUID
+                // Optional columns (may be NULL for old records)
+                let originalText: String? = sqlite3_column_type(statement, 4) != SQLITE_NULL
+                    ? String(cString: sqlite3_column_text(statement, 4)) : nil
+                let transformations: String? = sqlite3_column_type(statement, 5) != SQLITE_NULL
+                    ? String(cString: sqlite3_column_text(statement, 5)) : nil
+
                 if let id = UUID(uuidString: idString) {
                     let record = TranscriptionRecord(
                         id: id,
                         text: text,
                         timestamp: Date(timeIntervalSince1970: timestamp),
-                        modelUsed: model
+                        modelUsed: model,
+                        originalText: originalText,
+                        transformationsApplied: transformations
                     )
                     loadedRecords.append(record)
                 }
@@ -211,7 +253,6 @@ class HistoryManager: ObservableObject {
 
         sqlite3_finalize(statement)
 
-        // Update the published property on the main thread
         DispatchQueue.main.async {
             self.transcriptions = loadedRecords
         }

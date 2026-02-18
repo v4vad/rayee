@@ -37,6 +37,24 @@ struct RecordingPanelView: View {
     /// Called when user copies text in result mode
     var onCopy: () -> Void
 
+    /// Transformation state (nil if transformations disabled)
+    var transformState: TransformationState?
+
+    /// Whether transformations are enabled
+    var transformationsEnabled: Bool
+
+    /// Which transformations the user has enabled
+    var enabledTransformations: Set<String>
+
+    /// Called when user taps a transformation button
+    var onTransform: ((TransformationType) -> Void)?
+
+    /// Called when user accepts the transformed text
+    var onUseTransformed: ((String) -> Void)?
+
+    /// Called when user reverts to original text
+    var onUseOriginal: (() -> Void)?
+
     var body: some View {
         VStack(spacing: 0) {
             // Header with title and settings icon
@@ -117,19 +135,37 @@ struct RecordingPanelView: View {
 
     private var resultView: some View {
         VStack(spacing: 8) {
-            // Editable text area
-            TextEditor(text: $transcribedText)
-                .font(.system(size: 13))
-                .scrollContentBackground(.hidden)
-                .padding(8)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(NSColor.textBackgroundColor))
+            // Show transformation preview if active (loading, preview, or error)
+            if let tState = transformState, tState.isActive {
+                TransformationPreviewView(
+                    transformState: tState,
+                    onUseTransformed: { text in onUseTransformed?(text) },
+                    onUseOriginal: { onUseOriginal?() }
                 )
-                .frame(height: 60)
+            } else {
+                // Editable text area
+                TextEditor(text: $transcribedText)
+                    .font(.system(size: 13))
+                    .scrollContentBackground(.hidden)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(NSColor.textBackgroundColor))
+                    )
+                    .frame(height: 60)
 
-            // Copy button
-            copyButton
+                // Transformation bar (below text editor)
+                if transformationsEnabled, let tState = transformState {
+                    TransformationBar(
+                        transformState: tState,
+                        enabledTypes: enabledTransformations,
+                        onTransform: { type in onTransform?(type) }
+                    )
+                }
+
+                // Copy button
+                copyButton
+            }
         }
     }
 
@@ -206,29 +242,16 @@ struct RecordingPanelView: View {
         onStop: {},
         onCancel: {},
         onSettings: {},
-        onCopy: {}
+        onCopy: {},
+        transformState: nil,
+        transformationsEnabled: false,
+        enabledTransformations: []
     )
     .padding()
     .background(Color.gray.opacity(0.3))
 }
 
-#Preview("Transcribing") {
-    RecordingPanelView(
-        isRecording: false,
-        isTranscribing: true,
-        audioLevelMonitor: AudioLevelMonitor(),
-        transcribedText: .constant(""),
-        showResult: false,
-        onStop: {},
-        onCancel: {},
-        onSettings: {},
-        onCopy: {}
-    )
-    .padding()
-    .background(Color.gray.opacity(0.3))
-}
-
-#Preview("Result") {
+#Preview("Result with Transforms") {
     RecordingPanelView(
         isRecording: false,
         isTranscribing: false,
@@ -238,7 +261,10 @@ struct RecordingPanelView: View {
         onStop: {},
         onCancel: {},
         onSettings: {},
-        onCopy: {}
+        onCopy: {},
+        transformState: TransformationState(),
+        transformationsEnabled: true,
+        enabledTransformations: Set(TransformationType.allCases.map(\.rawValue))
     )
     .padding()
     .background(Color.gray.opacity(0.3))

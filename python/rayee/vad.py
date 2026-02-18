@@ -5,15 +5,16 @@ Detects when someone is speaking vs. silence.
 Used to automatically stop recording when the user stops talking.
 """
 
-import numpy as np
-import torch
-import sounddevice as sd
-from typing import Optional, Callable
+import signal
 import threading
 import time
-import signal
+from typing import Callable, Optional
 
-from .audio import SAMPLE_RATE, CHANNELS
+import numpy as np
+import sounddevice as sd
+import torch
+
+from .audio import CHANNELS, SAMPLE_RATE
 
 # Timeout for downloading the VAD model (5 minutes)
 VAD_DOWNLOAD_TIMEOUT = 300
@@ -58,11 +59,11 @@ class VoiceActivityDetector:
         def download_model():
             try:
                 model, utils = torch.hub.load(
-                    repo_or_dir='snakers4/silero-vad',
-                    model='silero_vad',
+                    repo_or_dir="snakers4/silero-vad",
+                    model="silero_vad",
                     force_reload=False,
                     onnx=False,
-                    trust_repo=True
+                    trust_repo=True,
                 )
                 result["model"] = model
                 result["utils"] = utils
@@ -135,7 +136,7 @@ class VoiceActivityDetector:
 
         # Process in 512-sample windows
         for i in range(0, len(audio_buffer) - VAD_CHUNK_SAMPLES + 1, VAD_CHUNK_SAMPLES):
-            chunk = audio_buffer[i:i + VAD_CHUNK_SAMPLES]
+            chunk = audio_buffer[i : i + VAD_CHUNK_SAMPLES]
             if self.is_speech(chunk, threshold):
                 return True
 
@@ -159,10 +160,10 @@ class SmartRecorder:
 
     def __init__(
         self,
-        silence_threshold: float = 0.5,      # How confident we need to be it's speech
-        silence_duration: float = 1.5,        # Seconds of silence before stopping
-        max_duration: float = 60.0,           # Maximum recording length
-        min_speech_duration: float = 0.3,     # Minimum speech before we start "listening"
+        silence_threshold: float = 0.5,  # How confident we need to be it's speech
+        silence_duration: float = 1.5,  # Seconds of silence before stopping
+        max_duration: float = 60.0,  # Maximum recording length
+        min_speech_duration: float = 0.3,  # Minimum speech before we start "listening"
     ):
         """
         Initialize the smart recorder.
@@ -217,7 +218,7 @@ class SmartRecorder:
 
         # Debug: show which audio device we're using
         try:
-            default_device = sd.query_devices(kind='input')
+            default_device = sd.query_devices(kind="input")
             print(f"[DEBUG] Using input device: {default_device['name']}")
         except Exception as e:
             print(f"[DEBUG] Could not query input device: {e}")
@@ -226,8 +227,8 @@ class SmartRecorder:
         with sd.InputStream(
             samplerate=SAMPLE_RATE,
             channels=CHANNELS,
-            dtype='float32',
-            blocksize=chunk_size
+            dtype="float32",
+            blocksize=chunk_size,
         ) as stream:
             while self._is_recording and not self._stop_requested:
                 # Check max duration
@@ -262,7 +263,9 @@ class SmartRecorder:
                     # Check if silence has lasted long enough
                     silence_elapsed = time.time() - last_speech_time
                     if silence_elapsed >= self.silence_duration:
-                        print(f"\nSilence detected for {self.silence_duration}s, stopping.")
+                        print(
+                            f"\nSilence detected for {self.silence_duration}s, stopping."
+                        )
                         break
 
         self._is_recording = False
@@ -278,7 +281,7 @@ class SmartRecorder:
             return audio_data
         else:
             print("No speech detected.")
-            return np.array([], dtype='float32')
+            return np.array([], dtype="float32")
 
     def stop(self):
         """Manually stop the recording."""

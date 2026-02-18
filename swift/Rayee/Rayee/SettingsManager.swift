@@ -22,6 +22,10 @@ enum SettingsKey {
     static let silenceDuration = "silenceDuration"
     static let timeoutEnabled = "timeoutEnabled"
     static let backgroundUploadEnabled = "backgroundUploadEnabled"
+    static let transformationsEnabled = "transformationsEnabled"
+    static let keepTransformModelLoaded = "keepTransformModelLoaded"
+    static let enabledTransformations = "enabledTransformations"
+    static let hasCompletedSetup = "hasCompletedSetup"
 }
 
 // MARK: - AI Model Options
@@ -207,6 +211,26 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(backgroundUploadEnabled, forKey: SettingsKey.backgroundUploadEnabled) }
     }
 
+    // Whether text transformations are enabled
+    @Published var transformationsEnabled: Bool {
+        didSet { UserDefaults.standard.set(transformationsEnabled, forKey: SettingsKey.transformationsEnabled) }
+    }
+
+    // Whether to keep the transform LLM loaded in memory (uses ~800MB RAM)
+    @Published var keepTransformModelLoaded: Bool {
+        didSet { UserDefaults.standard.set(keepTransformModelLoaded, forKey: SettingsKey.keepTransformModelLoaded) }
+    }
+
+    // Which transformation types to show in the UI
+    @Published var enabledTransformations: Set<String> {
+        didSet { UserDefaults.standard.set(Array(enabledTransformations), forKey: SettingsKey.enabledTransformations) }
+    }
+
+    // Whether the user has completed the first-launch setup
+    @Published var hasCompletedSetup: Bool {
+        didSet { UserDefaults.standard.set(hasCompletedSetup, forKey: SettingsKey.hasCompletedSetup) }
+    }
+
     private init() {
         // Load saved settings or use defaults
 
@@ -265,6 +289,31 @@ class SettingsManager: ObservableObject {
         } else {
             self.backgroundUploadEnabled = Config.defaultBackgroundUpload
         }
+
+        // Load transformations enabled (default: true)
+        if UserDefaults.standard.object(forKey: SettingsKey.transformationsEnabled) != nil {
+            self.transformationsEnabled = UserDefaults.standard.bool(forKey: SettingsKey.transformationsEnabled)
+        } else {
+            self.transformationsEnabled = true
+        }
+
+        // Load keep transform model loaded (default: false)
+        if UserDefaults.standard.object(forKey: SettingsKey.keepTransformModelLoaded) != nil {
+            self.keepTransformModelLoaded = UserDefaults.standard.bool(forKey: SettingsKey.keepTransformModelLoaded)
+        } else {
+            self.keepTransformModelLoaded = false
+        }
+
+        // Load enabled transformations (default: all 5)
+        let allTypes = Set(TransformationType.allCases.map(\.rawValue))
+        if let saved = UserDefaults.standard.stringArray(forKey: SettingsKey.enabledTransformations) {
+            self.enabledTransformations = Set(saved)
+        } else {
+            self.enabledTransformations = allTypes
+        }
+
+        // Load setup completion flag (default: false)
+        self.hasCompletedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
     }
 
     // Save hotkey configuration to UserDefaults
@@ -295,5 +344,8 @@ class SettingsManager: ObservableObject {
         silenceDuration = 30.0
         timeoutEnabled = true
         backgroundUploadEnabled = Config.defaultBackgroundUpload
+        transformationsEnabled = true
+        keepTransformModelLoaded = false
+        enabledTransformations = Set(TransformationType.allCases.map(\.rawValue))
     }
 }

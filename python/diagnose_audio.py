@@ -3,8 +3,9 @@
 Diagnostic script to check if audio and VAD are working.
 """
 
-import sys
 import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import numpy as np
@@ -14,11 +15,11 @@ import torch
 # Load VAD
 print("Loading VAD model...")
 model, utils = torch.hub.load(
-    repo_or_dir='snakers4/silero-vad',
-    model='silero_vad',
+    repo_or_dir="snakers4/silero-vad",
+    model="silero_vad",
     force_reload=False,
     onnx=False,
-    trust_repo=True
+    trust_repo=True,
 )
 print("VAD loaded!")
 
@@ -35,17 +36,14 @@ print("\nPress Ctrl+C to stop.\n")
 
 try:
     with sd.InputStream(
-        samplerate=SAMPLE_RATE,
-        channels=1,
-        dtype='float32',
-        blocksize=CHUNK_SIZE
+        samplerate=SAMPLE_RATE, channels=1, dtype="float32", blocksize=CHUNK_SIZE
     ) as stream:
         while True:
             audio_chunk, _ = stream.read(CHUNK_SIZE)
             audio_chunk = audio_chunk.flatten()
 
             # Calculate audio level (RMS)
-            level = np.sqrt(np.mean(audio_chunk ** 2))
+            level = np.sqrt(np.mean(audio_chunk**2))
             level_db = 20 * np.log10(level + 1e-10)  # Convert to dB
 
             # Get VAD score
@@ -62,7 +60,11 @@ try:
             else:
                 status = "silence"
 
-            print(f"\rLevel: [{bar}] {level_db:6.1f}dB | VAD: {vad_score:.2f} ({status})  ", end="", flush=True)
+            print(
+                f"\rLevel: [{bar}] {level_db:6.1f}dB | VAD: {vad_score:.2f} ({status})  ",
+                end="",
+                flush=True,
+            )
 
 except KeyboardInterrupt:
     print("\n\nDone!")

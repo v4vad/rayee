@@ -42,6 +42,9 @@ class AppState: ObservableObject {
 
     // MARK: - Dependencies
 
+    /// Bridge for communicating with the Python server
+    private let pythonBridge = PythonBridge()
+
     /// Handles recording → transcription → paste flow
     private let transcriptionCoordinator = TranscriptionCoordinator()
 
@@ -69,8 +72,7 @@ class AppState: ObservableObject {
         setupBindings()
         setupHotkey()
         healthMonitor.start()
-        // Hotkey listening is started from RayeeApp.swift .onAppear
-        // This ensures it happens after the UI is ready and permissions are loaded
+        startHotkeyListening()
     }
 
     deinit {
@@ -110,19 +112,12 @@ class AppState: ObservableObject {
     }
 
     /// Start listening for the global hotkey
-    /// Called from .onAppear in RayeeApp when the UI is ready
     func startHotkeyListening() {
         AppLogger.log("startHotkeyListening() called", category: "hotkey")
-        hotkeyManager.start()
-
-        // If it failed (permission not ready yet), try once more after a delay
-        // This handles the edge case where .onAppear happens before macOS loads permissions
-        if !hotkeyManager.isEnabled {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                guard let self = self, !self.hotkeyManager.isEnabled else { return }
-                AppLogger.log("Delayed retry starting hotkey listener", category: "hotkey")
-                self.hotkeyManager.start()
-            }
+        // Dispatch to main thread to ensure setupBindings() and setupHotkey()
+        // have finished setting callbacks before start() runs
+        DispatchQueue.main.async { [weak self] in
+            self?.hotkeyManager.start()
         }
     }
 
@@ -219,6 +214,17 @@ class AppState: ObservableObject {
         // Note: onSettings is handled in RecordingPanelHostView with @Environment
         recordingPanelController.onCopy = { [weak self] in
             self?.copyFromPanel()
+        }
+
+        // Transformation callbacks
+        recordingPanelController.onTransform = { [weak self] type in
+            self?.handleTransformation(type: type)
+        }
+        recordingPanelController.onUseTransformed = { [weak self] text in
+            self?.handleUseTransformed(text: text)
+        }
+        recordingPanelController.onUseOriginal = { [weak self] in
+            self?.handleUseOriginal()
         }
 
         // Observe server manager state
@@ -326,6 +332,48 @@ class AppState: ObservableObject {
             }
             return false  // Let Escape pass through to other apps
         }
+    }
+
+    // MARK: - Transformation Handling
+
+    /// Handle a transformation request from the recording panel
+    private func handleTransformation(type: TransformationType) {
+        let text = recordingPanelController.transcribedText
+        guard !text.isEmpty else { return }
+
+        let transformState = recordingPanelController.transformState
+        transformState.startTransformation(text: text, type: type)
+        recordingPanelController.updateWindowSizeForTransform()
+
+        Task { @MainActor in
+            do {
+                let response = try await pythonBridge.transformText(text: text, type: type.rawValue)
+                transformState.completeTransformation(transformedText: response.transformedText)
+                recordingPanelController.updateWindowSizeForTransform()
+            } catch {
+                transformState.failTransformation(message: error.localizedDescription)
+                recordingPanelController.updateWindowSizeForTransform()
+            }
+        }
+    }
+
+    /// Handle user accepting the transformed text
+    private func handleUseTransformed(text: String) {
+        recordingPanelController.transcribedText = text
+        transcribedText = text
+        recordingPanelController.transformState.reset()
+        recordingPanelController.updateWindowSizeForTransform()
+    }
+
+    /// Handle user reverting to original text
+    private func handleUseOriginal() {
+        let originalText = recordingPanelController.transformState.previewOriginal
+        if !originalText.isEmpty {
+            recordingPanelController.transcribedText = originalText
+            transcribedText = originalText
+        }
+        recordingPanelController.transformState.reset()
+        recordingPanelController.updateWindowSizeForTransform()
     }
 
     /// Cancel recording without transcribing (called when user presses Escape)

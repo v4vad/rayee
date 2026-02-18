@@ -29,11 +29,17 @@ class RecordingPanelController: ObservableObject {
     /// Whether to show result mode (editable text + copy button)
     @Published var showResult = false
 
+    /// Transformation state
+    let transformState = TransformationState()
+
     /// Callbacks
     var onStop: (() -> Void)?
     var onCancel: (() -> Void)?
     var onSettings: (() -> Void)?
     var onCopy: (() -> Void)?
+    var onTransform: ((TransformationType) -> Void)?
+    var onUseTransformed: ((String) -> Void)?
+    var onUseOriginal: (() -> Void)?
 
     // MARK: - Public Methods
 
@@ -54,9 +60,10 @@ class RecordingPanelController: ObservableObject {
     /// Hide the recording panel
     func hidePanel() {
         window?.orderOut(nil)
-        // Reset result mode when hiding
+        // Reset result mode and transform state when hiding
         showResult = false
         transcribedText = ""
+        transformState.reset()
     }
 
     /// Update recording state
@@ -81,6 +88,11 @@ class RecordingPanelController: ObservableObject {
         showResult = true
         isRecording = false
         isTranscribing = false
+        updateWindowSize()
+    }
+
+    /// Update window size when transformation state changes
+    func updateWindowSizeForTransform() {
         updateWindowSize()
     }
 
@@ -121,7 +133,14 @@ class RecordingPanelController: ObservableObject {
     private func updateWindowSize() {
         guard let window = window else { return }
 
-        let newHeight = showResult ? Config.recordingPanelHeightWithResult : Config.recordingPanelHeight
+        let newHeight: CGFloat
+        if transformState.showPreview || transformState.isTransforming {
+            newHeight = Config.recordingPanelHeightWithTransform
+        } else if showResult {
+            newHeight = Config.recordingPanelHeightWithResult
+        } else {
+            newHeight = Config.recordingPanelHeight
+        }
 
         // Animate the size change
         var frame = window.frame
@@ -157,6 +176,18 @@ struct RecordingPanelHostView: View {
             },
             onCopy: {
                 controller.onCopy?()
+            },
+            transformState: controller.transformState,
+            transformationsEnabled: SettingsManager.shared.transformationsEnabled,
+            enabledTransformations: SettingsManager.shared.enabledTransformations,
+            onTransform: { type in
+                controller.onTransform?(type)
+            },
+            onUseTransformed: { text in
+                controller.onUseTransformed?(text)
+            },
+            onUseOriginal: {
+                controller.onUseOriginal?()
             }
         )
     }

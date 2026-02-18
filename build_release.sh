@@ -179,6 +179,19 @@ success "Python server bundled successfully"
 echo ""
 
 # ==========================================
+# Step 3b: Re-sign App Bundle
+# ==========================================
+# Adding the ~600MB Python server invalidates Xcode's code signature.
+# Re-sign with explicit entitlements so macOS can properly identify the app
+# for accessibility permission grants.
+info "Re-signing app bundle..."
+ENTITLEMENTS="$SWIFT_DIR/Rayee.entitlements"
+codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_PATH"
+codesign --verify --deep --strict "$APP_PATH"
+success "App re-signed successfully"
+echo ""
+
+# ==========================================
 # Step 4: Create DMG
 # ==========================================
 info "Step 4: Creating DMG..."
