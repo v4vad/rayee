@@ -28,6 +28,9 @@ class HotkeyManager: ObservableObject {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
+    // Timer that polls for accessibility permission until granted
+    private var permissionTimer: Timer?
+
     private init() {
         // Listen for hotkey configuration changes from Settings
         NotificationCenter.default.addObserver(
@@ -63,10 +66,9 @@ class HotkeyManager: ObservableObject {
 
     /// Start listening for the global hotkey
     func start() {
-        // Check permission first
-        guard hasAccessibilityPermissionSilent() else {
-            AppLogger.log("Cannot start - no accessibility permission", category: "hotkey")
-            isEnabled = false
+        // Must run on the main thread — CGEvent tap needs the main run loop
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in self?.start() }
             return
         }
 
@@ -91,7 +93,9 @@ class HotkeyManager: ObservableObject {
             return manager.handleEvent(proxy: proxy, type: type, event: event)
         }
 
-        // Create the tap
+        // Try to create the tap — this is the definitive permission check.
+        // CGEvent.tapCreate() returns nil if accessibility permission isn't granted,
+        // bypassing AXIsProcessTrusted() which can return stale results at startup.
         eventTap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,           // Listen at session level
             place: .headInsertEventTap,        // Insert at head of tap list
@@ -102,12 +106,18 @@ class HotkeyManager: ObservableObject {
         )
 
         guard let eventTap = eventTap else {
-            AppLogger.log("Failed to create event tap", category: "hotkey")
+            AppLogger.log("Cannot create event tap (no permission yet), will poll", category: "hotkey")
             isEnabled = false
+            hasPermission = false
+            startPermissionPolling()
             return
         }
 
-        // Create a run loop source and add it to the current run loop
+        // Tap created successfully — we have permission
+        stopPermissionPolling()
+        hasPermission = true
+
+        // Create a run loop source and add it to the main run loop explicitly
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
 
         guard let runLoopSource = runLoopSource else {
@@ -117,7 +127,7 @@ class HotkeyManager: ObservableObject {
             return
         }
 
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
 
         // Enable the tap
         CGEvent.tapEnable(tap: eventTap, enable: true)
@@ -128,12 +138,14 @@ class HotkeyManager: ObservableObject {
 
     /// Stop listening for the global hotkey
     func stop() {
+        stopPermissionPolling()
+
         if let eventTap = eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
         }
 
         if let runLoopSource = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
         }
 
         eventTap = nil
@@ -227,9 +239,34 @@ class HotkeyManager: ObservableObject {
     /// Called when the user changes the hotkey in Settings
     @objc private func hotkeyConfigChanged() {
         print("HotkeyManager: Configuration changed to \(SettingsManager.shared.hotkeyConfig.displayString)")
-        // Restart to apply the new hotkey
-        if isEnabled {
-            restart()
+        // Always restart to apply the new hotkey
+        // Previously this only restarted if isEnabled was true, which meant
+        // changing the hotkey in settings did nothing if permission wasn't granted initially
+        restart()
+    }
+
+    // MARK: - Permission Polling
+
+    /// Start polling for accessibility permission
+    /// Called when start() can't create an event tap (permission not yet granted).
+    /// Retries start() which uses tapCreate as the definitive permission check.
+    private func startPermissionPolling() {
+        // Don't start a second timer
+        guard permissionTimer == nil else { return }
+
+        AppLogger.log("Starting permission polling (every \(Int(Config.hotkeyPermissionPollInterval))s)", category: "hotkey")
+        let timer = Timer.scheduledTimer(withTimeInterval: Config.hotkeyPermissionPollInterval, repeats: true) { [weak self] _ in
+            // start() will try tapCreate again — if it succeeds, polling stops automatically
+            self?.start()
         }
+        // Ensure the timer runs on the main run loop in common modes
+        RunLoop.main.add(timer, forMode: .common)
+        permissionTimer = timer
+    }
+
+    /// Stop the permission polling timer
+    private func stopPermissionPolling() {
+        permissionTimer?.invalidate()
+        permissionTimer = nil
     }
 }

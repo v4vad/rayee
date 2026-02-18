@@ -23,10 +23,6 @@ struct RayeeApp: App {
             // Simple dropdown menu with basic actions
             SimpleMenuView()
                 .environmentObject(appState)
-                .onAppear {
-                    // Start listening for global hotkey when UI appears
-                    appState.startHotkeyListening()
-                }
         } label: {
             // The icon that appears in the menu bar
             // Changes based on current status and shows server status via color
@@ -76,6 +72,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // and let the user run the server manually
         ServerManager.shared.start()
 
+        // Backup hotkey start — fires on the main thread after the app has fully settled.
+        // Safe because start() guards on eventTap == nil, so it's a no-op if already running.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Config.hotkeyBackupStartDelay) {
+            AppLogger.log("Backup hotkey start from AppDelegate", category: "hotkey")
+            HotkeyManager.shared.start()
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

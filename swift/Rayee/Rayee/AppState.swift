@@ -72,8 +72,7 @@ class AppState: ObservableObject {
         setupBindings()
         setupHotkey()
         healthMonitor.start()
-        // Hotkey listening is started from RayeeApp.swift .onAppear
-        // This ensures it happens after the UI is ready and permissions are loaded
+        startHotkeyListening()
     }
 
     deinit {
@@ -113,19 +112,12 @@ class AppState: ObservableObject {
     }
 
     /// Start listening for the global hotkey
-    /// Called from .onAppear in RayeeApp when the UI is ready
     func startHotkeyListening() {
         AppLogger.log("startHotkeyListening() called", category: "hotkey")
-        hotkeyManager.start()
-
-        // If it failed (permission not ready yet), try once more after a delay
-        // This handles the edge case where .onAppear happens before macOS loads permissions
-        if !hotkeyManager.isEnabled {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
-                guard let self = self, !self.hotkeyManager.isEnabled else { return }
-                AppLogger.log("Delayed retry starting hotkey listener", category: "hotkey")
-                self.hotkeyManager.start()
-            }
+        // Dispatch to main thread to ensure setupBindings() and setupHotkey()
+        // have finished setting callbacks before start() runs
+        DispatchQueue.main.async { [weak self] in
+            self?.hotkeyManager.start()
         }
     }
 

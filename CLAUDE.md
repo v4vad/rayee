@@ -27,28 +27,20 @@ Swift App (UI layer)          Python Server (AI layer)
 └── Settings management       └── Model management (download, load, unload)
 ```
 
-## Commands
+## Setup
 
-### Python Development
+### Python
 ```bash
-# Set up virtual environment
 cd python && python3 -m venv venv && source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Run the server
-python run_server.py
 ```
 
-### Swift Development
+### Swift
 ```bash
-# Open in Xcode
 open swift/Rayee/Rayee.xcodeproj
-
-# Build from command line
-xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 ```
+
+Use `/run-server` to start the Python server, `/build-app` to build the Swift app.
 
 ## Key Dependencies
 
@@ -188,16 +180,6 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 2. Test the endpoint directly: `curl http://localhost:8765/transform/status`
 3. MLX requires Apple Silicon (M1+) — won't work on Intel Macs
 4. The model uses ~800MB RAM when loaded; check available memory
-
-## Agent Delegation
-
-Use subagents for cost-effective model selection:
-
-| Task Type | Agent | Model | Examples |
-|-----------|-------|-------|----------|
-| Quick commands | `quick-executor` | Haiku | `git status`, `python run_server.py`, `pytest`, `pre-commit run` |
-| Coding work | `coder` | Sonnet | Writing Swift/Python code, fixing bugs, adding features |
-| Deep thinking | `architect` | Opus | Architecture decisions, complex debugging, code review |
 
 ## Testing & Verification
 
