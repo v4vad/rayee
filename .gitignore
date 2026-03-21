@@ -41,5 +41,8 @@ DerivedData/
 *.m4a
 *.dmg
 
+# Local planning docs
+OPTIMIZATIONS.md
+
 # Claude Code
 .claude/

@@ -7,13 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10001E0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10001E0000 /* Assets.xcassets */; };
 		A1000001001 /* RayeeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RayeeApp.swift */; };
 		A1000002001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* AppState.swift */; };
-		A1000410001 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000410000 /* MenuBarController.swift */; };
 		A1000004001 /* StatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000 /* StatusIndicator.swift */; };
 		A1000005001 /* PythonBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* PythonBridge.swift */; };
-		A1000420001 /* UnixSocketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000420000 /* UnixSocketProtocol.swift */; };
 		A1000007001 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* SettingsManager.swift */; };
 		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
 		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
@@ -33,6 +30,7 @@
 		A10001B0001 /* PanelButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001B0000 /* PanelButtonStyles.swift */; };
 		A10001C0001 /* PasteTargetDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001C0000 /* PasteTargetDetector.swift */; };
 		A10001D0001 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001D0000 /* AppLogger.swift */; };
+		A10001E0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10001E0000 /* Assets.xcassets */; };
 		A10002A0001 /* AudioFileConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002A0000 /* AudioFileConverter.swift */; };
 		A10002B0001 /* UploadRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002B0000 /* UploadRecord.swift */; };
 		A10002C0001 /* UploadHistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002C0000 /* UploadHistoryManager.swift */; };
@@ -51,18 +49,19 @@
 		A10003E0001 /* TransformAPITypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003E0000 /* TransformAPITypes.swift */; };
 		A10003F0001 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003F0000 /* SetupGuideView.swift */; };
 		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
-		A1000520001 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000520000 /* UpdateManager.swift */; };
+		A1000410001 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000410000 /* MenuBarController.swift */; };
+		A1000420001 /* UnixSocketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000420000 /* UnixSocketProtocol.swift */; };
 		A1000510001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1000510000 /* Sparkle */; };
+		A1000520001 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000520000 /* UpdateManager.swift */; };
+		DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1000000000 /* Rayee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rayee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000001000 /* RayeeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RayeeApp.swift; sourceTree = "<group>"; };
 		A1000002000 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1000004000 /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
 		A1000005000 /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
-		A1000420000 /* UnixSocketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnixSocketProtocol.swift; sourceTree = "<group>"; };
 		A1000006000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000007000 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A1000008000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -103,7 +102,10 @@
 		A10003E0000 /* TransformAPITypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformAPITypes.swift; sourceTree = "<group>"; };
 		A10003F0000 /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
 		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
+		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
+		A1000420000 /* UnixSocketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnixSocketProtocol.swift; sourceTree = "<group>"; };
 		A1000520000 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
+		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -132,6 +134,7 @@
 				A1000001000 /* RayeeApp.swift */,
 				A1000002000 /* AppState.swift */,
 				A1000410000 /* MenuBarController.swift */,
+				D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */,
 				A1000004000 /* StatusIndicator.swift */,
 				A1000005000 /* PythonBridge.swift */,
 				A1000420000 /* UnixSocketProtocol.swift */,
@@ -219,7 +222,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					A1000030000 = {
 						CreatedOnToolsVersion = 15.0;
@@ -266,6 +269,7 @@
 				A1000001001 /* RayeeApp.swift in Sources */,
 				A1000002001 /* AppState.swift in Sources */,
 				A1000410001 /* MenuBarController.swift in Sources */,
+				DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */,
 				A1000004001 /* StatusIndicator.swift in Sources */,
 				A1000005001 /* PythonBridge.swift in Sources */,
 				A1000420001 /* UnixSocketProtocol.swift in Sources */,
@@ -347,6 +351,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -370,6 +375,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -409,6 +415,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
+				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -425,6 +432,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 			};
 			name = Release;
@@ -437,9 +445,13 @@
 				CODE_SIGN_ENTITLEMENTS = Rayee/Rayee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Rayee/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -449,7 +461,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rayee.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -465,9 +477,13 @@
 				CODE_SIGN_ENTITLEMENTS = Rayee/Rayee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
+				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = "";
+				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Rayee/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -477,7 +493,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.2;
+				MARKETING_VERSION = 0.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rayee.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
