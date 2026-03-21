@@ -90,6 +90,24 @@ async def download_transform_model():
     return TransformDownloadResponse(status="downloading")
 
 
+@router.post("/transform/warmup")
+async def warmup_transform_model():
+    """Preload the transform model so the next transform request is instant."""
+    mgr = _text_transformer.model_manager
+
+    if mgr.is_model_loaded:
+        return {"status": "already_loaded"}
+    if not mgr.is_model_downloaded:
+        return {"status": "not_downloaded"}
+    if mgr.is_downloading:
+        return {"status": "downloading"}
+
+    loop = asyncio.get_running_loop()
+    loop.run_in_executor(transform_executor, mgr.load_model)
+
+    return {"status": "warming_up"}
+
+
 @router.get("/transform/download_status", response_model=TransformDownloadResponse)
 async def get_transform_download_status():
     """Get the download status of the transformation model."""

@@ -20,10 +20,8 @@ struct HistoryView: View {
     // Confirmation dialog for clearing all history
     @State private var showingClearConfirmation = false
 
-    // Filter transcriptions based on search text
-    private var filteredTranscriptions: [TranscriptionRecord] {
-        historyManager.searchTranscriptions(query: searchText)
-    }
+    // Debounced search
+    @State private var searchTask: DispatchWorkItem?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,14 +33,14 @@ struct HistoryView: View {
             Divider()
 
             // Main content: list of transcriptions or empty state
-            if filteredTranscriptions.isEmpty {
+            if historyManager.transcriptions.isEmpty && !historyManager.isLoadingMore {
                 emptyStateView
             } else {
                 transcriptionList
             }
 
             // Footer with clear all button (only show if there's history)
-            if !historyManager.transcriptions.isEmpty {
+            if historyManager.count > 0 {
                 Divider()
                 footerView
             }
@@ -58,9 +56,21 @@ struct HistoryView: View {
 
             TextField("Search transcriptions...", text: $searchText)
                 .textFieldStyle(.plain)
+                .onChange(of: searchText) { newValue in
+                    searchTask?.cancel()
+                    let task = DispatchWorkItem {
+                        historyManager.performSearch(query: newValue)
+                    }
+                    searchTask = task
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: task)
+                }
 
             if !searchText.isEmpty {
-                Button(action: { searchText = "" }) {
+                Button(action: {
+                    searchTask?.cancel()
+                    searchText = ""
+                    historyManager.performSearch(query: "")
+                }) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundColor(.secondary)
                 }
@@ -111,7 +121,7 @@ struct HistoryView: View {
     private var transcriptionList: some View {
         ScrollView {
             LazyVStack(spacing: 1) {
-                ForEach(filteredTranscriptions) { record in
+                ForEach(historyManager.transcriptions) { record in
                     TranscriptionRow(
                         record: record,
                         isExpanded: expandedId == record.id,
@@ -131,6 +141,25 @@ struct HistoryView: View {
                             historyManager.deleteTranscription(id: record.id)
                         }
                     )
+                    .onAppear {
+                        if record.id == historyManager.transcriptions.last?.id {
+                            historyManager.loadNextPage()
+                        }
+                    }
+                }
+
+                if historyManager.isLoadingMore {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                }
+
+                if !historyManager.hasMorePages && !historyManager.transcriptions.isEmpty {
+                    Text("End of history")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                 }
             }
         }

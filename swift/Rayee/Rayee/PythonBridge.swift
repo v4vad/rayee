@@ -185,6 +185,41 @@ class PythonBridge {
         return response.text
     }
 
+    // MARK: - Settings
+
+    /// Response from /settings endpoint
+    private struct SettingsResponse: Codable {
+        let beamSize: Int
+
+        enum CodingKeys: String, CodingKey {
+            case beamSize = "beam_size"
+        }
+    }
+
+    /// Request body for /settings endpoint
+    private struct SettingsUpdateRequest: Codable {
+        let beamSize: Int
+
+        enum CodingKeys: String, CodingKey {
+            case beamSize = "beam_size"
+        }
+    }
+
+    /// Update server settings (e.g. beam_size for fast mode)
+    func updateSettings(beamSize: Int) async {
+        do {
+            let requestBody = SettingsUpdateRequest(beamSize: beamSize)
+            let _: SettingsResponse = try await performRequest(
+                endpoint: "/settings",
+                method: "POST",
+                body: requestBody,
+                timeout: Config.regularTimeout
+            )
+        } catch {
+            print("[PythonBridge] Failed to update settings: \(error)")
+        }
+    }
+
     // MARK: - Generic Model Action
 
     /// Perform a model action (download, delete) by endpoint path
@@ -197,6 +232,21 @@ class PythonBridge {
             timeout: Config.regularTimeout
         )
         return body
+    }
+
+    // MARK: - Transform Warmup
+
+    /// Preload the transform model so the next transform is instant
+    func warmupTransformModel() async {
+        do {
+            let _: [String: String] = try await performRequest(
+                endpoint: "/transform/warmup",
+                method: "POST",
+                timeout: Config.regularTimeout
+            )
+        } catch {
+            // Warmup is best-effort — don't surface errors
+        }
     }
 
     // MARK: - Text Transformation Methods

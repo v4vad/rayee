@@ -24,6 +24,8 @@ from .server_helpers import (
     FWDownloadResponse,
     ModelRequest,
     ModelResponse,
+    SettingsResponse,
+    SettingsUpdateRequest,
     StartupStatusResponse,
     StatusResponse,
     TranscribeFileRequest,
@@ -231,6 +233,7 @@ async def list_models():
                 "name": name,
                 "description": info["description"],
                 "size_mb": info["size_mb"],
+                "category": info.get("category", "standard"),
                 "is_current": name == current.get("model_size"),
                 "is_loaded": current.get("is_loaded", False)
                 and name == current.get("model_size"),
@@ -335,6 +338,23 @@ async def delete_fw_model_endpoint(model_name: str):
         message="Model deleted successfully" if success else "Failed to delete model",
         model_name=model_name,
     )
+
+
+# ============ Settings Endpoints ============
+
+
+@app.get("/settings", response_model=SettingsResponse)
+async def get_settings():
+    """Get current server settings."""
+    return SettingsResponse(beam_size=state_manager.beam_size)
+
+
+@app.post("/settings", response_model=SettingsResponse)
+async def update_settings(request: SettingsUpdateRequest):
+    """Update server settings."""
+    if request.beam_size is not None:
+        state_manager.beam_size = request.beam_size
+    return SettingsResponse(beam_size=state_manager.beam_size)
 
 
 # ============ Vocabulary Endpoints ============

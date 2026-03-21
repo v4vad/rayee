@@ -49,6 +49,9 @@ class ServerStateManager:
         self.startup_error: Optional[str] = None
         self.models_ready = False
 
+        # Settings
+        self.beam_size: int = 5
+
         # Shared resources
         self._transcriber: Optional[Transcriber] = None
         self.vocabulary = VocabularyManager()

@@ -5,6 +5,7 @@ Detects when someone is speaking vs. silence.
 Used to automatically stop recording when the user stops talking.
 """
 
+import logging
 import signal
 import threading
 import time
@@ -15,6 +16,24 @@ import sounddevice as sd
 import torch
 
 from .audio import CHANNELS, SAMPLE_RATE
+
+logger = logging.getLogger(__name__)
+
+
+def trim_trailing_silence(
+    audio: np.ndarray,
+    sample_rate: int,
+    threshold: float = 0.01,
+    pad_seconds: float = 0.05,
+) -> np.ndarray:
+    """Remove trailing silence from audio, keeping a small pad."""
+    above = np.where(np.abs(audio) > threshold)[0]
+    if len(above) == 0:
+        return audio
+    last_speech = above[-1]
+    pad_samples = int(pad_seconds * sample_rate)
+    return audio[: last_speech + pad_samples]
+
 
 # Timeout for downloading the VAD model (5 minutes)
 VAD_DOWNLOAD_TIMEOUT = 300
@@ -50,8 +69,10 @@ class VoiceActivityDetector:
         if self._model is not None:
             return
 
-        print("Loading voice activity detection model...")
-        print("(This may take a few minutes on first run while the model downloads)")
+        logger.info("Loading voice activity detection model...")
+        logger.info(
+            "(This may take a few minutes on first run while the model downloads)"
+        )
 
         # Use a thread with timeout to prevent hanging forever
         result = {"model": None, "utils": None, "error": None}
@@ -86,7 +107,7 @@ class VoiceActivityDetector:
 
         self._model = result["model"]
         self._utils = result["utils"]
-        print("VAD model loaded.")
+        logger.info("VAD model loaded.")
 
     def is_speech(self, audio_chunk: np.ndarray, threshold: float = 0.5) -> bool:
         """
@@ -214,14 +235,13 @@ class SmartRecorder:
         self._is_recording = True
         self._stop_requested = False
 
-        print("Listening... (speak now)")
+        logger.info("Listening... (speak now)")
 
-        # Debug: show which audio device we're using
         try:
             default_device = sd.query_devices(kind="input")
-            print(f"[DEBUG] Using input device: {default_device['name']}")
+            logger.debug("Using input device: %s", default_device["name"])
         except Exception as e:
-            print(f"[DEBUG] Could not query input device: {e}")
+            logger.debug("Could not query input device: %s", e)
 
         # Open audio stream
         with sd.InputStream(
@@ -234,7 +254,7 @@ class SmartRecorder:
                 # Check max duration
                 elapsed = time.time() - recording_start_time
                 if elapsed >= self.max_duration:
-                    print(f"\nMax duration ({self.max_duration}s) reached.")
+                    logger.info("Max duration (%.0fs) reached.", self.max_duration)
                     break
 
                 # Read audio chunk (exactly 512 samples for VAD)
@@ -246,27 +266,39 @@ class SmartRecorder:
 
                 if is_speech:
                     if not speech_started:
-                        # First speech detected!
-                        speech_started = True
-                        speech_start_time = time.time()
-                        if on_speech_start:
-                            on_speech_start()
-                        print("Speech detected, recording...")
+                        if speech_start_time is None:
+                            # First speech chunk — start probation
+                            speech_start_time = time.time()
+                        audio_chunks.append(audio_chunk)
+                        # Only confirm speech after min_speech_duration
+                        if time.time() - speech_start_time >= self.min_speech_duration:
+                            speech_started = True
+                            if on_speech_start:
+                                on_speech_start()
+                            logger.info("Speech detected, recording...")
+                    else:
+                        audio_chunks.append(audio_chunk)
 
                     last_speech_time = time.time()
-                    audio_chunks.append(audio_chunk)
 
                 elif speech_started:
-                    # Silence after speech
+                    # Silence after confirmed speech
                     audio_chunks.append(audio_chunk)
 
                     # Check if silence has lasted long enough
                     silence_elapsed = time.time() - last_speech_time
                     if silence_elapsed >= self.silence_duration:
-                        print(
-                            f"\nSilence detected for {self.silence_duration}s, stopping."
+                        logger.info(
+                            "Silence detected for %.1fs, stopping.",
+                            self.silence_duration,
                         )
                         break
+
+                else:
+                    # Silence during probation — reset
+                    if speech_start_time is not None:
+                        speech_start_time = None
+                        audio_chunks.clear()
 
         self._is_recording = False
 
@@ -276,11 +308,12 @@ class SmartRecorder:
         # Combine all chunks
         if audio_chunks:
             audio_data = np.concatenate(audio_chunks)
+            audio_data = trim_trailing_silence(audio_data, SAMPLE_RATE)
             duration = len(audio_data) / SAMPLE_RATE
-            print(f"Recorded {duration:.2f} seconds of audio")
+            logger.info("Recorded %.2f seconds of audio", duration)
             return audio_data
         else:
-            print("No speech detected.")
+            logger.info("No speech detected.")
             return np.array([], dtype="float32")
 
     def stop(self):

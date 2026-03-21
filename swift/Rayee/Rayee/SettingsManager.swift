@@ -26,6 +26,7 @@ enum SettingsKey {
     static let keepTransformModelLoaded = "keepTransformModelLoaded"
     static let enabledTransformations = "enabledTransformations"
     static let hasCompletedSetup = "hasCompletedSetup"
+    static let fastModeEnabled = "fastModeEnabled"
 }
 
 // MARK: - AI Model Options
@@ -36,6 +37,10 @@ enum TranscriptionModel: String, CaseIterable, Identifiable {
     case small = "small"
     case medium = "medium"
     case large = "large-v3"  // Python uses "large-v3" not "large"
+    case largeTurbo = "large-v3-turbo"
+    case distilSmallEn = "distil-small.en"
+    case distilMediumEn = "distil-medium.en"
+    case distilLargeV3 = "distil-large-v3"
 
     var id: String { rawValue }
 
@@ -46,6 +51,10 @@ enum TranscriptionModel: String, CaseIterable, Identifiable {
         case .small: return "Small (Balanced)"
         case .medium: return "Medium (Better)"
         case .large: return "Large (Best Quality)"
+        case .largeTurbo: return "Large Turbo (Fast + Accurate)"
+        case .distilSmallEn: return "Distil Small (English)"
+        case .distilMediumEn: return "Distil Medium (English)"
+        case .distilLargeV3: return "Distil Large (English)"
         }
     }
 
@@ -56,6 +65,10 @@ enum TranscriptionModel: String, CaseIterable, Identifiable {
         case .small: return "~2GB RAM, good balance of speed and accuracy"
         case .medium: return "~5GB RAM, better accuracy"
         case .large: return "~10GB RAM, highest accuracy"
+        case .largeTurbo: return "~4GB RAM, near-best accuracy, much faster than large"
+        case .distilSmallEn: return "~1GB RAM, fast English-only"
+        case .distilMediumEn: return "~2GB RAM, balanced English-only"
+        case .distilLargeV3: return "~4GB RAM, best English-only"
         }
     }
 
@@ -66,6 +79,10 @@ enum TranscriptionModel: String, CaseIterable, Identifiable {
         case .small: return 488
         case .medium: return 1500
         case .large: return 3000
+        case .largeTurbo: return 1600
+        case .distilSmallEn: return 330
+        case .distilMediumEn: return 750
+        case .distilLargeV3: return 1400
         }
     }
 
@@ -231,6 +248,14 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(hasCompletedSetup, forKey: SettingsKey.hasCompletedSetup) }
     }
 
+    // Whether fast transcription mode is enabled (beam_size=1 instead of 5)
+    @Published var fastModeEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(fastModeEnabled, forKey: SettingsKey.fastModeEnabled)
+            syncFastModeToServer()
+        }
+    }
+
     private init() {
         // Load saved settings or use defaults
 
@@ -314,6 +339,9 @@ class SettingsManager: ObservableObject {
 
         // Load setup completion flag (default: false)
         self.hasCompletedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
+
+        // Load fast mode setting (default: false)
+        self.fastModeEnabled = UserDefaults.standard.bool(forKey: SettingsKey.fastModeEnabled)
     }
 
     // Save hotkey configuration to UserDefaults
@@ -347,5 +375,13 @@ class SettingsManager: ObservableObject {
         transformationsEnabled = true
         keepTransformModelLoaded = false
         enabledTransformations = Set(TransformationType.allCases.map(\.rawValue))
+        fastModeEnabled = false
+    }
+
+    /// Sync the fast mode setting to the Python server
+    func syncFastModeToServer() {
+        Task {
+            await PythonBridge().updateSettings(beamSize: fastModeEnabled ? 1 : 5)
+        }
     }
 }

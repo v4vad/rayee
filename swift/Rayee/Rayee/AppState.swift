@@ -164,6 +164,10 @@ class AppState: ObservableObject {
                 if isOnline && (self.status == .startingServer || self.status == .downloadingModels) {
                     self.status = .ready
                 }
+                // Sync settings to server when it comes online
+                if isOnline {
+                    SettingsManager.shared.syncFastModeToServer()
+                }
             }
             .store(in: &cancellables)
 
