@@ -322,18 +322,20 @@ class HistoryManager: ObservableObject {
 
     /// Refresh the total count of transcriptions from the database
     private func refreshTotalCount() {
-        let countSQL = "SELECT COUNT(*) FROM transcriptions;"
-        var statement: OpaquePointer?
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            let countSQL = "SELECT COUNT(*) FROM transcriptions;"
+            var statement: OpaquePointer?
 
-        if sqlite3_prepare_v2(db, countSQL, -1, &statement, nil) == SQLITE_OK {
-            if sqlite3_step(statement) == SQLITE_ROW {
-                let count = Int(sqlite3_column_int(statement, 0))
-                DispatchQueue.main.async {
-                    self.totalCount = count
+            if sqlite3_prepare_v2(self.db, countSQL, -1, &statement, nil) == SQLITE_OK {
+                if sqlite3_step(statement) == SQLITE_ROW {
+                    let count = Int(sqlite3_column_int(statement, 0))
+                    DispatchQueue.main.async {
+                        self.totalCount = count
+                    }
                 }
             }
+            sqlite3_finalize(statement)
         }
-
-        sqlite3_finalize(statement)
     }
 }

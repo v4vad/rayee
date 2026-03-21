@@ -6,6 +6,7 @@ Handles model preloading and cleanup when server starts/stops.
 
 import asyncio
 import os
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from .state import StartupState, state_manager
@@ -67,24 +68,39 @@ def preload_models():
     This runs in a separate thread so the server stays responsive
     while models download (which can take minutes on first run).
     """
+    errors = {}
+
+    def load_vad():
+        try:
+            vad = VoiceActivityDetector()
+            vad.load_model()
+        except Exception as e:
+            errors["vad"] = e
+
+    def load_whisper():
+        try:
+            transcriber = state_manager.get_transcriber()
+            transcriber.load_model()
+        except Exception as e:
+            errors["whisper"] = e
+
     try:
-        # Step 1: Load VAD model
+        # Load both models in parallel
         state_manager.set_startup_state(
-            StartupState.DOWNLOADING_VAD, "Downloading voice detection model..."
+            StartupState.DOWNLOADING_VAD, "Loading models..."
         )
         print(f"[Startup] {state_manager.startup_message}")
 
-        vad = VoiceActivityDetector()
-        vad.load_model()
+        vad_thread = threading.Thread(target=load_vad, daemon=True)
+        whisper_thread = threading.Thread(target=load_whisper, daemon=True)
+        vad_thread.start()
+        whisper_thread.start()
+        vad_thread.join()
+        whisper_thread.join()
 
-        # Step 2: Load Whisper model
-        state_manager.set_startup_state(
-            StartupState.DOWNLOADING_WHISPER, "Downloading transcription model..."
-        )
-        print(f"[Startup] {state_manager.startup_message}")
-
-        transcriber = state_manager.get_transcriber()
-        transcriber.load_model()
+        if errors:
+            first_error = next(iter(errors.values()))
+            raise first_error
 
         # All done!
         state_manager.set_startup_state(

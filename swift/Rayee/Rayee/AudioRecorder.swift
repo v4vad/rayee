@@ -114,6 +114,7 @@ class AudioRecorder {
 
         // Reset state
         audioBuffer = []
+        audioBuffer.reserveCapacity(Int(maxDuration * sampleRate))
         recordingStartTime = Date()
         lastSpeechTime = nil
         speechDetected = false
@@ -278,9 +279,7 @@ class AudioRecorder {
         // Only keep audio after speech is detected
         if speechDetected {
             // Append samples to buffer
-            for i in 0..<frameLength {
-                audioBuffer.append(channelData[i])
-            }
+            audioBuffer.append(contentsOf: UnsafeBufferPointer(start: channelData, count: frameLength))
         }
 
         // Check stopping conditions
@@ -349,8 +348,8 @@ class AudioRecorder {
 
         // Copy our samples to the buffer
         if let channelData = buffer.floatChannelData?[0] {
-            for (index, sample) in audioBuffer.enumerated() {
-                channelData[index] = sample
+            audioBuffer.withUnsafeBufferPointer { src in
+                channelData.update(from: src.baseAddress!, count: src.count)
             }
         }
 

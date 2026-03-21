@@ -37,7 +37,13 @@ from .server_helpers import (
     read_wav_file,
     transcribe_audio,
 )
-from .startup import audio_executor, on_shutdown, on_startup, upload_executor
+from .startup import (
+    audio_executor,
+    on_shutdown,
+    on_startup,
+    transform_executor,
+    upload_executor,
+)
 from .state import ServerState, state_manager
 from .transcribe import Transcriber
 from .transform_routes import router as transform_router
@@ -161,8 +167,11 @@ async def transcribe_file(request: TranscribeFileRequest):
         )
 
     try:
-        # Read and validate the WAV file
-        audio_data = read_wav_file(request.audio_path)
+        # Read and validate the WAV file (off the event loop)
+        loop = asyncio.get_running_loop()
+        audio_data = await loop.run_in_executor(
+            audio_executor, lambda: read_wav_file(request.audio_path)
+        )
 
         if len(audio_data) == 0:
             return TranscribeResponse(text="", status="no_audio")
@@ -202,7 +211,10 @@ async def transcribe_upload(request: TranscribeFileRequest):
         )
 
     try:
-        audio_data = read_wav_file(request.audio_path)
+        loop = asyncio.get_running_loop()
+        audio_data = await loop.run_in_executor(
+            upload_executor, lambda: read_wav_file(request.audio_path)
+        )
 
         if len(audio_data) == 0:
             return TranscribeResponse(text="", status="no_audio")

@@ -3,7 +3,7 @@
 //  Rayee
 //
 //  Monitors the Python server's health status.
-//  Checks periodically and publishes whether the server is online.
+//  Derives isServerOnline directly from ServerManager state — no polling needed.
 //
 
 import Foundation
@@ -17,57 +17,19 @@ class HealthMonitor: ObservableObject {
     /// Whether the Python server is currently reachable
     @Published var isServerOnline: Bool = false
 
-    /// Bridge for making health check requests
-    private let pythonBridge: PythonBridge
-
-    /// Timer for periodic health checks
-    private var healthCheckTimer: Timer?
-
-    /// Whether monitoring is active
-    private var isMonitoring = false
+    private var cancellable: AnyCancellable?
 
     // MARK: - Initialization
 
-    init(pythonBridge: PythonBridge = PythonBridge()) {
-        self.pythonBridge = pythonBridge
+    private init() {
+        cancellable = ServerManager.shared.$state
+            .map { $0 == .running }
+            .assign(to: \.isServerOnline, on: self)
     }
 
-    deinit {
-        stop()
-    }
+    // MARK: - Public Methods (kept for call-site compatibility)
 
-    // MARK: - Public Methods
-
-    /// Start monitoring server health
-    /// Performs an immediate check, then checks periodically
-    func start() {
-        guard !isMonitoring else { return }
-        isMonitoring = true
-
-        // Check immediately
-        checkHealth()
-
-        // Then check periodically
-        healthCheckTimer = Timer.scheduledTimer(
-            withTimeInterval: Config.healthCheckInterval,
-            repeats: true
-        ) { [weak self] _ in
-            self?.checkHealth()
-        }
-    }
-
-    /// Stop monitoring server health
-    func stop() {
-        isMonitoring = false
-        healthCheckTimer?.invalidate()
-        healthCheckTimer = nil
-    }
-
-    /// Perform a single health check (useful for manual refresh)
-    func checkHealth() {
-        Task { @MainActor in
-            let isOnline = await pythonBridge.checkHealth()
-            self.isServerOnline = isOnline
-        }
-    }
+    func start() {}
+    func stop() {}
+    func checkHealth() {}
 }

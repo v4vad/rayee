@@ -14,6 +14,16 @@ from .transform_prompts import AVAILABLE_TRANSFORMATIONS, build_prompt
 MAX_INPUT_LENGTH = 5000
 MIN_INPUT_LENGTH = 1
 
+# Pre-compiled regex patterns for output cleaning
+_RE_PREAMBLE = [
+    re.compile(
+        r"^Here(?:'s| is) the (?:corrected|transformed|rephrased|formal|casual|revised) (?:text|version)[:\s]*",
+        re.IGNORECASE,
+    ),
+    re.compile(r"^Sure[,!]?\s*(?:here(?:'s| is))?[:\s]*", re.IGNORECASE),
+    re.compile(r"^(?:Corrected|Transformed|Rephrased|Revised)[:\s]+", re.IGNORECASE),
+]
+
 
 class TransformError(Exception):
     """Raised when a transformation fails."""
@@ -98,13 +108,8 @@ class TextTransformer:
             text = text[1:-1].strip()
 
         # Remove common LLM preambles
-        preamble_patterns = [
-            r"^Here(?:'s| is) the (?:corrected|transformed|rephrased|formal|casual|revised) (?:text|version)[:\s]*",
-            r"^Sure[,!]?\s*(?:here(?:'s| is))?[:\s]*",
-            r"^(?:Corrected|Transformed|Rephrased|Revised)[:\s]+",
-        ]
-        for pattern in preamble_patterns:
-            text = re.sub(pattern, "", text, flags=re.IGNORECASE).strip()
+        for pattern in _RE_PREAMBLE:
+            text = pattern.sub("", text).strip()
 
         # If the model returned empty, fall back to original
         if not text:
