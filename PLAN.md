@@ -1,7 +1,5 @@
 # Rayee - Local Voice Transcription App
 
-**Project Location:** `/Users/karthikvadlapatla/claude/rayee`
-
 ---
 
 ## CURRENT STATUS (March 21, 2026)
@@ -21,7 +19,7 @@
 
 ### How to Run the Server
 ```bash
-cd /Users/karthikvadlapatla/claude/rayee/python
+cd rayee/python
 source venv/bin/activate
 python run_server.py
 ```
@@ -108,7 +106,7 @@ A voice-to-text app that runs entirely on your Mac. Press a hotkey, speak, and t
 ### Phase 0: Project Setup ✅
 **Goal:** Create project structure and version control
 
-- [x] Create project folder at `/Users/karthikvadlapatla/claude/rayee`
+- [x] Create project folder at `rayee`
 - [x] Initialize git repository
 - [x] Create folder structure (python/, swift/)
 - [x] Copy this plan into the project as `PLAN.md`
