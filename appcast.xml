@@ -1,0 +1,47 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+    <channel>
+        <title>Rayee Updates</title>
+        <link>https://raw.githubusercontent.com/v4vad/rayee/main/appcast.xml</link>
+        <description>Rayee update feed</description>
+        <language>en</language>
+
+        <!--
+            To add a new release:
+            1. Run ./publish_release.sh - it prints the EdDSA signature and file size
+            2. Copy the <item> block below and update:
+               - sparkle:version (build number)
+               - sparkle:shortVersionString (display version like 1.1)
+               - url (GitHub release download URL)
+               - sparkle:edSignature (from build script output)
+               - length (file size in bytes from build script output)
+
+        <item>
+            <title>Version X.X</title>
+            <pubDate>Mon, 01 Jan 2026 00:00:00 +0000</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+            <enclosure
+                url="https://github.com/v4vad/rayee/releases/download/vX.X/Rayee.dmg"
+                type="application/octet-stream"
+                sparkle:edSignature="SIGNATURE_HERE"
+                length="FILE_SIZE_IN_BYTES"
+            />
+        </item>
+        -->
+
+        <item>
+            <title>Version 0.2</title>
+            <pubDate>Fri, 21 Mar 2026 00:00:00 +0000</pubDate>
+            <sparkle:version>2</sparkle:version>
+            <sparkle:shortVersionString>0.2</sparkle:shortVersionString>
+            <enclosure
+                url="https://github.com/v4vad/rayee/releases/download/v0.2/Rayee.dmg"
+                type="application/octet-stream"
+                sparkle:edSignature="+ZaKMVsvMMWFojQ3eaJH3IG+pWhDkR2sw9UhFHD5LGvkQxwFxt8GGOXbCiXGHj0uomPepyfgDQkfl2BDZKmKDw=="
+                length="243795373"
+            />
+        </item>
+
+    </channel>
+</rss>

@@ -10,9 +10,10 @@
 		A10001E0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10001E0000 /* Assets.xcassets */; };
 		A1000001001 /* RayeeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RayeeApp.swift */; };
 		A1000002001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* AppState.swift */; };
-		A1000003001 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000003000 /* SimpleMenuView.swift */; };
+		A1000410001 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000410000 /* MenuBarController.swift */; };
 		A1000004001 /* StatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000 /* StatusIndicator.swift */; };
 		A1000005001 /* PythonBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* PythonBridge.swift */; };
+		A1000420001 /* UnixSocketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000420000 /* UnixSocketProtocol.swift */; };
 		A1000007001 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* SettingsManager.swift */; };
 		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
 		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
@@ -26,7 +27,6 @@
 		A1000130001 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000130000 /* Config.swift */; };
 		A1000140001 /* HealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000140000 /* HealthMonitor.swift */; };
 		A1000150001 /* TranscriptionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000150000 /* TranscriptionCoordinator.swift */; };
-		A1000380001 /* DotGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000380000 /* DotGridView.swift */; };
 		A1000170001 /* AudioLevelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000170000 /* AudioLevelMonitor.swift */; };
 		A1000180001 /* RecordingPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000180000 /* RecordingPanelView.swift */; };
 		A1000190001 /* RecordingPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000190000 /* RecordingPanelController.swift */; };
@@ -51,15 +51,18 @@
 		A10003E0001 /* TransformAPITypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003E0000 /* TransformAPITypes.swift */; };
 		A10003F0001 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003F0000 /* SetupGuideView.swift */; };
 		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
+		A1000520001 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000520000 /* UpdateManager.swift */; };
+		A1000510001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1000510000 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		A1000000000 /* Rayee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rayee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000001000 /* RayeeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RayeeApp.swift; sourceTree = "<group>"; };
 		A1000002000 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		A1000003000 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
+		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1000004000 /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
 		A1000005000 /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
+		A1000420000 /* UnixSocketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnixSocketProtocol.swift; sourceTree = "<group>"; };
 		A1000006000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000007000 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A1000008000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -75,7 +78,6 @@
 		A1000130000 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1000140000 /* HealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMonitor.swift; sourceTree = "<group>"; };
 		A1000150000 /* TranscriptionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCoordinator.swift; sourceTree = "<group>"; };
-		A1000380000 /* DotGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DotGridView.swift; sourceTree = "<group>"; };
 		A1000170000 /* AudioLevelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelMonitor.swift; sourceTree = "<group>"; };
 		A1000180000 /* RecordingPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelView.swift; sourceTree = "<group>"; };
 		A1000190000 /* RecordingPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelController.swift; sourceTree = "<group>"; };
@@ -101,6 +103,7 @@
 		A10003E0000 /* TransformAPITypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformAPITypes.swift; sourceTree = "<group>"; };
 		A10003F0000 /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
 		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
+		A1000520000 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +111,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1000510001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,9 +131,10 @@
 			children = (
 				A1000001000 /* RayeeApp.swift */,
 				A1000002000 /* AppState.swift */,
-				A1000003000 /* SimpleMenuView.swift */,
+				A1000410000 /* MenuBarController.swift */,
 				A1000004000 /* StatusIndicator.swift */,
 				A1000005000 /* PythonBridge.swift */,
+				A1000420000 /* UnixSocketProtocol.swift */,
 				A1000007000 /* SettingsManager.swift */,
 				A1000008000 /* SettingsView.swift */,
 				A1000009000 /* HotkeyManager.swift */,
@@ -143,7 +148,6 @@
 				A1000130000 /* Config.swift */,
 				A1000140000 /* HealthMonitor.swift */,
 				A1000150000 /* TranscriptionCoordinator.swift */,
-				A1000380000 /* DotGridView.swift */,
 				A1000170000 /* AudioLevelMonitor.swift */,
 				A1000180000 /* RecordingPanelView.swift */,
 				A1000190000 /* RecordingPanelController.swift */,
@@ -168,6 +172,7 @@
 				A10003E0000 /* TransformAPITypes.swift */,
 				A10003F0000 /* SetupGuideView.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
+				A1000520000 /* UpdateManager.swift */,
 				A10001E0000 /* Assets.xcassets */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
@@ -199,6 +204,9 @@
 			dependencies = (
 			);
 			name = Rayee;
+			packageProductDependencies = (
+				A1000510000 /* Sparkle */,
+			);
 			productName = Rayee;
 			productReference = A1000000000 /* Rayee.app */;
 			productType = "com.apple.product-type.application";
@@ -227,6 +235,9 @@
 				Base,
 			);
 			mainGroup = A1000020000;
+			packageReferences = (
+				A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
 			productRefGroup = A1000022000 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -254,9 +265,10 @@
 			files = (
 				A1000001001 /* RayeeApp.swift in Sources */,
 				A1000002001 /* AppState.swift in Sources */,
-				A1000003001 /* SimpleMenuView.swift in Sources */,
+				A1000410001 /* MenuBarController.swift in Sources */,
 				A1000004001 /* StatusIndicator.swift in Sources */,
 				A1000005001 /* PythonBridge.swift in Sources */,
+				A1000420001 /* UnixSocketProtocol.swift in Sources */,
 				A1000007001 /* SettingsManager.swift in Sources */,
 				A1000008001 /* SettingsView.swift in Sources */,
 				A1000009001 /* HotkeyManager.swift in Sources */,
@@ -270,7 +282,6 @@
 				A1000130001 /* Config.swift in Sources */,
 				A1000140001 /* HealthMonitor.swift in Sources */,
 				A1000150001 /* TranscriptionCoordinator.swift in Sources */,
-				A1000380001 /* DotGridView.swift in Sources */,
 				A1000170001 /* AudioLevelMonitor.swift in Sources */,
 				A1000180001 /* RecordingPanelView.swift in Sources */,
 				A1000190001 /* RecordingPanelController.swift in Sources */,
@@ -295,6 +306,7 @@
 				A10003E0001 /* TransformAPITypes.swift in Sources */,
 				A10003F0001 /* SetupGuideView.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
+				A1000520001 /* UpdateManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -425,7 +437,7 @@
 				CODE_SIGN_ENTITLEMENTS = Rayee/Rayee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -437,7 +449,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rayee.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -453,7 +465,7 @@
 				CODE_SIGN_ENTITLEMENTS = Rayee/Rayee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -465,7 +477,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rayee.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -495,6 +507,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A1000510000 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A1000050000 /* Project object */;
 }
