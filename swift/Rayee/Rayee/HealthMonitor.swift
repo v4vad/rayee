@@ -3,7 +3,8 @@
 //  Rayee
 //
 //  Monitors the Python server's health status.
-//  Checks periodically and publishes whether the server is online.
+//  Uses ServerManager state for instant updates, plus periodic socket checks
+//  to detect manually-started servers (development mode).
 //
 
 import Foundation
@@ -26,10 +27,22 @@ class HealthMonitor: ObservableObject {
     /// Whether monitoring is active
     private var isMonitoring = false
 
+    /// Combine subscription for ServerManager state
+    private var cancellable: AnyCancellable?
+
     // MARK: - Initialization
 
     init(pythonBridge: PythonBridge = PythonBridge()) {
         self.pythonBridge = pythonBridge
+
+        // Instantly set online when ServerManager reports running
+        cancellable = ServerManager.shared.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                if state == .running {
+                    self?.isServerOnline = true
+                }
+            }
     }
 
     deinit {
@@ -39,15 +52,12 @@ class HealthMonitor: ObservableObject {
     // MARK: - Public Methods
 
     /// Start monitoring server health
-    /// Performs an immediate check, then checks periodically
     func start() {
         guard !isMonitoring else { return }
         isMonitoring = true
 
-        // Check immediately
         checkHealth()
 
-        // Then check periodically
         healthCheckTimer = Timer.scheduledTimer(
             withTimeInterval: Config.healthCheckInterval,
             repeats: true
@@ -63,7 +73,7 @@ class HealthMonitor: ObservableObject {
         healthCheckTimer = nil
     }
 
-    /// Perform a single health check (useful for manual refresh)
+    /// Perform a single health check
     func checkHealth() {
         Task { @MainActor in
             let isOnline = await pythonBridge.checkHealth()

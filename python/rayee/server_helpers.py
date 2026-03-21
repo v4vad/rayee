@@ -177,6 +177,11 @@ def read_wav_file(audio_path: str) -> np.ndarray:
             status_code=400, detail=f"Expected 16kHz sample rate, got {sample_rate}Hz"
         )
 
+    # Ensure mono first (take first channel if stereo), then convert dtype
+    # This avoids converting all channels and then discarding the extras
+    if len(audio_data.shape) > 1:
+        audio_data = audio_data[:, 0]
+
     # Convert to float32 if needed
     if audio_data.dtype == np.int16:
         audio_data = audio_data.astype(np.float32) / 32768.0
@@ -184,10 +189,6 @@ def read_wav_file(audio_path: str) -> np.ndarray:
         audio_data = audio_data.astype(np.float32) / 2147483648.0
     elif audio_data.dtype != np.float32:
         audio_data = audio_data.astype(np.float32)
-
-    # Ensure mono (take first channel if stereo)
-    if len(audio_data.shape) > 1:
-        audio_data = audio_data[:, 0]
 
     return audio_data
 

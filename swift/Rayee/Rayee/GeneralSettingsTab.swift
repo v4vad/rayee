@@ -90,6 +90,13 @@ struct GeneralSettingsTab: View {
                 Text("Faster but slightly less accurate. Best for short dictation.")
             }
 
+            // Adaptive Silence Detection
+            Section {
+                Toggle("Adaptive silence detection", isOn: $settings.adaptiveVADEnabled)
+            } footer: {
+                Text("Auto-calibrates to ambient noise for 200ms when recording starts. Useful in varying noise environments.")
+            }
+
             // Reset Button
             Section {
                 HStack {

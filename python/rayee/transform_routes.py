@@ -6,9 +6,11 @@ Mounted as part of the main FastAPI app in server.py.
 """
 
 import asyncio
+import queue
 import threading
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
 from .server_helpers import (
     TransformDownloadResponse,
@@ -106,6 +108,48 @@ async def warmup_transform_model():
     loop.run_in_executor(transform_executor, mgr.load_model)
 
     return {"status": "warming_up"}
+
+
+@router.post("/transform_stream")
+async def transform_text_stream(request: TransformRequest):
+    """Transform text and stream tokens as they're generated."""
+    # Validate synchronously first
+    try:
+        _text_transformer._validate_input(request.text, request.transformation_type)
+    except (TransformError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    async def generate():
+        loop = asyncio.get_running_loop()
+        token_queue = queue.Queue()
+
+        def producer():
+            try:
+                for token in _text_transformer.transform_stream(
+                    request.text, request.transformation_type
+                ):
+                    token_queue.put(token)
+            except Exception as e:
+                token_queue.put(e)
+            finally:
+                token_queue.put(None)  # Sentinel
+
+        loop.run_in_executor(transform_executor, producer)
+
+        while True:
+            try:
+                item = await loop.run_in_executor(
+                    None, lambda: token_queue.get(timeout=0.1)
+                )
+                if item is None:
+                    break
+                if isinstance(item, Exception):
+                    break
+                yield item
+            except queue.Empty:
+                continue
+
+    return StreamingResponse(generate(), media_type="text/plain")
 
 
 @router.get("/transform/download_status", response_model=TransformDownloadResponse)

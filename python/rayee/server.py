@@ -9,7 +9,8 @@ All communication happens over a Unix domain socket (~/.rayee/server.sock) - onl
 
 import asyncio
 
-from fastapi import FastAPI, HTTPException
+import numpy as np
+from fastapi import FastAPI, HTTPException, Request
 
 from .models import (
     AVAILABLE_MODELS,
@@ -37,7 +38,13 @@ from .server_helpers import (
     read_wav_file,
     transcribe_audio,
 )
-from .startup import audio_executor, on_shutdown, on_startup, upload_executor
+from .startup import (
+    audio_executor,
+    on_shutdown,
+    on_startup,
+    transform_executor,
+    upload_executor,
+)
 from .state import ServerState, state_manager
 from .transcribe import Transcriber
 from .transform_routes import router as transform_router
@@ -161,8 +168,11 @@ async def transcribe_file(request: TranscribeFileRequest):
         )
 
     try:
-        # Read and validate the WAV file
-        audio_data = read_wav_file(request.audio_path)
+        # Read and validate the WAV file (off the event loop)
+        loop = asyncio.get_running_loop()
+        audio_data = await loop.run_in_executor(
+            audio_executor, lambda: read_wav_file(request.audio_path)
+        )
 
         if len(audio_data) == 0:
             return TranscribeResponse(text="", status="no_audio")
@@ -202,7 +212,10 @@ async def transcribe_upload(request: TranscribeFileRequest):
         )
 
     try:
-        audio_data = read_wav_file(request.audio_path)
+        loop = asyncio.get_running_loop()
+        audio_data = await loop.run_in_executor(
+            upload_executor, lambda: read_wav_file(request.audio_path)
+        )
 
         if len(audio_data) == 0:
             return TranscribeResponse(text="", status="no_audio")
@@ -215,6 +228,39 @@ async def transcribe_upload(request: TranscribeFileRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+
+
+@app.post("/transcribe_raw", response_model=TranscribeResponse)
+async def transcribe_raw(request: Request):
+    """
+    Transcribe raw Float32 PCM audio sent directly in the request body.
+    Skips the WAV file round-trip for faster transcription from Swift.
+    Body: raw bytes of float32 samples at 16kHz mono.
+    """
+    if not state_manager.models_ready:
+        raise_models_not_ready()
+
+    if not state_manager.set_state(ServerState.TRANSCRIBING):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Server is busy ({state_manager.state.value}). Please wait.",
+        )
+
+    try:
+        body = await request.body()
+        if len(body) == 0:
+            return TranscribeResponse(text="", status="no_audio")
+
+        audio_data = np.frombuffer(body, dtype=np.float32).copy()
+        text = await transcribe_audio(audio_data, audio_executor)
+        return TranscribeResponse(text=text, status="success")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    finally:
+        state_manager.set_state(ServerState.IDLE)
 
 
 # ============ Model Endpoints ============

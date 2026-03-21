@@ -42,6 +42,7 @@ class VocabularyManager:
         """
         self.vocab_path = vocab_path
         self._words: Set[str] = set()
+        self._prompt_cache = None
         self._load()
 
     def _load(self):
@@ -83,6 +84,7 @@ class VocabularyManager:
             return False
 
         self._words.add(word)
+        self._prompt_cache = None
         self._save()
         return True
 
@@ -101,6 +103,7 @@ class VocabularyManager:
             return False
 
         self._words.discard(word)
+        self._prompt_cache = None
         self._save()
         return True
 
@@ -120,11 +123,14 @@ class VocabularyManager:
         """
         if not self._words:
             return ""
-        return ", ".join(sorted(self._words))
+        if self._prompt_cache is None:
+            self._prompt_cache = ", ".join(sorted(self._words))
+        return self._prompt_cache
 
     def clear(self):
         """Remove all words from the vocabulary."""
         self._words.clear()
+        self._prompt_cache = None
         self._save()
 
     def count(self) -> int:

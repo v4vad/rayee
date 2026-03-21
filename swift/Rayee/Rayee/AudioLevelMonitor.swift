@@ -10,15 +10,20 @@ import Foundation
 
 /// Stores audio level history for waveform visualization
 class AudioLevelMonitor: ObservableObject {
-    /// Rolling buffer of audio levels (most recent at the end)
+    /// Ordered rolling buffer of audio levels (most recent at the end), for SwiftUI
     @Published var levels: [Float] = []
 
     /// How many levels to keep in the buffer
     private let bufferSize: Int
 
+    /// Backing circular buffer — avoids O(n) removeFirst on every update
+    private var buffer: [Float]
+    private var writeIndex: Int = 0
+
     init(bufferSize: Int = Config.waveformBarCount) {
         self.bufferSize = bufferSize
-        // Initialize with silent levels
+        self.buffer = Array(repeating: 0.01, count: bufferSize)
+        // Initialize published levels with silent values
         levels = Array(repeating: 0.01, count: bufferSize)
     }
 
@@ -28,17 +33,20 @@ class AudioLevelMonitor: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
 
-            self.levels.append(level)
+            // Write into circular slot
+            self.buffer[self.writeIndex % self.bufferSize] = level
+            self.writeIndex += 1
 
-            // Keep only the most recent readings
-            if self.levels.count > self.bufferSize {
-                self.levels.removeFirst(self.levels.count - self.bufferSize)
-            }
+            // Reconstruct ordered array from circular buffer
+            let start = self.writeIndex % self.bufferSize
+            self.levels = Array(self.buffer[start...]) + Array(self.buffer[..<start])
         }
     }
 
     /// Reset to silent state
     func reset() {
+        buffer = Array(repeating: 0.01, count: bufferSize)
+        writeIndex = 0
         levels = Array(repeating: 0.01, count: bufferSize)
     }
 }

@@ -117,7 +117,8 @@ class TranscriptionCoordinator: ObservableObject {
         // Create recorder with user's settings
         audioRecorder = AudioRecorder(
             silenceDuration: settings.silenceDuration,
-            timeoutEnabled: settings.timeoutEnabled
+            timeoutEnabled: settings.timeoutEnabled,
+            adaptiveVADEnabled: settings.adaptiveVADEnabled
         )
 
         // Set up callbacks
@@ -149,8 +150,8 @@ class TranscriptionCoordinator: ObservableObject {
 
         switch result {
         case .success(let recordingResult):
-            AppLogger.log("Recording complete: \(String(format: "%.1f", recordingResult.duration))s, path: \(recordingResult.audioPath.lastPathComponent)", category: "transcription")
-            transcribeAudioFile(recordingResult.audioPath)
+            AppLogger.log("Recording complete: \(String(format: "%.1f", recordingResult.duration))s", category: "transcription")
+            transcribeRecording(recordingResult)
 
         case .failure(let error):
             if case .noAudioRecorded = error {
@@ -172,17 +173,24 @@ class TranscriptionCoordinator: ObservableObject {
         onTranscriptionComplete?(.error(message: error.localizedDescription))
     }
 
-    /// Send recorded audio to Python for transcription
-    private func transcribeAudioFile(_ audioPath: URL) {
+    /// Transcribe recording using raw PCM bytes (with WAV file fallback)
+    private func transcribeRecording(_ result: RecordingResult) {
         isTranscribing = true
-        AppLogger.log("Sending audio to server for transcription...", category: "transcription")
+        AppLogger.log("Transcribing audio (raw PCM)...", category: "transcription")
 
         Task { @MainActor in
             do {
-                let text = try await pythonBridge.transcribeFile(audioPath: audioPath)
+                let text = try await pythonBridge.transcribeRaw(audioData: result.audioData)
                 self.handleTranscriptionSuccess(text)
             } catch {
-                self.handleTranscriptionError(error)
+                // Fall back to file-based path if raw fails
+                AppLogger.log("Raw path failed, falling back to file: \(error)", category: "transcription")
+                do {
+                    let text = try await pythonBridge.transcribeFile(audioPath: result.audioPath)
+                    self.handleTranscriptionSuccess(text)
+                } catch {
+                    self.handleTranscriptionError(error)
+                }
             }
         }
     }

@@ -67,6 +67,9 @@ class TransformationState: ObservableObject {
     /// Error message if transformation fails
     @Published var error: String?
 
+    /// Streaming text accumulated token by token during transformation
+    @Published var streamingText: String = ""
+
     /// Whether to show the preview (original vs transformed)
     @Published var showPreview = false
 
@@ -83,6 +86,7 @@ class TransformationState: ObservableObject {
         activeType = nil
         error = nil
         showPreview = false
+        streamingText = ""
     }
 
     /// Start a transformation
@@ -92,6 +96,12 @@ class TransformationState: ObservableObject {
         isTransforming = true
         error = nil
         showPreview = false
+        streamingText = ""
+    }
+
+    /// Append a streaming token to the accumulated streaming text
+    func appendStreamingToken(_ token: String) {
+        streamingText += token
     }
 
     /// Complete a transformation with the result

@@ -129,8 +129,8 @@ class VoiceActivityDetector:
                 f"VAD requires exactly {VAD_CHUNK_SAMPLES} samples, got {len(audio_chunk)}"
             )
 
-        # Convert to torch tensor
-        audio_tensor = torch.from_numpy(audio_chunk).float()
+        # Convert to torch tensor (audio_chunk is already float32)
+        audio_tensor = torch.from_numpy(audio_chunk)
 
         # Get speech probability
         speech_prob = self._model(audio_tensor, SAMPLE_RATE).item()
@@ -259,7 +259,7 @@ class SmartRecorder:
 
                 # Read audio chunk (exactly 512 samples for VAD)
                 audio_chunk, overflowed = stream.read(chunk_size)
-                audio_chunk = audio_chunk.flatten()
+                audio_chunk = audio_chunk[:, 0] if audio_chunk.ndim > 1 else audio_chunk
 
                 # Check for speech using 512-sample chunk
                 is_speech = self._vad.is_speech(audio_chunk, self.silence_threshold)

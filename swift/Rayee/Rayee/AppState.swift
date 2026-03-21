@@ -354,8 +354,16 @@ class AppState: ObservableObject {
 
         Task { @MainActor in
             do {
-                let response = try await pythonBridge.transformText(text: text, type: type.rawValue)
-                transformState.completeTransformation(transformedText: response.transformedText)
+                try await pythonBridge.transformTextStreaming(
+                    text: text,
+                    type: type.rawValue,
+                    onToken: { [weak self] token in
+                        transformState.appendStreamingToken(token)
+                        self?.recordingPanelController.updateWindowSizeForTransform()
+                    }
+                )
+                // Streaming complete — finalize with accumulated text
+                transformState.completeTransformation(transformedText: transformState.streamingText)
                 recordingPanelController.updateWindowSizeForTransform()
             } catch {
                 transformState.failTransformation(message: error.localizedDescription)

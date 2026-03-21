@@ -45,6 +45,8 @@ class MLXModelManager:
         self._last_used = 0.0
         self._downloading = False
         self._download_error = None
+        self._checker_running = False
+        self._checker_lock = threading.Lock()
 
     @property
     def is_model_loaded(self) -> bool:
@@ -142,6 +144,40 @@ class MLXModelManager:
         self._schedule_unload()
         return result
 
+    def stream_generate(
+        self, system_prompt: str, user_prompt: str, max_tokens: int = DEFAULT_MAX_TOKENS
+    ):
+        """Stream tokens as they're generated.
+
+        Yields:
+            Token strings as they are generated.
+        """
+        if self._model is None:
+            self.load_model()
+
+        from mlx_lm import stream_generate as mlx_stream_generate
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        prompt = self._tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+
+        self._last_used = time.time()
+
+        for response in mlx_stream_generate(
+            self._model,
+            self._tokenizer,
+            prompt=prompt,
+            max_tokens=max_tokens,
+        ):
+            yield response.text
+
+        self._schedule_unload()
+
     def download_model(self):
         """Download the model files to disk (blocking)."""
         self._downloading = True
@@ -164,24 +200,28 @@ class MLXModelManager:
             self._downloading = False
 
     def _schedule_unload(self):
-        """Schedule model unload after inactivity timeout."""
-        self._cancel_unload_timer()
-        self._unload_timer = threading.Timer(
-            UNLOAD_DELAY_SECONDS, self._check_and_unload
-        )
-        self._unload_timer.daemon = True
-        self._unload_timer.start()
+        """Update last-used time and start background checker if not running."""
+        self._last_used = time.time()
+        with self._checker_lock:
+            if not self._checker_running:
+                self._checker_running = True
+                t = threading.Thread(target=self._idle_checker, daemon=True)
+                t.start()
 
     def _cancel_unload_timer(self):
-        if self._unload_timer is not None:
-            self._unload_timer.cancel()
-            self._unload_timer = None
+        """No-op kept for compatibility (checker stops itself when idle)."""
+        pass
 
-    def _check_and_unload(self):
-        """Unload model if it hasn't been used recently."""
-        elapsed = time.time() - self._last_used
-        if elapsed >= UNLOAD_DELAY_SECONDS:
-            self.unload_model()
+    def _idle_checker(self):
+        """Background thread that unloads the model after inactivity."""
+        while True:
+            time.sleep(UNLOAD_DELAY_SECONDS)
+            elapsed = time.time() - self._last_used
+            if elapsed >= UNLOAD_DELAY_SECONDS:
+                self.unload_model()
+                with self._checker_lock:
+                    self._checker_running = False
+                break
 
     def _check_hf_cache(self) -> bool:
         """Check if model exists in HuggingFace cache."""
