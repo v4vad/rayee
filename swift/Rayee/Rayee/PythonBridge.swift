@@ -315,6 +315,42 @@ class PythonBridge {
         )
     }
 
+    /// Transform text with streaming, calling onToken for each received chunk
+    func transformTextStreaming(
+        text: String,
+        type: String,
+        onToken: @escaping (String) -> Void
+    ) async throws {
+        let requestBody = TransformRequestBody(text: text, transformationType: type)
+        let bodyData = try encoder.encode(requestBody)
+
+        let socketPath = Config.serverSocketPath
+        let timeoutSec = max(Int(Config.transformationTimeout), 5)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try Self.rawSocketStreamingRequest(
+                        socketPath: socketPath,
+                        method: "POST",
+                        path: "/transform_stream",
+                        body: bodyData,
+                        headers: ["Content-Type": "application/json"],
+                        timeoutSec: timeoutSec,
+                        onChunk: { chunk in
+                            if let text = String(data: chunk, encoding: .utf8), !text.isEmpty {
+                                DispatchQueue.main.async { onToken(text) }
+                            }
+                        }
+                    )
+                    continuation.resume()
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     // MARK: - Private Helpers
 
     /// Perform a single health check request
@@ -537,5 +573,98 @@ class PythonBridge {
         let responseBody = (CFHTTPMessageCopyBody(cfMsg)?.takeRetainedValue()) as Data? ?? Data()
 
         return (statusCode, responseBody)
+    }
+
+    /// Low-level streaming socket request — calls onChunk for each received body chunk
+    private static func rawSocketStreamingRequest(
+        socketPath: String,
+        method: String,
+        path: String,
+        body: Data?,
+        headers: [String: String],
+        timeoutSec: Int,
+        onChunk: (Data) -> Void
+    ) throws {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw PythonBridgeError.serverOffline }
+        defer { Darwin.close(fd) }
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
+            _ = socketPath.withCString { strncpy(ptr, $0, 104) }
+        }
+        let connectResult = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        guard connectResult == 0 else { throw PythonBridgeError.serverOffline }
+
+        // Build and send HTTP request (same pattern as rawSocketRequest)
+        var httpText = "\(method) \(path) HTTP/1.1\r\n"
+        httpText += "Host: localhost\r\nConnection: close\r\n"
+        for (key, value) in headers { httpText += "\(key): \(value)\r\n" }
+        if let body = body { httpText += "Content-Length: \(body.count)\r\n" }
+        httpText += "\r\n"
+
+        guard var requestData = httpText.data(using: .utf8) else {
+            throw PythonBridgeError.networkError("Failed to encode request")
+        }
+        if let body = body { requestData.append(body) }
+
+        let sendOK = requestData.withUnsafeBytes { ptr -> Bool in
+            var sent = 0
+            let total = requestData.count
+            while sent < total {
+                let n = send(fd, ptr.baseAddress! + sent, total - sent, 0)
+                if n <= 0 { return false }
+                sent += n
+            }
+            return true
+        }
+        guard sendOK else { throw PythonBridgeError.networkError("Failed to send request") }
+
+        // Read response — stream body chunks after headers
+        var headerBuffer = Data()
+        var headersDone = false
+        let bufSize = 4096
+        let buf = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
+        defer { buf.deallocate() }
+        let headerSeparator = Data([0x0D, 0x0A, 0x0D, 0x0A])  // \r\n\r\n
+
+        let deadline = Date().addingTimeInterval(TimeInterval(timeoutSec))
+
+        while Date() < deadline {
+            var pfd = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+            let pollResult = poll(&pfd, 1, 500)
+            if pollResult < 0 { break }
+            if pollResult == 0 { continue }
+
+            let n = recv(fd, buf, bufSize, 0)
+            if n <= 0 { break }
+
+            let chunk = Data(bytes: buf, count: n)
+
+            if !headersDone {
+                headerBuffer.append(chunk)
+                if let range = headerBuffer.range(of: headerSeparator) {
+                    headersDone = true
+                    // Check status code
+                    if let headerText = String(data: headerBuffer[..<range.lowerBound], encoding: .utf8),
+                       !headerText.hasPrefix("HTTP/1.1 2") {
+                        throw PythonBridgeError.transcriptionFailed("Transform stream failed")
+                    }
+                    // Forward any body bytes that came with the headers
+                    let bodyStart = range.upperBound
+                    if bodyStart < headerBuffer.endIndex {
+                        let bodyChunk = Data(headerBuffer[bodyStart...])
+                        onChunk(bodyChunk)
+                    }
+                }
+            } else {
+                onChunk(chunk)
+            }
+        }
     }
 }

@@ -34,21 +34,27 @@ struct TransformationPreviewView: View {
 
     private var loadingView: some View {
         VStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-            Text("Transforming...")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-
-            Button("Cancel") {
-                onUseOriginal()
+            if transformState.streamingText.isEmpty {
+                ProgressView()
+                    .controlSize(.small)
+                Text("Transforming...")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Transforming...")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .textCase(.uppercase)
+                    Text(transformState.streamingText)
+                        .font(.system(size: 12))
+                        .foregroundColor(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 12)
+        .padding(.vertical, 8)
     }
 
     // MARK: - Error State

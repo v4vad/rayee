@@ -144,6 +144,40 @@ class MLXModelManager:
         self._schedule_unload()
         return result
 
+    def stream_generate(
+        self, system_prompt: str, user_prompt: str, max_tokens: int = DEFAULT_MAX_TOKENS
+    ):
+        """Stream tokens as they're generated.
+
+        Yields:
+            Token strings as they are generated.
+        """
+        if self._model is None:
+            self.load_model()
+
+        from mlx_lm import stream_generate as mlx_stream_generate
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        prompt = self._tokenizer.apply_chat_template(
+            messages, tokenize=False, add_generation_prompt=True
+        )
+
+        self._last_used = time.time()
+
+        for response in mlx_stream_generate(
+            self._model,
+            self._tokenizer,
+            prompt=prompt,
+            max_tokens=max_tokens,
+        ):
+            yield response.text
+
+        self._schedule_unload()
+
     def download_model(self):
         """Download the model files to disk (blocking)."""
         self._downloading = True

@@ -71,6 +71,19 @@ class TextTransformer:
         cleaned = self._clean_output(result, text)
         return cleaned
 
+    def transform_stream(self, text: str, transformation_type: str):
+        """Transform text and yield tokens as they're generated."""
+        self._validate_input(text, transformation_type)
+        system_prompt, user_prompt = build_prompt(text, transformation_type)
+
+        try:
+            for token in self._model_manager.stream_generate(
+                system_prompt, user_prompt
+            ):
+                yield token
+        except Exception as e:
+            raise TransformError(f"Model generation failed: {str(e)}")
+
     def _validate_input(self, text: str, transformation_type: str):
         """Validate transformation inputs."""
         stripped = text.strip()
