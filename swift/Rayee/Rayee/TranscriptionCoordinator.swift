@@ -213,6 +213,11 @@ class TranscriptionCoordinator: ObservableObject {
             }
         }
 
+        // Speculatively preload the transform model so it's warm when user clicks a transform button
+        if settings.transformationsEnabled && !text.isEmpty {
+            Task { await pythonBridge.warmupTransformModel() }
+        }
+
         onTranscriptionComplete?(.success(text: text, didPaste: didPaste))
     }
 

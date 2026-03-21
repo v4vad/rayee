@@ -133,6 +133,18 @@ class TransformDownloadResponse(BaseModel):
     error: Optional[str] = None
 
 
+class SettingsUpdateRequest(BaseModel):
+    """Request to update server settings."""
+
+    beam_size: Optional[int] = None
+
+
+class SettingsResponse(BaseModel):
+    """Response from settings endpoints."""
+
+    beam_size: int
+
+
 # ============ Helper Functions ============
 
 
@@ -193,7 +205,9 @@ async def transcribe_audio(audio_data: np.ndarray, executor) -> str:
         with state_manager.transcription_lock:
             transcriber = state_manager.get_transcriber()
             return transcriber.transcribe(
-                audio_data, initial_prompt=vocab_prompt if vocab_prompt else None
+                audio_data,
+                initial_prompt=vocab_prompt if vocab_prompt else None,
+                beam_size=state_manager.beam_size,
             )
 
     loop = asyncio.get_running_loop()

@@ -5,6 +5,7 @@ Handles loading and switching between different Whisper models.
 Models are downloaded automatically on first use from Hugging Face.
 """
 
+import gc
 import shutil
 import threading
 from pathlib import Path
@@ -24,33 +25,72 @@ WHISPER_DOWNLOAD_TIMEOUT = 600
 # medium: ~1.5GB, better accuracy
 # large:  ~3GB, best accuracy, needs more RAM
 
-ModelSize = Literal["tiny", "base", "small", "medium", "large-v3"]
+ModelSize = Literal[
+    "tiny",
+    "base",
+    "small",
+    "medium",
+    "large-v3",
+    "large-v3-turbo",
+    "distil-small.en",
+    "distil-medium.en",
+    "distil-large-v3",
+]
 
 AVAILABLE_MODELS = {
     "tiny": {
         "name": "tiny",
         "description": "Fastest, lowest accuracy (good for testing)",
         "size_mb": 75,
+        "category": "standard",
     },
     "base": {
         "name": "base",
         "description": "Fast with reasonable accuracy",
         "size_mb": 145,
+        "category": "standard",
     },
     "small": {
         "name": "small",
         "description": "Good balance of speed and accuracy (recommended)",
         "size_mb": 488,
+        "category": "standard",
     },
     "medium": {
         "name": "medium",
         "description": "Better accuracy, slower",
         "size_mb": 1500,
+        "category": "standard",
     },
     "large-v3": {
         "name": "large-v3",
         "description": "Best accuracy, slowest, needs more memory",
         "size_mb": 3000,
+        "category": "standard",
+    },
+    "large-v3-turbo": {
+        "name": "large-v3-turbo",
+        "description": "Near-best accuracy, much faster than large-v3",
+        "size_mb": 1600,
+        "category": "standard",
+    },
+    "distil-small.en": {
+        "name": "distil-small.en",
+        "description": "Fast English-only, distilled from small",
+        "size_mb": 330,
+        "category": "distil",
+    },
+    "distil-medium.en": {
+        "name": "distil-medium.en",
+        "description": "Balanced English-only, distilled from medium",
+        "size_mb": 750,
+        "category": "distil",
+    },
+    "distil-large-v3": {
+        "name": "distil-large-v3",
+        "description": "Best English-only, distilled from large-v3",
+        "size_mb": 1400,
+        "category": "distil",
     },
 }
 
@@ -58,6 +98,7 @@ DEFAULT_MODEL = "small"
 
 # Faster-Whisper models are hosted on HuggingFace under this org
 FW_REPO_PREFIX = "Systran/faster-whisper-"
+DISTIL_REPO_PREFIX = "Systran/faster-distil-whisper-"
 
 # Track download state for Faster-Whisper models
 _fw_download_progress: dict[str, str] = (
@@ -69,6 +110,11 @@ _fw_download_lock = threading.Lock()
 
 def get_fw_repo_id(model_name: str) -> str:
     """Get the HuggingFace repo ID for a Faster-Whisper model."""
+    model_info = AVAILABLE_MODELS.get(model_name, {})
+    if model_info.get("category") == "distil":
+        # distil-small.en -> small.en (strip "distil-" prefix)
+        short_name = model_name.removeprefix("distil-")
+        return f"{DISTIL_REPO_PREFIX}{short_name}"
     return f"{FW_REPO_PREFIX}{model_name}"
 
 
@@ -193,6 +239,16 @@ class ModelManager:
         if self._current_model and self._current_model_name == model_size:
             print(f"Model '{model_size}' already loaded.")
             return self._current_model
+
+        # Unload previous model to free memory before loading new one
+        if self._current_model is not None:
+            print(
+                f"Unloading model '{self._current_model_name}' before loading '{model_size}'..."
+            )
+            del self._current_model
+            self._current_model = None
+            self._current_model_name = None
+            gc.collect()
 
         if model_size not in AVAILABLE_MODELS:
             raise ValueError(

@@ -48,6 +48,7 @@ class Transcriber:
         audio: np.ndarray,
         language: Optional[str] = None,
         initial_prompt: Optional[str] = None,
+        beam_size: int = 5,
     ) -> str:
         """
         Convert audio to text.
@@ -70,8 +71,8 @@ class Transcriber:
             audio,
             language=language,
             initial_prompt=initial_prompt,
-            beam_size=5,  # Higher = more accurate but slower
-            vad_filter=True,  # Filter out silence
+            beam_size=beam_size,
+            vad_filter=False,  # Silero VAD in vad.py already strips silence
         )
 
         # Combine all segments into one text string
@@ -87,6 +88,7 @@ class Transcriber:
         self,
         audio: np.ndarray,
         language: Optional[str] = None,
+        beam_size: int = 5,
     ) -> List[Tuple[float, float, str]]:
         """
         Transcribe and return text with timing information.
@@ -100,8 +102,8 @@ class Transcriber:
         segments, info = self._model.transcribe(
             audio,
             language=language,
-            beam_size=5,
-            vad_filter=True,
+            beam_size=beam_size,
+            vad_filter=False,
             word_timestamps=True,
         )
 

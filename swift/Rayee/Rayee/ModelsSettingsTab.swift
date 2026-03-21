@@ -75,10 +75,22 @@ struct ModelsSettingsTab: View {
 
     // MARK: - Model List
 
+    private var standardModels: [FWModelInfo] {
+        fwManager.models.filter { $0.category == "standard" }
+    }
+
+    private var distilModels: [FWModelInfo] {
+        fwManager.models.filter { $0.category == "distil" }
+    }
+
     private var modelListView: some View {
         ScrollView {
             VStack(spacing: 16) {
                 standardModelsSection
+
+                if !distilModels.isEmpty {
+                    distilModelsSection
+                }
             }
             .padding()
         }
@@ -90,7 +102,27 @@ struct ModelsSettingsTab: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionHeader(title: "Standard Models", subtitle: "Work on all Macs")
 
-            ForEach(fwManager.models) { model in
+            ForEach(standardModels) { model in
+                ModelRow(
+                    name: model.name,
+                    description: model.description,
+                    sizeText: model.formattedSize,
+                    isActive: isFWModelActive(model.id),
+                    status: fwRowStatus(model),
+                    onUse: { handleFWUse(model) },
+                    onDelete: fwCanDelete(model) ? { handleFWDelete(model) } : nil
+                )
+            }
+        }
+    }
+
+    // MARK: - Distil Models Section
+
+    private var distilModelsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader(title: "Distil Models (English Only)", subtitle: "Faster, English transcription only")
+
+            ForEach(distilModels) { model in
                 ModelRow(
                     name: model.name,
                     description: model.description,

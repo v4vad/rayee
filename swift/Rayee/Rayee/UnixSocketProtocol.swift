@@ -15,6 +15,9 @@ class UnixSocketProtocol: URLProtocol {
     /// Flag to prevent re-entry
     private static let handledKey = "UnixSocketHandled"
 
+    /// Key for stashing httpBody (URLSession strips it from custom URLProtocols)
+    static let storedBodyKey = "UnixSocketStoredBody"
+
     /// Track cancellation
     private var isCancelled = false
 
@@ -79,12 +82,37 @@ class UnixSocketProtocol: URLProtocol {
             return
         }
 
-        // Build HTTP request text (GET only — no body needed)
+        // Build HTTP request
         let httpText = buildHTTPText()
-        guard let requestData = httpText.data(using: .utf8) else {
+        guard var requestData = httpText.data(using: .utf8) else {
             Darwin.close(fd)
             reportError(.cannotParseResponse)
             return
+        }
+
+        // Retrieve body — check stashed property first (URLSession strips httpBody),
+        // then fall back to httpBody / httpBodyStream
+        let body: Data? = Self.property(forKey: Self.storedBodyKey, in: request) as? Data
+            ?? request.httpBody
+            ?? {
+                // Last resort: read from httpBodyStream if available
+                guard let stream = request.httpBodyStream else { return nil }
+                stream.open()
+                defer { stream.close() }
+                var data = Data()
+                let bufSize = 4096
+                let buf = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
+                defer { buf.deallocate() }
+                while stream.hasBytesAvailable {
+                    let read = stream.read(buf, maxLength: bufSize)
+                    if read <= 0 { break }
+                    data.append(buf, count: read)
+                }
+                return data.isEmpty ? nil : data
+            }()
+
+        if let body = body {
+            requestData.append(body)
         }
 
         // Send request
@@ -151,7 +179,7 @@ class UnixSocketProtocol: URLProtocol {
         }
 
         let statusCode = CFHTTPMessageGetResponseStatusCode(cfMsg)
-        let body = (CFHTTPMessageCopyBody(cfMsg)?.takeRetainedValue()) as Data? ?? Data()
+        let responseBody = (CFHTTPMessageCopyBody(cfMsg)?.takeRetainedValue()) as Data? ?? Data()
         let headers = CFHTTPMessageCopyAllHeaderFields(cfMsg)?.takeRetainedValue() as? [String: String] ?? [:]
 
         guard let httpResponse = HTTPURLResponse(
@@ -165,13 +193,13 @@ class UnixSocketProtocol: URLProtocol {
         }
 
         client?.urlProtocol(self, didReceive: httpResponse, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: body)
+        client?.urlProtocol(self, didLoad: responseBody)
         client?.urlProtocolDidFinishLoading(self)
     }
 
     // MARK: - Helpers
 
-    /// Build a raw HTTP/1.1 request string (GET only)
+    /// Build a raw HTTP/1.1 request string
     private func buildHTTPText() -> String {
         let url = request.url!
         let method = request.httpMethod ?? "GET"
@@ -185,9 +213,16 @@ class UnixSocketProtocol: URLProtocol {
 
         for (key, value) in request.allHTTPHeaderFields ?? [:] {
             let k = key.lowercased()
-            if k != "host" && k != "connection" {
+            if k != "host" && k != "connection" && k != "content-length" {
                 msg += "\(key): \(value)\r\n"
             }
+        }
+
+        // Get body size for Content-Length (check stashed property first)
+        let bodyData = Self.property(forKey: Self.storedBodyKey, in: request) as? Data
+            ?? request.httpBody
+        if let bodyData = bodyData {
+            msg += "Content-Length: \(bodyData.count)\r\n"
         }
 
         msg += "\r\n"

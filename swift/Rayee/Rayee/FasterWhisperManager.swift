@@ -23,13 +23,14 @@ struct FWModelData: Codable {
     let name: String
     let description: String
     let sizeMB: Int
+    let category: String?
     let isCurrent: Bool
     let isLoaded: Bool
     let status: String
     let error: String?
 
     enum CodingKeys: String, CodingKey {
-        case name, description, status, error
+        case name, description, category, status, error
         case sizeMB = "size_mb"
         case isCurrent = "is_current"
         case isLoaded = "is_loaded"
@@ -79,6 +80,7 @@ struct FWModelInfo: Identifiable, Equatable {
     let name: String
     let description: String
     let sizeMB: Int
+    let category: String
     var status: FWModelStatus
 
     var formattedSize: String {
@@ -146,6 +148,7 @@ class FasterWhisperManager: ObservableObject {
                     name: TranscriptionModel(rawValue: data.name)?.displayName ?? data.name,
                     description: data.description,
                     sizeMB: data.sizeMB,
+                    category: data.category ?? "standard",
                     status: FWModelStatus.from(status: data.status, error: data.error)
                 )
             }
@@ -286,9 +289,16 @@ class FasterWhisperManager: ObservableObject {
         request.httpMethod = method
         request.timeoutInterval = method == "POST" ? Config.transcriptionTimeout : Config.regularTimeout
 
+        var bodyData: Data? = nil
         if let body = body {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(body)
+            bodyData = try JSONEncoder().encode(body)
+            request.httpBody = bodyData
+            // Stash body for UnixSocketProtocol — URLSession strips httpBody
+            // from requests before passing to custom URLProtocol subclasses
+            let mutableRequest = (request as NSURLRequest).mutableCopy() as! NSMutableURLRequest
+            URLProtocol.setProperty(bodyData!, forKey: UnixSocketProtocol.storedBodyKey, in: mutableRequest)
+            request = mutableRequest as URLRequest
         }
 
         let (data, response) = try await unixSocketSession.data(for: request)
