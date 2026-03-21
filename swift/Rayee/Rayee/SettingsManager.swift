@@ -27,6 +27,7 @@ enum SettingsKey {
     static let enabledTransformations = "enabledTransformations"
     static let hasCompletedSetup = "hasCompletedSetup"
     static let fastModeEnabled = "fastModeEnabled"
+    static let adaptiveVADEnabled = "adaptiveVADEnabled"
 }
 
 // MARK: - AI Model Options
@@ -256,6 +257,11 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    // Whether adaptive VAD is enabled (auto-calibrates silence threshold for 200ms at recording start)
+    @Published var adaptiveVADEnabled: Bool {
+        didSet { UserDefaults.standard.set(adaptiveVADEnabled, forKey: SettingsKey.adaptiveVADEnabled) }
+    }
+
     private init() {
         // Load saved settings or use defaults
 
@@ -342,6 +348,9 @@ class SettingsManager: ObservableObject {
 
         // Load fast mode setting (default: false)
         self.fastModeEnabled = UserDefaults.standard.bool(forKey: SettingsKey.fastModeEnabled)
+
+        // Load adaptive VAD setting (default: false)
+        self.adaptiveVADEnabled = UserDefaults.standard.bool(forKey: SettingsKey.adaptiveVADEnabled)
     }
 
     // Save hotkey configuration to UserDefaults
@@ -376,6 +385,7 @@ class SettingsManager: ObservableObject {
         keepTransformModelLoaded = false
         enabledTransformations = Set(TransformationType.allCases.map(\.rawValue))
         fastModeEnabled = false
+        adaptiveVADEnabled = false
     }
 
     /// Sync the fast mode setting to the Python server

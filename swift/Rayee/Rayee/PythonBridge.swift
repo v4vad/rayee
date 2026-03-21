@@ -159,6 +159,34 @@ class PythonBridge {
         return response.text
     }
 
+    /// Transcribe audio by sending raw Float32 PCM bytes directly over the socket.
+    /// Skips the WAV file save/read cycle for lower latency.
+    func transcribeRaw(audioData: [Float]) async throws -> String {
+        let bodyData = audioData.withUnsafeBufferPointer { buffer in
+            Data(buffer: buffer)
+        }
+
+        let (statusCode, responseData) = try await socketRequest(
+            method: "POST",
+            path: "/transcribe_raw",
+            body: bodyData,
+            headers: ["Content-Type": "application/octet-stream"],
+            timeout: Config.transcriptionTimeout
+        )
+
+        switch statusCode {
+        case 200:
+            return try decoder.decode(TranscribeResponse.self, from: responseData).text
+        case 409:
+            throw PythonBridgeError.serverBusy
+        case 503:
+            throw PythonBridgeError.serverStarting
+        default:
+            let detail = extractErrorDetail(from: responseData)
+            throw PythonBridgeError.transcriptionFailed(detail ?? "Transcription failed")
+        }
+    }
+
     /// Transcribe an uploaded audio file in the background (doesn't block recording).
     /// Calls /transcribe_upload which bypasses the state machine.
     func transcribeUploadedFile(audioPath: URL) async throws -> String {

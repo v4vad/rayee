@@ -67,6 +67,9 @@ enum Config {
     /// Audio level below this is considered silence
     static let silenceThreshold: Float = 0.01
 
+    /// Minimum threshold floor for adaptive VAD (prevents near-zero threshold in dead-silent rooms)
+    static let minSilenceThreshold: Float = 0.005
+
     /// Maximum recording duration before auto-stop (seconds)
     static let maxRecordingDuration: TimeInterval = 60.0
 

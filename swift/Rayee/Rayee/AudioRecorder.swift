@@ -34,6 +34,7 @@ enum AudioRecorderError: LocalizedError {
 struct RecordingResult {
     let audioPath: URL      // Path to the saved WAV file
     let duration: TimeInterval  // How long the recording was
+    let audioData: [Float]
 }
 
 class AudioRecorder {
@@ -46,6 +47,14 @@ class AudioRecorder {
     private var silenceDuration: TimeInterval   // How long silence triggers stop
     private let maxDuration: TimeInterval = Config.maxRecordingDuration
     private let timeoutEnabled: Bool            // Whether to enforce maxDuration
+
+    // Adaptive VAD
+    private var adaptiveVADEnabled: Bool
+    private var isCalibrating = false
+    private var calibrationRMSValues: [Float] = []
+    private var calibrationChunkCount = 0
+    private let calibrationChunkTarget = 2  // 2 chunks × 100ms = 200ms
+    private var adaptedThreshold: Float
 
     // Audio engine components
     private var audioEngine: AVAudioEngine?
@@ -63,9 +72,13 @@ class AudioRecorder {
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
 
-    init(silenceDuration: TimeInterval = Config.defaultSilenceDuration, timeoutEnabled: Bool = true) {
+    init(silenceDuration: TimeInterval = Config.defaultSilenceDuration,
+         timeoutEnabled: Bool = true,
+         adaptiveVADEnabled: Bool = false) {
         self.silenceDuration = silenceDuration
         self.timeoutEnabled = timeoutEnabled
+        self.adaptiveVADEnabled = adaptiveVADEnabled
+        self.adaptedThreshold = Config.silenceThreshold
     }
 
     // MARK: - Public Methods
@@ -119,6 +132,12 @@ class AudioRecorder {
         lastSpeechTime = nil
         speechDetected = false
         isRecording = true
+
+        // Reset adaptive VAD calibration
+        isCalibrating = adaptiveVADEnabled
+        calibrationRMSValues = []
+        calibrationChunkCount = 0
+        adaptedThreshold = Config.silenceThreshold
 
         // Create audio engine
         audioEngine = AVAudioEngine()
@@ -193,7 +212,7 @@ class AudioRecorder {
         do {
             let audioPath = try saveToWavFile()
             let duration = Double(audioBuffer.count) / sampleRate
-            let result = RecordingResult(audioPath: audioPath, duration: duration)
+            let result = RecordingResult(audioPath: audioPath, duration: duration, audioData: audioBuffer)
             onRecordingComplete?(.success(result))
         } catch let error as AudioRecorderError {
             onRecordingComplete?(.failure(error))
@@ -261,8 +280,22 @@ class AudioRecorder {
             self?.onAudioLevel?(rms)
         }
 
+        // Adaptive VAD: calibrate during first 200ms
+        if isCalibrating {
+            calibrationRMSValues.append(rms)
+            calibrationChunkCount += 1
+            if calibrationChunkCount >= calibrationChunkTarget {
+                let avgRMS = calibrationRMSValues.reduce(0, +) / Float(calibrationRMSValues.count)
+                adaptedThreshold = max(avgRMS * 1.5, Config.minSilenceThreshold)
+                isCalibrating = false
+                print("[AudioRecorder] Adaptive VAD calibrated: threshold=\(adaptedThreshold)")
+            }
+            return
+        }
+
         // Check for speech vs silence
-        let isSpeech = rms > silenceThreshold
+        let effectiveThreshold = adaptiveVADEnabled ? adaptedThreshold : silenceThreshold
+        let isSpeech = rms > effectiveThreshold
         let now = Date()
 
         if isSpeech {

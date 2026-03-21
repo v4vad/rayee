@@ -9,7 +9,8 @@ All communication happens over a Unix domain socket (~/.rayee/server.sock) - onl
 
 import asyncio
 
-from fastapi import FastAPI, HTTPException
+import numpy as np
+from fastapi import FastAPI, HTTPException, Request
 
 from .models import (
     AVAILABLE_MODELS,
@@ -227,6 +228,39 @@ async def transcribe_upload(request: TranscribeFileRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+
+
+@app.post("/transcribe_raw", response_model=TranscribeResponse)
+async def transcribe_raw(request: Request):
+    """
+    Transcribe raw Float32 PCM audio sent directly in the request body.
+    Skips the WAV file round-trip for faster transcription from Swift.
+    Body: raw bytes of float32 samples at 16kHz mono.
+    """
+    if not state_manager.models_ready:
+        raise_models_not_ready()
+
+    if not state_manager.set_state(ServerState.TRANSCRIBING):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Server is busy ({state_manager.state.value}). Please wait.",
+        )
+
+    try:
+        body = await request.body()
+        if len(body) == 0:
+            return TranscribeResponse(text="", status="no_audio")
+
+        audio_data = np.frombuffer(body, dtype=np.float32).copy()
+        text = await transcribe_audio(audio_data, audio_executor)
+        return TranscribeResponse(text=text, status="success")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+    finally:
+        state_manager.set_state(ServerState.IDLE)
 
 
 # ============ Model Endpoints ============
