@@ -3,7 +3,8 @@
 //  Rayee
 //
 //  Handles communication with the Python transcription server.
-//  Makes HTTP requests to localhost:8765 for health checks, status, and transcription.
+//  Talks directly over a Unix domain socket to avoid VPN interference
+//  and URLSession's httpBody stripping issue with URLProtocol.
 //
 
 import Foundation
@@ -86,13 +87,7 @@ private struct TranscribeFileRequest: Codable {
 
 class PythonBridge {
     private let decoder = JSONDecoder()
-
-    /// URLSession configured to route requests through Unix domain socket
-    private let session: URLSession = {
-        let config = URLSessionConfiguration.default
-        config.protocolClasses = [UnixSocketProtocol.self]
-        return URLSession(configuration: config)
-    }()
+    private let encoder = JSONEncoder()
 
     // MARK: - Public Methods
 
@@ -194,16 +189,14 @@ class PythonBridge {
 
     /// Perform a model action (download, delete) by endpoint path
     func performModelAction(endpoint: String, method: String = "POST") async throws -> Data {
-        guard let url = URL(string: "\(Config.serverBaseURL)\(endpoint)") else {
-            throw PythonBridgeError.networkError("Invalid URL")
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.timeoutInterval = Config.regularTimeout
-
-        let (data, _) = try await session.data(for: request)
-        return data
+        let (_, body) = try await socketRequest(
+            method: method,
+            path: endpoint,
+            body: nil,
+            headers: [:],
+            timeout: Config.regularTimeout
+        )
+        return body
     }
 
     // MARK: - Text Transformation Methods
@@ -260,75 +253,211 @@ class PythonBridge {
     }
 
     /// Generic HTTP request helper that handles all common patterns
-    /// - Parameters:
-    ///   - endpoint: The API path (e.g., "/health", "/transcribe")
-    ///   - method: HTTP method (defaults to GET)
-    ///   - body: Optional request body (will be JSON encoded)
-    ///   - timeout: Request timeout
-    /// - Returns: Decoded response of type T
     private func performRequest<T: Decodable>(
         endpoint: String,
         method: String = "GET",
         body: (any Encodable)? = nil,
         timeout: TimeInterval
     ) async throws -> T {
-        guard let url = URL(string: "\(Config.serverBaseURL)\(endpoint)") else {
-            throw PythonBridgeError.networkError("Invalid URL")
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.timeoutInterval = timeout
+        var headers: [String: String] = [:]
+        var bodyData: Data? = nil
 
         if let body = body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(body)
+            headers["Content-Type"] = "application/json"
+            bodyData = try encoder.encode(body)
         }
 
-        do {
-            let (data, response) = try await session.data(for: request)
+        let (statusCode, responseData) = try await socketRequest(
+            method: method,
+            path: endpoint,
+            body: bodyData,
+            headers: headers,
+            timeout: timeout
+        )
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw PythonBridgeError.networkError("Invalid response")
-            }
+        // Handle status codes
+        switch statusCode {
+        case 200:
+            return try decoder.decode(T.self, from: responseData)
 
-            // Handle status codes
-            switch httpResponse.statusCode {
-            case 200:
-                return try decoder.decode(T.self, from: data)
+        case 400:
+            let detail = extractErrorDetail(from: responseData)
+            throw PythonBridgeError.transcriptionFailed(detail ?? "Invalid request")
 
-            case 400:
-                // Bad request (e.g., file not found)
-                let detail = extractErrorDetail(from: data)
-                throw PythonBridgeError.transcriptionFailed(detail ?? "Invalid request")
+        case 409:
+            throw PythonBridgeError.serverBusy
 
-            case 409:
-                throw PythonBridgeError.serverBusy
+        case 500:
+            let detail = extractErrorDetail(from: responseData)
+            throw PythonBridgeError.transcriptionFailed(detail ?? "Server error")
 
-            case 500:
-                let detail = extractErrorDetail(from: data)
-                throw PythonBridgeError.transcriptionFailed(detail ?? "Server error")
+        case 503:
+            throw PythonBridgeError.serverStarting
 
-            case 503:
-                throw PythonBridgeError.serverStarting
-
-            default:
-                throw PythonBridgeError.networkError("Unexpected status: \(httpResponse.statusCode)")
-            }
-
-        } catch is URLError {
-            throw PythonBridgeError.serverOffline
-        } catch let error as PythonBridgeError {
-            throw error
-        } catch let error as DecodingError {
-            throw PythonBridgeError.networkError("Failed to parse response: \(error.localizedDescription)")
-        } catch {
-            throw PythonBridgeError.networkError(error.localizedDescription)
+        default:
+            throw PythonBridgeError.networkError("Unexpected status: \(statusCode)")
         }
     }
 
     /// Extract error detail from server error response
     private func extractErrorDetail(from data: Data) -> String? {
         return try? decoder.decode(ErrorResponse.self, from: data).detail
+    }
+
+    // MARK: - Direct Unix Socket Communication
+
+    /// Send an HTTP request directly over the Unix domain socket.
+    /// Bypasses URLSession entirely to avoid httpBody stripping issues.
+    /// Returns (statusCode, responseBody).
+    private func socketRequest(
+        method: String,
+        path: String,
+        body: Data?,
+        headers: [String: String],
+        timeout: TimeInterval
+    ) async throws -> (Int, Data) {
+        let socketPath = Config.serverSocketPath
+        let timeoutSec = max(Int(timeout), 5)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try Self.rawSocketRequest(
+                        socketPath: socketPath,
+                        method: method,
+                        path: path,
+                        body: body,
+                        headers: headers,
+                        timeoutSec: timeoutSec
+                    )
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Low-level socket request — runs synchronously, must be called off main thread
+    private static func rawSocketRequest(
+        socketPath: String,
+        method: String,
+        path: String,
+        body: Data?,
+        headers: [String: String],
+        timeoutSec: Int
+    ) throws -> (Int, Data) {
+        // Create Unix domain socket
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else {
+            throw PythonBridgeError.serverOffline
+        }
+
+        // Connect to socket file
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        withUnsafeMutablePointer(to: &addr.sun_path.0) { ptr in
+            _ = socketPath.withCString { strncpy(ptr, $0, 104) }
+        }
+
+        let connectResult = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+
+        guard connectResult == 0 else {
+            Darwin.close(fd)
+            throw PythonBridgeError.serverOffline
+        }
+
+        // Build HTTP request
+        var httpText = "\(method) \(path) HTTP/1.1\r\n"
+        httpText += "Host: localhost\r\n"
+        httpText += "Connection: close\r\n"
+
+        for (key, value) in headers {
+            httpText += "\(key): \(value)\r\n"
+        }
+
+        if let body = body {
+            httpText += "Content-Length: \(body.count)\r\n"
+        }
+
+        httpText += "\r\n"
+
+        // Combine headers and body into one data block
+        guard var requestData = httpText.data(using: .utf8) else {
+            Darwin.close(fd)
+            throw PythonBridgeError.networkError("Failed to encode request")
+        }
+
+        if let body = body {
+            requestData.append(body)
+        }
+
+        // Send the complete request
+        let sendOK = requestData.withUnsafeBytes { ptr -> Bool in
+            var sent = 0
+            let total = requestData.count
+            while sent < total {
+                let n = send(fd, ptr.baseAddress! + sent, total - sent, 0)
+                if n <= 0 { return false }
+                sent += n
+            }
+            return true
+        }
+
+        guard sendOK else {
+            Darwin.close(fd)
+            throw PythonBridgeError.networkError("Failed to send request")
+        }
+
+        // Read response using poll() for reliable timeout enforcement
+        var responseData = Data()
+        let bufSize = 65536
+        let buf = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
+        defer { buf.deallocate() }
+
+        let pollTimeoutMs: Int32 = 1000  // Check every 1 second
+        let deadline = Date().addingTimeInterval(TimeInterval(timeoutSec))
+
+        while Date() < deadline {
+            var pfd = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+            let pollResult = poll(&pfd, 1, pollTimeoutMs)
+
+            if pollResult < 0 {
+                break  // poll error
+            } else if pollResult == 0 {
+                continue  // No data yet, check deadline
+            }
+
+            let n = recv(fd, buf, bufSize, 0)
+            if n <= 0 { break }  // Connection closed or error
+            responseData.append(buf, count: n)
+        }
+
+        Darwin.close(fd)
+
+        // If no data received, it's a timeout
+        if responseData.isEmpty {
+            throw PythonBridgeError.serverOffline
+        }
+
+        // Parse HTTP response
+        let cfMsg = CFHTTPMessageCreateEmpty(kCFAllocatorDefault, false).takeRetainedValue()
+        responseData.withUnsafeBytes { ptr in
+            guard let base = ptr.baseAddress?.assumingMemoryBound(to: UInt8.self) else { return }
+            CFHTTPMessageAppendBytes(cfMsg, base, responseData.count)
+        }
+
+        guard CFHTTPMessageIsHeaderComplete(cfMsg) else {
+            throw PythonBridgeError.networkError("Incomplete response from server")
+        }
+
+        let statusCode = CFHTTPMessageGetResponseStatusCode(cfMsg)
+        let responseBody = (CFHTTPMessageCopyBody(cfMsg)?.takeRetainedValue()) as Data? ?? Data()
+
+        return (statusCode, responseBody)
     }
 }

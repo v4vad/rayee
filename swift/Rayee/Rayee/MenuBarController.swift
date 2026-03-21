@@ -33,16 +33,22 @@ class MenuBarController: NSObject, NSMenuDelegate {
     // MARK: - Status Item Setup
 
     private func setupStatusItem() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
 
         if let button = statusItem?.button {
             updateIcon()
             button.target = self
+            AppLogger.log("Status item created — image: \(button.image != nil ? "loaded" : "NIL"), title: '\(button.title)', frame: \(button.frame)", category: "menubar")
+        } else {
+            AppLogger.log("WARNING: Status item button is nil!", category: "menubar")
         }
 
         let menu = NSMenu()
         menu.delegate = self
         statusItem?.menu = menu
+
+        // Force the status item to be visible (counteracts Bartender hiding)
+        statusItem?.isVisible = true
     }
 
     // MARK: - Icon Updates
@@ -54,6 +60,11 @@ class MenuBarController: NSObject, NSMenuDelegate {
         if let image = NSImage(systemSymbolName: iconName, accessibilityDescription: "Rayee") {
             image.isTemplate = true
             button.image = image
+            button.title = ""
+        } else {
+            // Fallback if SF Symbol fails to load — keep the icon visible
+            button.image = nil
+            button.title = "R"
         }
     }
 

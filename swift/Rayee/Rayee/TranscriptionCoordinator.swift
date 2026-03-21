@@ -149,15 +149,16 @@ class TranscriptionCoordinator: ObservableObject {
 
         switch result {
         case .success(let recordingResult):
-            // Recording succeeded - now send to Python for transcription
+            AppLogger.log("Recording complete: \(String(format: "%.1f", recordingResult.duration))s, path: \(recordingResult.audioPath.lastPathComponent)", category: "transcription")
             transcribeAudioFile(recordingResult.audioPath)
 
         case .failure(let error):
             if case .noAudioRecorded = error {
-                // No speech detected - just go back to ready
+                AppLogger.log("Recording ended with no speech detected", category: "transcription")
                 audioFeedback.playStopSound()
                 onTranscriptionComplete?(.cancelled)
             } else {
+                AppLogger.log("Recording failed: \(error.localizedDescription)", category: "transcription")
                 handleRecordingError(error)
             }
         }
@@ -174,6 +175,7 @@ class TranscriptionCoordinator: ObservableObject {
     /// Send recorded audio to Python for transcription
     private func transcribeAudioFile(_ audioPath: URL) {
         isTranscribing = true
+        AppLogger.log("Sending audio to server for transcription...", category: "transcription")
 
         Task { @MainActor in
             do {
@@ -188,6 +190,7 @@ class TranscriptionCoordinator: ObservableObject {
     /// Handle successful transcription
     private func handleTranscriptionSuccess(_ text: String) {
         isTranscribing = false
+        AppLogger.log("Transcription succeeded: \(text.prefix(80))...", category: "transcription")
         audioFeedback.playStopSound()
 
         // Save to history if we got text
@@ -216,6 +219,7 @@ class TranscriptionCoordinator: ObservableObject {
     /// Handle transcription errors
     private func handleTranscriptionError(_ error: Error) {
         isTranscribing = false
+        AppLogger.log("Transcription failed: \(error.localizedDescription)", category: "transcription")
         audioFeedback.playErrorSound()
 
         let message: String
