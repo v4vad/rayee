@@ -3,44 +3,22 @@
 //  Rayee
 //
 //  Main entry point for the Rayee menu bar app.
-//  This file creates the app and puts a waveform icon in your menu bar.
+//  The menu bar icon is managed by MenuBarController (NSStatusItem)
+//  for compatibility with menu bar manager apps like Bartender.
 //
 
 import SwiftUI
 
 @main
 struct RayeeApp: App {
-    // The shared app state - tracks status, transcribed text, etc.
-    @StateObject private var appState = AppState()
-
     // NSApplication delegate for handling app lifecycle
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // MenuBarExtra creates the menu bar icon and dropdown menu
-        // This app lives in the menu bar with a simple dropdown
-        MenuBarExtra {
-            // Simple dropdown menu with basic actions
-            SimpleMenuView()
-                .environmentObject(appState)
-        } label: {
-            // The icon that appears in the menu bar
-            // Changes based on current status and shows server status via color
-            if appState.isServerOnline {
-                Image(systemName: appState.menuBarIcon)
-                    .symbolRenderingMode(.hierarchical)
-            } else {
-                Image(systemName: appState.menuBarIcon)
-                    .symbolRenderingMode(.monochrome)
-                    .foregroundStyle(.red)
-            }
-        }
-        .menuBarExtraStyle(.menu)  // Simple dropdown menu
-
         // Settings window - opens from menu or floating panel
         Window("Rayee Settings", id: "settings") {
             SettingsView()
-                .environmentObject(appState)
+                .environmentObject(AppState.shared)
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: Config.settingsWindowWidth, height: Config.settingsWindowMinHeight)
@@ -49,7 +27,7 @@ struct RayeeApp: App {
         // Setup guide window - shown on first launch or from menu
         Window("System Status", id: "setup-guide") {
             SetupGuideView()
-                .environmentObject(appState)
+                .environmentObject(AppState.shared)
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
@@ -59,9 +37,15 @@ struct RayeeApp: App {
 // MARK: - App Delegate
 // Handles app-level events like activation and termination
 class AppDelegate: NSObject, NSApplicationDelegate {
+    /// Menu bar controller - must be stored to keep the status item alive
+    private var menuBarController: MenuBarController?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize logging first so we capture everything
         AppLogger.initialize()
+
+        // Create the menu bar icon and dropdown menu (NSStatusItem)
+        menuBarController = MenuBarController(appState: AppState.shared)
 
         // Request permissions immediately on first launch
         // This ensures the hotkey and recording work right away
@@ -71,6 +55,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // In development mode (no bundled server), this will detect that
         // and let the user run the server manually
         ServerManager.shared.start()
+
+        // Initialize the update manager so background update checks begin
+        _ = UpdateManager.shared
 
         // Backup hotkey start — fires on the main thread after the app has fully settled.
         // Safe because start() guards on eventTap == nil, so it's a no-op if already running.

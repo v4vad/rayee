@@ -8,5 +8,11 @@
 	<string>Rayee needs microphone access to record your voice for transcription.</string>
 	<key>NSAccessibilityUsageDescription</key>
 	<string>Rayee needs Accessibility permission to use global keyboard shortcuts and auto-paste transcribed text into other applications.</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/v4vad/rayee/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>VKzHB1Nc+/xx5xHaNI8N8T3gOvjx8FmXHdKTO9fNrY8=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 </dict>
 </plist>

@@ -8,7 +8,11 @@ Run this script to start the transcription server:
     source venv/bin/activate
     python run_server.py
 
-The server will run on http://localhost:8765
+The server communicates via a Unix domain socket at ~/.rayee/server.sock
+(avoids interfering with VPNs like Cloudflare WARP).
+
+For development with TCP instead:
+    python run_server.py --tcp
 
 Press Ctrl+C to stop the server.
 """
@@ -30,10 +34,15 @@ if __name__ == "__main__":
         except RuntimeError:
             pass  # Already set
 
-    from rayee.startup import HOST, PORT, run_server
+    from rayee.startup import SOCKET_PATH, run_server
 
-    print(f"\nStarting Rayee Transcription Server...")
-    print(f"Server will be available at: http://{HOST}:{PORT}")
+    use_tcp = "--tcp" in sys.argv
+
+    print("\nStarting Rayee Transcription Server...")
+    if use_tcp:
+        print("Mode: TCP (http://127.0.0.1:8765)")
+    else:
+        print(f"Mode: Unix socket ({SOCKET_PATH})")
     print("Press Ctrl+C to stop.\n")
 
-    run_server()
+    run_server(use_socket=not use_tcp)

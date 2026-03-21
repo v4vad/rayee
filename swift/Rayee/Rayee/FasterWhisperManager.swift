@@ -8,6 +8,15 @@
 import Foundation
 import SwiftUI
 
+// MARK: - Shared Unix Socket Session
+
+/// URLSession that routes requests through Unix domain socket
+private let unixSocketSession: URLSession = {
+    let config = URLSessionConfiguration.default
+    config.protocolClasses = [UnixSocketProtocol.self]
+    return URLSession(configuration: config)
+}()
+
 // MARK: - API Response Types
 
 struct FWModelData: Codable {
@@ -282,7 +291,7 @@ class FasterWhisperManager: ObservableObject {
             request.httpBody = try JSONEncoder().encode(body)
         }
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await unixSocketSession.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw PythonBridgeError.networkError("Invalid response")

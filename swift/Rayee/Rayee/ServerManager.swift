@@ -35,6 +35,13 @@ class ServerManager: ObservableObject {
     /// Bridge for checking startup status
     private let pythonBridge = PythonBridge()
 
+    /// URLSession that routes through Unix domain socket
+    private let socketSession: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.protocolClasses = [UnixSocketProtocol.self]
+        return URLSession(configuration: config)
+    }()
+
     /// Possible states for the server
     enum ServerState: String {
         case notStarted = "Not Started"
@@ -280,7 +287,7 @@ class ServerManager: ObservableObject {
         var request = URLRequest(url: url)
         request.timeoutInterval = Config.healthCheckIntervalDuringStartup
 
-        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+        socketSession.dataTask(with: request) { [weak self] data, response, error in
             guard let self = self else { return }
 
             if let httpResponse = response as? HTTPURLResponse,

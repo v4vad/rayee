@@ -15,8 +15,16 @@ enum Config {
 
     // MARK: - Server Connection
 
-    /// The Python server runs on this URL
+    /// The Python server runs on this URL (used for building request paths)
     static let serverBaseURL = "http://127.0.0.1:8765"
+
+    /// Unix domain socket path for server communication.
+    /// Uses a socket file instead of TCP to avoid interfering with VPNs
+    /// (e.g. Cloudflare WARP) that intercept network traffic.
+    static let serverSocketPath: String = {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return "\(home)/.rayee/server.sock"
+    }()
 
     // MARK: - Timeouts
 
@@ -73,49 +81,20 @@ enum Config {
 
     // MARK: - Recording Panel
 
-    /// Corner radius for Liquid Glass panels (slightly larger for the glass look)
-    static let panelCornerRadiusGlass: CGFloat = 16
-
-    /// Corner radius for legacy material panels (pre-macOS 26)
-    static let panelCornerRadiusLegacy: CGFloat = 12
+    /// Corner radius for the floating panel
+    static let panelCornerRadius: CGFloat = 12
 
     /// Width of the floating recording panel
     static let recordingPanelWidth: CGFloat = 260
 
     /// Height of the floating recording panel (normal mode)
-    static let recordingPanelHeight: CGFloat = 155
+    static let recordingPanelHeight: CGFloat = 120
 
     /// Height of the floating recording panel (with result text)
     static let recordingPanelHeightWithResult: CGFloat = 200
 
     /// Number of audio level readings to keep in the buffer
     static let waveformBarCount = 16
-
-    // MARK: - Dot Grid Animation
-
-    /// Number of columns in the dot grid
-    static let dotGridColumns = 11
-
-    /// Number of rows in the dot grid
-    static let dotGridRows = 7
-
-    /// Default dot diameter (points)
-    static let dotGridDotSize: CGFloat = 6.0
-
-    /// Maximum dot diameter when audio is loud (points)
-    static let dotGridMaxDotSize: CGFloat = 8.0
-
-    /// Height of the dot grid area
-    static let dotGridHeight: CGFloat = 56.0
-
-    /// Time for one full radar sweep rotation (seconds)
-    static let dotGridSweepDuration: TimeInterval = 2.0
-
-    /// Width of the radar sweep wedge (degrees)
-    static let dotGridSweepWidth: Double = 60.0
-
-    /// Multiplier to boost audio levels for visual effect
-    static let dotGridAudioBoost: Float = 8.0
 
     // MARK: - UI Delays
 
@@ -155,5 +134,10 @@ enum Config {
 
     /// Minimum height of the Settings window
     static let settingsWindowMinHeight: CGFloat = 500
+
+    // MARK: - Updates
+
+    /// URL of the appcast XML file that lists available versions
+    static let appcastURL = "https://raw.githubusercontent.com/v4vad/rayee/main/appcast.xml"
 
 }

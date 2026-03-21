@@ -26,6 +26,9 @@ enum AppStatus: String {
 
 /// Main state container - all UI components read from this
 class AppState: ObservableObject {
+    /// Shared singleton so both SwiftUI views and AppKit controllers use the same state
+    static let shared = AppState()
+
     // MARK: - Published State
 
     /// Current status (ready, recording, etc.)

@@ -4,7 +4,7 @@
 
 ---
 
-## CURRENT STATUS (February 15, 2026)
+## CURRENT STATUS (March 21, 2026)
 
 ### What's Done
 - Phase 0: Project setup complete
@@ -25,7 +25,7 @@ cd /Users/karthikvadlapatla/claude/rayee/python
 source venv/bin/activate
 python run_server.py
 ```
-Server runs on `http://localhost:8765`
+Server communicates via Unix socket at `~/.rayee/server.sock`
 
 ### Files Created
 ```

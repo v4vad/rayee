@@ -11,7 +11,7 @@ The Python server handles all the "smart" parts:
 - **Transforming text** — fix grammar, rephrase, format (using Llama 3.2 via MLX)
 - **Managing custom vocabulary** for better recognition
 
-The Swift app talks to this server over HTTP on `localhost:8765`.
+The Swift app talks to this server over HTTP via a Unix domain socket at `~/.rayee/server.sock` (avoids interfering with VPNs like Cloudflare WARP).
 
 ## File Overview
 
@@ -72,8 +72,8 @@ cd python && source venv/bin/activate && python run_server.py
 
 ### Test an endpoint
 ```bash
-curl http://localhost:8765/health
-curl http://localhost:8765/status
+curl --unix-socket ~/.rayee/server.sock http://localhost/health
+curl --unix-socket ~/.rayee/server.sock http://localhost/status
 ```
 
 ### Check if server is responding

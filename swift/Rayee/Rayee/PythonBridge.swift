@@ -87,6 +87,13 @@ private struct TranscribeFileRequest: Codable {
 class PythonBridge {
     private let decoder = JSONDecoder()
 
+    /// URLSession configured to route requests through Unix domain socket
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.protocolClasses = [UnixSocketProtocol.self]
+        return URLSession(configuration: config)
+    }()
+
     // MARK: - Public Methods
 
     /// Check if the Python server is running
@@ -195,7 +202,7 @@ class PythonBridge {
         request.httpMethod = method
         request.timeoutInterval = Config.regularTimeout
 
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, _) = try await session.data(for: request)
         return data
     }
 
@@ -279,7 +286,7 @@ class PythonBridge {
         }
 
         do {
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let (data, response) = try await session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw PythonBridgeError.networkError("Invalid response")

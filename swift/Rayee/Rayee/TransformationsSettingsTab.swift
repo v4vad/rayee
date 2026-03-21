@@ -25,17 +25,13 @@ struct TransformationsSettingsTab: View {
             // Enable/Disable Section
             Section {
                 Toggle("Enable text transformations", isOn: $settings.transformationsEnabled)
-
+            } footer: {
                 Text("Transform transcribed text using a local AI model (Llama 3.2 1B)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
 
             if settings.transformationsEnabled {
-                Divider()
-
                 // Model Status Section
-                Section {
+                Section("Model") {
                     modelStatusRow
 
                     if let error = downloadError {
@@ -45,25 +41,15 @@ struct TransformationsSettingsTab: View {
                     }
                 }
 
-                Divider()
-
                 // Model Options Section
                 Section {
                     Toggle("Keep model loaded in memory", isOn: $settings.keepTransformModelLoaded)
-
+                } footer: {
                     Text("Uses ~800MB RAM but makes transformations instant. Otherwise the model loads on demand and unloads after 30 seconds.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
 
-                Divider()
-
                 // Visible Transformations Section
-                Section {
-                    Text("Show these transformations:")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
+                Section("Visible Transformations") {
                     ForEach(TransformationType.allCases) { type in
                         Toggle(isOn: transformationBinding(for: type)) {
                             HStack(spacing: 8) {
@@ -80,7 +66,8 @@ struct TransformationsSettingsTab: View {
                 }
             }
         }
-        .padding()
+        .formStyle(.grouped)
+        .toggleStyle(.switch)
         .onAppear { checkModelStatus() }
     }
 

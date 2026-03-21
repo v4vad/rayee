@@ -37,9 +37,7 @@ Powered by Llama 3.2 1B (4-bit quantized via MLX). Runs entirely on Apple Silico
 
 ## Status
 
-🚧 Under development
-
-See [PLAN.md](PLAN.md) for the full development roadmap.
+All core features are complete and working. See [PLAN.md](PLAN.md) for the full development roadmap.
 
 ## Requirements
 

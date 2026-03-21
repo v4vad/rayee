@@ -3,7 +3,7 @@
 //  Rayee
 //
 //  Custom button styles for the floating recording panel.
-//  Small pill-shaped buttons with keyboard shortcut hints.
+//  Small pill-shaped buttons with a subtle appearance.
 //
 
 import SwiftUI
@@ -38,86 +38,12 @@ struct PillButtonStyle: ButtonStyle {
     }
 }
 
-/// Button with keyboard hint (e.g., "⎋ Cancel")
-struct HotkeyButton: View {
-    let title: String
-    let hotkeySymbol: String
-    let isProminent: Bool
-    let action: () -> Void
-
-    init(
-        _ title: String,
-        hotkeySymbol: String,
-        isProminent: Bool = false,
-        action: @escaping () -> Void
-    ) {
-        self.title = title
-        self.hotkeySymbol = hotkeySymbol
-        self.isProminent = isProminent
-        self.action = action
-    }
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(hotkeySymbol)
-                    .font(.system(size: 11))
-                    .opacity(0.7)
-                Text(title)
-            }
-        }
-        .buttonStyle(PillButtonStyle(isProminent: isProminent))
-    }
-}
-
-/// Glass-styled button with keyboard hint for macOS 26 Liquid Glass
-/// Uses .glassEffect() instead of the custom PillButtonStyle
-@available(macOS 26, *)
-struct GlassHotkeyButton: View {
-    let title: String
-    let hotkeySymbol: String
-    let isProminent: Bool
-    let action: () -> Void
-
-    init(
-        _ title: String,
-        hotkeySymbol: String,
-        isProminent: Bool = false,
-        action: @escaping () -> Void
-    ) {
-        self.title = title
-        self.hotkeySymbol = hotkeySymbol
-        self.isProminent = isProminent
-        self.action = action
-    }
-
-    var body: some View {
-        if isProminent {
-            buttonLabel
-                .buttonStyle(.glassProminent)
-        } else {
-            buttonLabel
-                .buttonStyle(.glass)
-        }
-    }
-
-    private var buttonLabel: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(hotkeySymbol)
-                    .font(.system(size: 11))
-                    .opacity(0.7)
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-            }
-        }
-    }
-}
-
 #Preview("Buttons") {
     HStack(spacing: 12) {
-        HotkeyButton("Cancel", hotkeySymbol: "⎋") {}
-        HotkeyButton("Done", hotkeySymbol: "↵", isProminent: true) {}
+        Button("Cancel") {}
+            .buttonStyle(PillButtonStyle(isProminent: false))
+        Button("Done") {}
+            .buttonStyle(PillButtonStyle(isProminent: true))
     }
     .padding()
     .background(Color.black.opacity(0.05))

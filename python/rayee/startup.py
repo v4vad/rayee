@@ -5,14 +5,18 @@ Handles model preloading and cleanup when server starts/stops.
 """
 
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 from .state import StartupState, state_manager
 from .vad import VoiceActivityDetector
 
 # Server configuration
-HOST = "127.0.0.1"  # localhost only - secure
+HOST = "127.0.0.1"  # localhost only - fallback for development
 PORT = 8765
+
+# Unix domain socket path (bypasses network stack, avoids VPN conflicts)
+SOCKET_PATH = os.path.expanduser("~/.rayee/server.sock")
 
 # Dedicated executor for audio/transcription work
 # Using a single worker ensures audio operations don't compete for resources
@@ -30,11 +34,14 @@ transform_executor = ThreadPoolExecutor(
 )
 
 
-def print_startup_banner():
+def print_startup_banner(socket_path=None):
     """Print the startup message with available endpoints."""
     print(f"\n{'='*50}")
     print("  Rayee Transcription Server Started")
-    print(f"  Running on http://{HOST}:{PORT}")
+    if socket_path:
+        print(f"  Socket: {socket_path}")
+    else:
+        print(f"  Running on http://{HOST}:{PORT}")
     print(f"{'='*50}")
     print("\nEndpoints:")
     print("  GET  /status         - Server status")
@@ -101,7 +108,7 @@ def preload_models():
 
 async def on_startup():
     """Called when the FastAPI server starts."""
-    print_startup_banner()
+    print_startup_banner(socket_path=os.environ.get("RAYEE_SOCKET_PATH"))
     print("\nPreloading AI models (this may take a few minutes on first run)...")
 
     # Run model loading in the audio executor thread
@@ -121,16 +128,31 @@ async def on_shutdown():
     print("All background tasks completed.")
 
 
-def run_server(host: str = HOST, port: int = PORT):
+def run_server(host: str = HOST, port: int = PORT, use_socket: bool = True):
     """
     Start the server.
 
+    Uses a Unix domain socket by default to avoid interfering with VPNs
+    (e.g. Cloudflare WARP). Falls back to TCP if use_socket is False.
+
     Args:
-        host: Host to bind to (default: 127.0.0.1)
-        port: Port to listen on (default: 8765)
+        host: Host to bind to (default: 127.0.0.1, only used if use_socket=False)
+        port: Port to listen on (default: 8765, only used if use_socket=False)
+        use_socket: If True, use Unix domain socket instead of TCP
     """
     import uvicorn
 
     from .server import app
 
-    uvicorn.run(app, host=host, port=port)
+    if use_socket:
+        socket_path = SOCKET_PATH
+        os.makedirs(os.path.dirname(socket_path), exist_ok=True)
+
+        # Remove stale socket file from a previous crash
+        if os.path.exists(socket_path):
+            os.unlink(socket_path)
+
+        os.environ["RAYEE_SOCKET_PATH"] = socket_path
+        uvicorn.run(app, uds=socket_path)
+    else:
+        uvicorn.run(app, host=host, port=port)

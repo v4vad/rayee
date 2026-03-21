@@ -185,7 +185,7 @@ echo ""
 # Re-sign with explicit entitlements so macOS can properly identify the app
 # for accessibility permission grants.
 info "Re-signing app bundle..."
-ENTITLEMENTS="$SWIFT_DIR/Rayee.entitlements"
+ENTITLEMENTS="$SWIFT_DIR/Rayee/Rayee.entitlements"
 codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_PATH"
 codesign --verify --deep --strict "$APP_PATH"
 success "App re-signed successfully"
@@ -230,6 +230,44 @@ DMG_SIZE=$(du -sh "$DMG_NAME" | cut -f1)
 # Clean up
 rm -rf "$BUILD_DIR"
 
+# ==========================================
+# Step 5: Sign DMG for Sparkle Updates
+# ==========================================
+info "Step 5: Signing DMG for Sparkle auto-updates..."
+
+# Look for Sparkle's sign_update tool in common locations
+SIGN_UPDATE=""
+# Check in the SPM build artifacts
+SPM_SPARKLE="$SWIFT_DIR/build/Build/Products/Release/Sparkle.framework"
+if [ -f "$SPM_SPARKLE/../../../SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update" ]; then
+    SIGN_UPDATE="$SPM_SPARKLE/../../../SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update"
+fi
+
+# Also check DerivedData SPM checkouts
+DERIVED_SIGN=$(find "$SWIFT_DIR/build" -name "sign_update" -type f 2>/dev/null | head -1)
+if [ -n "$DERIVED_SIGN" ]; then
+    SIGN_UPDATE="$DERIVED_SIGN"
+fi
+
+if [ -n "$SIGN_UPDATE" ] && [ -f "$SIGN_UPDATE" ]; then
+    info "Found sign_update at: $SIGN_UPDATE"
+    SIGNATURE_OUTPUT=$("$SIGN_UPDATE" "$SCRIPT_DIR/$DMG_NAME" 2>&1) || true
+    if [ -n "$SIGNATURE_OUTPUT" ]; then
+        echo ""
+        echo "=========================================="
+        echo "  Sparkle Signature Info"
+        echo "=========================================="
+        echo "$SIGNATURE_OUTPUT"
+        echo ""
+    fi
+else
+    warn "Sparkle sign_update tool not found. You can sign the DMG manually later."
+    warn "After resolving Sparkle packages in Xcode, look for sign_update in DerivedData."
+fi
+
+# Get DMG file size in bytes for the appcast
+DMG_BYTES=$(stat -f%z "$SCRIPT_DIR/$DMG_NAME" 2>/dev/null || stat --printf="%s" "$SCRIPT_DIR/$DMG_NAME" 2>/dev/null || echo "unknown")
+
 echo ""
 echo "=========================================="
 success "Build Complete!"
@@ -238,11 +276,17 @@ echo ""
 echo "  Output: $SCRIPT_DIR/$DMG_NAME"
 echo "  App size: $APP_SIZE"
 echo "  DMG size: $DMG_SIZE"
+echo "  DMG size (bytes): $DMG_BYTES"
 echo ""
 echo "To install:"
 echo "  1. Open $DMG_NAME"
 echo "  2. Drag Rayee to Applications"
 echo "  3. Launch from Applications (first launch may ask for permissions)"
+echo ""
+echo "To release an update:"
+echo "  1. Update appcast.xml with the new version, signature, and file size"
+echo "  2. Create a GitHub Release tagged vX.X and upload $DMG_NAME"
+echo "  3. Commit and push appcast.xml"
 echo ""
 
 # Deactivate virtual environment

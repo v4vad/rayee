@@ -24,17 +24,17 @@ The app talks to the Python server to do the actual transcription work.
 | `AppState.swift` | Central state management - the "brain" of the app |
 | `Config.swift` | All constants (timeouts, sizes, URLs) in one place |
 | `PythonBridge.swift` | HTTP client that talks to the Python server |
+| `UnixSocketProtocol.swift` | Routes HTTP requests through Unix domain socket (avoids VPN conflicts) |
 | `ServerManager.swift` | Manages the bundled Python server |
 | `HealthMonitor.swift` | Checks server health on a timer |
 
 ### UI
 | File | Purpose |
 |------|---------|
-| `SimpleMenuView.swift` | The dropdown menu when you click the menu bar icon |
+| `MenuBarController.swift` | NSStatusItem-based menu bar icon and dropdown (Bartender-compatible) |
 | `StatusIndicator.swift` | Animated dots showing current status |
 | `RecordingPanelView.swift` | Floating panel during recording/transcription |
 | `RecordingPanelController.swift` | Manages the floating panel window |
-| `DotGridView.swift` | Animated dot grid visualization for recording |
 | `PanelButtonStyles.swift` | Shared button styles for the floating panel |
 | `SettingsView.swift` | Settings window with tabs |
 | `GeneralSettingsTab.swift` | General settings (hotkey, model, sounds) |
@@ -147,7 +147,7 @@ open swift/Rayee/Rayee.xcodeproj
 
 ## Communication with Python
 
-The `PythonBridge` class sends HTTP requests to `http://localhost:8765`:
+The `PythonBridge` class sends HTTP requests through a Unix domain socket at `~/.rayee/server.sock`:
 - Checks server health every 10 seconds
 - Sends transcription requests with silence duration setting
 - Sends text transformation requests (grammar, bullets, rephrase, etc.)

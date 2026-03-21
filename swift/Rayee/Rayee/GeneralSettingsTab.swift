@@ -18,7 +18,7 @@ struct GeneralSettingsTab: View {
     var body: some View {
         Form {
             // Server Status Section
-            Section {
+            Section("Server") {
                 HStack {
                     Circle()
                         .fill(appState.isServerOnline ? Color.green : Color.red)
@@ -30,14 +30,10 @@ struct GeneralSettingsTab: View {
                 }
             }
 
-            Divider()
-
             // Hotkey Section
-            Section {
+            Section("Hotkey") {
                 HotkeyPickerView()
             }
-
-            Divider()
 
             // Auto-Paste Section
             Section {
@@ -48,38 +44,26 @@ struct GeneralSettingsTab: View {
                         }
                     }
 
-                Text("Automatically paste transcribed text where your cursor is")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
                 if settings.autoPasteEnabled {
                     accessibilityStatusView
                 }
+            } footer: {
+                Text("Automatically paste transcribed text where your cursor is")
             }
-
-            Divider()
 
             // Sound Feedback Section
             Section {
                 Toggle("Play sounds", isOn: $settings.soundsEnabled)
-
+            } footer: {
                 Text("Play audio feedback when recording starts and stops")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
-
-            Divider()
 
             // Recording Timeout Section
             Section {
                 Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
-
+            } footer: {
                 Text("When enabled, recording stops after 60 seconds")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
-
-            Divider()
 
             // Silence Detection Section
             Section {
@@ -95,24 +79,23 @@ struct GeneralSettingsTab: View {
                     in: Config.minSilenceDuration...Config.maxSilenceDuration,
                     step: 5
                 )
-
+            } footer: {
                 Text("After you stop speaking, recording ends after this many seconds of silence")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
             }
-
-            Spacer()
 
             // Reset Button
-            HStack {
-                Spacer()
-                Button("Reset to Defaults") {
-                    settings.resetToDefaults()
+            Section {
+                HStack {
+                    Spacer()
+                    Button("Reset to Defaults") {
+                        settings.resetToDefaults()
+                    }
+                    .foregroundColor(.secondary)
                 }
-                .foregroundColor(.secondary)
             }
         }
-        .padding()
+        .formStyle(.grouped)
+        .toggleStyle(.switch)
     }
 
     // MARK: - Accessibility Status View

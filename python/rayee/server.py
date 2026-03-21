@@ -4,7 +4,7 @@ Rayee API Server
 A local web server that the Swift app communicates with.
 Handles recording, transcription, model switching, and vocabulary.
 
-All communication happens over HTTP on localhost:8765 - only your Mac can access it.
+All communication happens over a Unix domain socket (~/.rayee/server.sock) - only your Mac can access it.
 """
 
 import asyncio

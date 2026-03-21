@@ -117,11 +117,7 @@ class RecordingPanelController: ObservableObject {
         panel.contentView = hostingView
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        if #available(macOS 26, *) {
-            panel.hasShadow = false  // Liquid Glass provides its own visual depth
-        } else {
-            panel.hasShadow = true
-        }
+        panel.hasShadow = true
         panel.level = .floating
         panel.isMovableByWindowBackground = true  // Allow dragging anywhere
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]

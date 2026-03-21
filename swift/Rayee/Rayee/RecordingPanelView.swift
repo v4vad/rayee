@@ -3,7 +3,7 @@
 //  Rayee
 //
 //  The floating panel that appears during recording.
-//  Features a modern design with title, waveform, and pill-shaped buttons.
+//  Shows status, transcribed text, and transformation buttons.
 //
 
 import SwiftUI
@@ -16,7 +16,7 @@ struct RecordingPanelView: View {
     /// Whether transcription is in progress
     let isTranscribing: Bool
 
-    /// Audio level monitor for waveform
+    /// Audio level monitor (retained for future use)
     @ObservedObject var audioLevelMonitor: AudioLevelMonitor
 
     /// Transcribed text to display (for result mode)
@@ -113,19 +113,17 @@ struct RecordingPanelView: View {
             // Result mode: editable text with copy button
             resultView
         } else if isRecording {
-            // Recording mode: dot grid that blooms with your voice
             VStack(spacing: 8) {
-                DotGridView(levels: $audioLevelMonitor.levels, mode: .listening)
-
+                ProgressView()
+                    .controlSize(.small)
                 Text("Recording...")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
         } else if isTranscribing {
-            // Transcribing mode: rotating radar sweep on dot grid
             VStack(spacing: 8) {
-                DotGridView(levels: .constant([]), mode: .transcribing)
-
+                ProgressView()
+                    .controlSize(.small)
                 Text("Transcribing...")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
@@ -169,66 +167,35 @@ struct RecordingPanelView: View {
         }
     }
 
-    @ViewBuilder
     private var copyButton: some View {
-        if #available(macOS 26, *) {
-            Button(action: onCopy) {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 11))
-                    Text("Copy")
-                        .font(.system(size: 12, weight: .medium))
-                }
+        Button(action: onCopy) {
+            HStack(spacing: 4) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 11))
+                Text("Copy")
+                    .font(.system(size: 12, weight: .medium))
             }
-            .buttonStyle(.glassProminent)
-            .disabled(transcribedText.isEmpty)
-        } else {
-            Button(action: onCopy) {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.on.doc")
-                        .font(.system(size: 11))
-                    Text("Copy")
-                        .font(.system(size: 12, weight: .medium))
-                }
-            }
-            .buttonStyle(PillButtonStyle(isProminent: true))
-            .disabled(transcribedText.isEmpty)
         }
+        .buttonStyle(PillButtonStyle(isProminent: true))
+        .disabled(transcribedText.isEmpty)
     }
 
-    @ViewBuilder
     private var buttonBar: some View {
-        if #available(macOS 26, *) {
-            GlassEffectContainer {
-                HStack {
-                    GlassHotkeyButton("Cancel", hotkeySymbol: "⎋", action: onCancel)
-                    Spacer()
-                    if isRecording {
-                        GlassHotkeyButton("Done", hotkeySymbol: "↵", isProminent: true, action: onStop)
-                    }
-                }
-            }
-        } else {
-            HStack {
-                HotkeyButton("Cancel", hotkeySymbol: "⎋", action: onCancel)
-                Spacer()
-                if isRecording {
-                    HotkeyButton("Done", hotkeySymbol: "↵", isProminent: true, action: onStop)
-                }
+        HStack {
+            Button("Cancel", action: onCancel)
+                .buttonStyle(PillButtonStyle(isProminent: false))
+            Spacer()
+            if isRecording {
+                Button("Done", action: onStop)
+                    .buttonStyle(PillButtonStyle(isProminent: true))
             }
         }
     }
 
-    @ViewBuilder
     private var panelBackground: some View {
-        if #available(macOS 26, *) {
-            Color.clear
-                .glassEffect(.regular, in: .rect(cornerRadius: Config.panelCornerRadiusGlass))
-        } else {
-            RoundedRectangle(cornerRadius: Config.panelCornerRadiusLegacy)
-                .fill(.ultraThinMaterial)
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
-        }
+        RoundedRectangle(cornerRadius: Config.panelCornerRadius)
+            .fill(.ultraThinMaterial)
+            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
     }
 }
 

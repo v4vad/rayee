@@ -137,7 +137,7 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 **Check these:**
 1. Is the virtual environment activated? Run `source venv/bin/activate` first
 2. Are dependencies installed? Run `pip install -r requirements.txt`
-3. Is port 8765 already in use? Run `lsof -i :8765` to check
+3. Is a stale socket file blocking? Run `rm ~/.rayee/server.sock` and try again
 4. Kill any existing server: `pkill -f run_server.py`
 
 ### App says "Server not running"
@@ -145,8 +145,8 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 
 **Check these:**
 1. Is the Python server actually running? Open Terminal and check
-2. Test the server directly: `curl http://localhost:8765/health`
-3. Check if firewall is blocking localhost connections
+2. Test the server directly: `curl --unix-socket ~/.rayee/server.sock http://localhost/health`
+3. Check if the socket file exists: `ls -la ~/.rayee/server.sock`
 
 ### Microphone not working
 **Symptom:** Recording starts but no audio is captured
@@ -177,7 +177,7 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 
 **Check these:**
 1. Is the transform model downloaded? Check Settings → Transformations
-2. Test the endpoint directly: `curl http://localhost:8765/transform/status`
+2. Test the endpoint directly: `curl --unix-socket ~/.rayee/server.sock http://localhost/transform/status`
 3. MLX requires Apple Silicon (M1+) — won't work on Intel Macs
 4. The model uses ~800MB RAM when loaded; check available memory
 
@@ -186,16 +186,16 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 ### Quick health check
 ```bash
 # Check if server responds
-curl http://localhost:8765/health
+curl --unix-socket ~/.rayee/server.sock http://localhost/health
 
 # Check server status
-curl http://localhost:8765/status
+curl --unix-socket ~/.rayee/server.sock http://localhost/status
 ```
 
 ### Test transcription manually
 ```bash
 # Start recording (speak, then wait for it to finish)
-curl -X POST http://localhost:8765/transcribe
+curl --unix-socket ~/.rayee/server.sock -X POST http://localhost/transcribe
 ```
 
 ### Verify Python environment
@@ -214,10 +214,10 @@ xcodebuild -project swift/Rayee/Rayee.xcodeproj -scheme Rayee build
 ### Test text transformation
 ```bash
 # Check if transform model is ready
-curl http://localhost:8765/transform/status
+curl --unix-socket ~/.rayee/server.sock http://localhost/transform/status
 
 # Test a transformation
-curl -X POST http://localhost:8765/transform \
+curl --unix-socket ~/.rayee/server.sock -X POST http://localhost/transform \
   -H "Content-Type: application/json" \
   -d '{"text": "lets go too the store", "transformation_type": "grammar"}'
 ```
