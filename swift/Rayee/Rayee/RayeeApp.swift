@@ -53,9 +53,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Request permissions immediately on first launch
         requestPermissionsOnFirstLaunch()
 
-        // Start the bundled Python server
-        ServerManager.shared.start()
-
         // Initialize the update manager so background update checks begin
         _ = UpdateManager.shared
 
@@ -69,9 +66,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         // Clean up before quitting
         HotkeyManager.shared.stop()
-
-        // Stop the Python server
-        ServerManager.shared.stop()
 
         // Log shutdown and close the log file
         AppLogger.shutdown()

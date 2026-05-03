@@ -73,13 +73,13 @@ struct SetupGuideView: View {
 
     private var checklistItems: some View {
         VStack(spacing: 12) {
-            // Python Server
+            // AI Model Status
             ChecklistRow(
-                title: "Python Server",
-                status: appState.isServerOnline ? .ready : .notReady,
-                detail: appState.isServerOnline ? "Running" : "Not running",
-                actionLabel: appState.isServerOnline ? nil : "Start",
-                action: { ServerManager.shared.start() }
+                title: "AI Model",
+                status: appState.isWhisperReady ? .ready : (appState.isWhisperLoading ? .optional : .notReady),
+                detail: appState.isWhisperLoading ? "Loading..." : (appState.isWhisperReady ? "Ready" : "Not loaded"),
+                actionLabel: (!appState.isWhisperReady && !appState.isWhisperLoading) ? "Load" : nil,
+                action: { appState.loadWhisperModel() }
             )
 
             // Microphone Permission
