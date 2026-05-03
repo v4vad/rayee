@@ -3,26 +3,17 @@
 //  Rayee
 //
 //  Settings tab for configuring text transformations.
-//  Toggle transformations on/off, manage the LLM model, choose which types to show.
+//  Toggle transformations on/off, choose which types to show.
 //
 
 import SwiftUI
 
 struct TransformationsSettingsTab: View {
     @ObservedObject var settings = SettingsManager.shared
-
-    /// Model status from the server
-    @State private var modelDownloaded = false
-    @State private var modelLoaded = false
-    @State private var modelDownloading = false
-    @State private var downloadError: String?
-    @State private var isCheckingStatus = false
-
-    private let bridge = PythonBridge()
+    @StateObject private var transformManager = MLXTransformManager.shared
 
     var body: some View {
         Form {
-            // Enable/Disable Section
             Section {
                 Toggle("Enable text transformations", isOn: $settings.transformationsEnabled)
             } footer: {
@@ -30,25 +21,10 @@ struct TransformationsSettingsTab: View {
             }
 
             if settings.transformationsEnabled {
-                // Model Status Section
                 Section("Model") {
                     modelStatusRow
-
-                    if let error = downloadError {
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.red)
-                    }
                 }
 
-                // Model Options Section
-                Section {
-                    Toggle("Keep model loaded in memory", isOn: $settings.keepTransformModelLoaded)
-                } footer: {
-                    Text("Uses ~800MB RAM but makes transformations instant. Otherwise the model loads on demand and unloads after 30 seconds.")
-                }
-
-                // Visible Transformations Section
                 Section("Visible Transformations") {
                     ForEach(TransformationType.allCases) { type in
                         Toggle(isOn: transformationBinding(for: type)) {
@@ -68,7 +44,6 @@ struct TransformationsSettingsTab: View {
         }
         .formStyle(.grouped)
         .toggleStyle(.switch)
-        .onAppear { checkModelStatus() }
     }
 
     // MARK: - Model Status Row
@@ -78,26 +53,28 @@ struct TransformationsSettingsTab: View {
             Text("Transform Model")
             Spacer()
 
-            if modelDownloading {
+            if transformManager.isModelLoading {
                 ProgressView()
                     .controlSize(.small)
-                Text("Downloading...")
+                Text("Loading...")
                     .font(.caption)
                     .foregroundColor(.secondary)
-            } else if modelDownloaded {
+            } else if transformManager.isModelLoaded {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
-                Text(modelLoaded ? "Loaded" : "Ready")
+                Text("Loaded")
                     .font(.caption)
                     .foregroundColor(.green)
+            } else if let error = transformManager.loadError {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.red)
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
             } else {
-                Text("Not downloaded")
+                Text("Loads on first use")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                Button("Download") {
-                    downloadModel()
-                }
-                .controlSize(.small)
             }
         }
     }
@@ -111,73 +88,12 @@ struct TransformationsSettingsTab: View {
                 if enabled {
                     settings.enabledTransformations.insert(type.rawValue)
                 } else {
-                    // Don't allow disabling all transformations
                     if settings.enabledTransformations.count > 1 {
                         settings.enabledTransformations.remove(type.rawValue)
                     }
                 }
             }
         )
-    }
-
-    private func checkModelStatus() {
-        isCheckingStatus = true
-        Task {
-            if let status = try? await bridge.getTransformStatus() {
-                await MainActor.run {
-                    modelDownloaded = status.modelDownloaded
-                    modelLoaded = status.modelLoaded
-                    modelDownloading = status.modelDownloading
-                    downloadError = status.downloadError
-                    isCheckingStatus = false
-                }
-            } else {
-                await MainActor.run {
-                    isCheckingStatus = false
-                }
-            }
-        }
-    }
-
-    private func downloadModel() {
-        modelDownloading = true
-        downloadError = nil
-        Task {
-            do {
-                try await bridge.downloadTransformModel()
-                // Poll for completion
-                pollDownloadStatus()
-            } catch {
-                await MainActor.run {
-                    modelDownloading = false
-                    downloadError = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    private func pollDownloadStatus() {
-        Task {
-            while modelDownloading {
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                if let status = try? await bridge.getTransformDownloadStatus() {
-                    await MainActor.run {
-                        switch status.status {
-                        case "ready":
-                            modelDownloaded = true
-                            modelDownloading = false
-                        case "error":
-                            modelDownloading = false
-                            downloadError = status.error ?? "Download failed"
-                        case "downloading":
-                            break
-                        default:
-                            modelDownloading = false
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 

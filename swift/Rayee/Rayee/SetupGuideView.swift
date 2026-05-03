@@ -11,21 +11,17 @@ import SwiftUI
 struct SetupGuideView: View {
     @EnvironmentObject var appState: AppState
     @ObservedObject var settings = SettingsManager.shared
+    @ObservedObject private var modelManager = WhisperKitModelManager.shared
+    @ObservedObject private var transformManager = MLXTransformManager.shared
     @Environment(\.dismiss) private var dismiss
 
-    // Status tracking
     @State private var micPermission = false
     @State private var accessibilityPermission = false
-    @State private var whisperModelReady = false
-    @State private var transformModelReady = false
-    @State private var transformModelDownloading = false
 
-    private let bridge = PythonBridge()
     private let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             headerView
                 .padding(.horizontal, 24)
                 .padding(.top, 24)
@@ -33,7 +29,6 @@ struct SetupGuideView: View {
 
             Divider()
 
-            // Checklist
             ScrollView {
                 VStack(spacing: 2) {
                     checklistItems
@@ -43,7 +38,6 @@ struct SetupGuideView: View {
 
             Divider()
 
-            // Footer
             footerView
                 .padding(16)
         }
@@ -73,13 +67,13 @@ struct SetupGuideView: View {
 
     private var checklistItems: some View {
         VStack(spacing: 12) {
-            // Python Server
+            // AI Model Status (WhisperKit load state)
             ChecklistRow(
-                title: "Python Server",
-                status: appState.isServerOnline ? .ready : .notReady,
-                detail: appState.isServerOnline ? "Running" : "Not running",
-                actionLabel: appState.isServerOnline ? nil : "Start",
-                action: { ServerManager.shared.start() }
+                title: "AI Model",
+                status: appState.isWhisperReady ? .ready : (appState.isWhisperLoading ? .optional : .notReady),
+                detail: whisperModelDetail,
+                actionLabel: (!appState.isWhisperReady && !appState.isWhisperLoading) ? "Load" : nil,
+                action: { appState.loadWhisperModel() }
             )
 
             // Microphone Permission
@@ -100,37 +94,50 @@ struct SetupGuideView: View {
                 action: { openAccessibilitySettings() }
             )
 
-            // Whisper Model
+            // Whisper Model Download
             ChecklistRow(
                 title: "Whisper Model",
-                status: whisperModelReady ? .ready : .notReady,
-                detail: whisperModelReady ? "Ready" : "Not downloaded",
-                actionLabel: whisperModelReady ? nil : "Download",
+                status: isSelectedModelDownloaded ? .ready : .notReady,
+                detail: isSelectedModelDownloaded ? "Downloaded" : "Not downloaded",
+                actionLabel: isSelectedModelDownloaded ? nil : "Download",
                 action: { downloadWhisperModel() }
             )
 
             // Transform Model (optional)
             ChecklistRow(
                 title: "Transform Model",
-                status: transformModelReady ? .ready : .optional,
+                status: transformManager.isModelLoaded ? .ready : .optional,
                 detail: transformModelDetail,
-                actionLabel: (!transformModelReady && !transformModelDownloading) ? "Download" : nil,
-                action: { downloadTransformModel() },
+                actionLabel: nil,
+                action: {},
                 isOptional: true
             )
 
             Divider()
                 .padding(.vertical, 8)
 
-            // Recording Hotkey
             HotkeyPickerView()
         }
     }
 
+    private var whisperModelDetail: String {
+        if appState.isWhisperLoading { return "Loading..." }
+        if appState.isWhisperReady { return "Ready" }
+        return "Not loaded"
+    }
+
+    private var isSelectedModelDownloaded: Bool {
+        let targetName = settings.selectedWhisperKitModel
+        for model in modelManager.models {
+            if model.id == targetName, case .ready = model.status { return true }
+        }
+        return false
+    }
+
     private var transformModelDetail: String {
-        if transformModelDownloading { return "Downloading..." }
-        if transformModelReady { return "Ready" }
-        return "Optional — for text transformations"
+        if transformManager.isModelLoading { return "Loading..." }
+        if transformManager.isModelLoaded { return "Ready" }
+        return "Loads automatically on first use"
     }
 
     // MARK: - Footer
@@ -150,29 +157,15 @@ struct SetupGuideView: View {
     // MARK: - Status Refresh
 
     private func refreshStatus() {
-        // Microphone
         Task {
             let granted = await AudioRecorder.requestMicrophonePermission()
             await MainActor.run { micPermission = granted }
         }
 
-        // Accessibility
         accessibilityPermission = PasteManager.shared.hasAccessibilityPermission()
 
-        // Model status from server
         Task {
-            if let startup = await bridge.getStartupStatus() {
-                await MainActor.run {
-                    whisperModelReady = startup.state == "ready"
-                }
-            }
-
-            if let transformStatus = try? await bridge.getTransformStatus() {
-                await MainActor.run {
-                    transformModelReady = transformStatus.modelDownloaded
-                    transformModelDownloading = transformStatus.modelDownloading
-                }
-            }
+            await modelManager.refreshModels()
         }
     }
 
@@ -191,19 +184,7 @@ struct SetupGuideView: View {
     }
 
     private func downloadWhisperModel() {
-        let modelName = settings.selectedModel.rawValue
-        Task {
-            let _ = try? await bridge.performModelAction(
-                endpoint: "/models/download/\(modelName)", method: "POST"
-            )
-        }
-    }
-
-    private func downloadTransformModel() {
-        transformModelDownloading = true
-        Task {
-            let _ = try? await bridge.downloadTransformModel()
-        }
+        modelManager.downloadModel(settings.selectedWhisperKitModel)
     }
 }
 

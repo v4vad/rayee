@@ -27,7 +27,6 @@ class TranscriptionCoordinator: ObservableObject {
     @Published private(set) var isTranscribing = false
 
     /// Dependencies
-    private let pythonBridge: PythonBridge
     private let settings: SettingsManager
     private let historyManager: HistoryManager
     private let audioFeedback: AudioFeedback
@@ -48,13 +47,11 @@ class TranscriptionCoordinator: ObservableObject {
     // MARK: - Initialization
 
     init(
-        pythonBridge: PythonBridge = PythonBridge(),
         settings: SettingsManager = .shared,
         historyManager: HistoryManager = .shared,
         audioFeedback: AudioFeedback = .shared,
         pasteManager: PasteManager = .shared
     ) {
-        self.pythonBridge = pythonBridge
         self.settings = settings
         self.historyManager = historyManager
         self.audioFeedback = audioFeedback
@@ -173,24 +170,21 @@ class TranscriptionCoordinator: ObservableObject {
         onTranscriptionComplete?(.error(message: error.localizedDescription))
     }
 
-    /// Transcribe recording using raw PCM bytes (with WAV file fallback)
+    /// Transcribe recording using WhisperKit (on-device)
     private func transcribeRecording(_ result: RecordingResult) {
         isTranscribing = true
-        AppLogger.log("Transcribing audio (raw PCM)...", category: "transcription")
+        AppLogger.log("Transcribing audio via WhisperKit...", category: "transcription")
 
         Task { @MainActor in
             do {
-                let text = try await pythonBridge.transcribeRaw(audioData: result.audioData)
+                let vocabulary = settings.vocabularyList
+                let text = try await WhisperKitManager.shared.transcribe(
+                    audioBuffer: result.audioData,
+                    vocabulary: vocabulary
+                )
                 self.handleTranscriptionSuccess(text)
             } catch {
-                // Fall back to file-based path if raw fails
-                AppLogger.log("Raw path failed, falling back to file: \(error)", category: "transcription")
-                do {
-                    let text = try await pythonBridge.transcribeFile(audioPath: result.audioPath)
-                    self.handleTranscriptionSuccess(text)
-                } catch {
-                    self.handleTranscriptionError(error)
-                }
+                self.handleTranscriptionError(error)
             }
         }
     }
@@ -205,7 +199,7 @@ class TranscriptionCoordinator: ObservableObject {
         if !text.isEmpty {
             historyManager.saveTranscription(
                 text: text,
-                model: settings.selectedModel.rawValue
+                model: settings.selectedWhisperKitModel
             )
         }
 
@@ -221,11 +215,6 @@ class TranscriptionCoordinator: ObservableObject {
             }
         }
 
-        // Speculatively preload the transform model so it's warm when user clicks a transform button
-        if settings.transformationsEnabled && !text.isEmpty {
-            Task { await pythonBridge.warmupTransformModel() }
-        }
-
         onTranscriptionComplete?(.success(text: text, didPaste: didPaste))
     }
 
@@ -234,23 +223,6 @@ class TranscriptionCoordinator: ObservableObject {
         isTranscribing = false
         AppLogger.log("Transcription failed: \(error.localizedDescription)", category: "transcription")
         audioFeedback.playErrorSound()
-
-        let message: String
-        if let bridgeError = error as? PythonBridgeError {
-            switch bridgeError {
-            case .serverBusy:
-                message = "Server is busy. Please wait."
-            case .serverOffline:
-                message = "Server is not running."
-            case .serverStarting:
-                message = "AI models are still loading. Please wait."
-            default:
-                message = bridgeError.localizedDescription
-            }
-        } else {
-            message = "Transcription failed: \(error.localizedDescription)"
-        }
-
-        onTranscriptionComplete?(.error(message: message))
+        onTranscriptionComplete?(.error(message: error.localizedDescription))
     }
 }

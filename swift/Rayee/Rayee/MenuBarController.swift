@@ -74,7 +74,7 @@ class MenuBarController: NSObject, NSMenuDelegate {
             .sink { [weak self] _ in self?.updateIcon() }
             .store(in: &cancellables)
 
-        appState.$isServerOnline
+        appState.$isWhisperReady
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in self?.updateIcon() }
             .store(in: &cancellables)
@@ -191,8 +191,7 @@ class MenuBarController: NSObject, NSMenuDelegate {
 
     private var recordButtonTitle: String {
         switch appState.status {
-        case .startingServer: return "Starting server..."
-        case .downloadingModels: return "Downloading models..."
+        case .loadingModels: return "Loading models..."
         case .ready, .error: return "Record"
         case .recording: return "Stop Recording"
         case .transcribing: return "Transcribing..."
@@ -202,7 +201,7 @@ class MenuBarController: NSObject, NSMenuDelegate {
     private var canRecord: Bool {
         switch appState.status {
         case .ready, .error, .recording: return true
-        case .startingServer, .downloadingModels, .transcribing: return false
+        case .loadingModels, .transcribing: return false
         }
     }
 

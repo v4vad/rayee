@@ -17,16 +17,16 @@ struct GeneralSettingsTab: View {
 
     var body: some View {
         Form {
-            // Server Status Section
-            Section("Server") {
+            // Model Status Section
+            Section("Transcription") {
                 HStack {
                     Circle()
-                        .fill(appState.isServerOnline ? Color.green : Color.red)
+                        .fill(appState.isWhisperLoading ? Color.blue : (appState.isWhisperReady ? Color.green : Color.red))
                         .frame(width: 10, height: 10)
-                    Text("Server Status")
+                    Text("AI Model")
                     Spacer()
-                    Text(appState.isServerOnline ? "Online" : "Offline")
-                        .foregroundColor(appState.isServerOnline ? .green : .red)
+                    Text(appState.isWhisperLoading ? "Loading..." : (appState.isWhisperReady ? "Ready" : "Not Loaded"))
+                        .foregroundColor(appState.isWhisperLoading ? .blue : (appState.isWhisperReady ? .green : .red))
                 }
             }
 

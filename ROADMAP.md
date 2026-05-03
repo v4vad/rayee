@@ -1,34 +1,20 @@
 # Rayee Roadmap
 
-## Blocked: Eliminate Python — Pure Native App
+## Completed: Eliminated Python — Pure Native App
 
-**Goal:** Replace the Python server with native Swift libraries. Single .app binary, no Python dependency, instant startup, ~40-50% less memory.
+**Shipped in v0.4.** Replaced the Python server with:
+- WhisperKit (`argmax-oss-swift` v1.0.0) for CoreML transcription
+- mlx-swift-lm v3.31.3 for Metal-accelerated LLM transforms
 
-**Plan:** WhisperKit for transcription + mlx-swift-lm for LLM transforms.
-
-**Status:** Attempted and reverted. Blocked by a dependency conflict:
-- WhisperKit requires `swift-transformers` 1.1.6 to <1.2.0
-- mlx-swift-lm requires `swift-transformers` 1.2.0 to <1.3.0
-- These ranges don't overlap — SPM cannot resolve both in the same project
-- No public project has made these two libraries coexist
-- GitHub issue to be filed on WhisperKit requesting they widen the constraint
-
-**When resolved, the plan is:**
-1. Replace Python transcription with WhisperKit (native CoreML inference)
-2. Replace Python transforms with mlx-swift-lm (native Metal LLM inference)
-3. Delete all Python infrastructure (PythonBridge, ServerManager, HealthMonitor, etc.)
-
-**Alternative if needed:** SwiftWhisper (whisper.cpp wrapper, 772 stars) + llmfarm_core (llama.cpp wrapper, 279 stars). Both have zero `swift-transformers` dependency. Community-maintained, not Apple.
+Single .app binary, no Python dependency, instant startup.
 
 ---
 
-## Blocked: Live Transcription (Real-Time Streaming)
+## Future: Live Transcription (Real-Time Streaming)
 
 **Goal:** Text appears word-by-word as you speak — like Apple's built-in dictation.
 
-**Status:** Depends on the native migration above. WhisperKit has built-in streaming mode. With the current Python architecture, this would require WebSocket audio streaming + incremental Whisper processing — complex and would be thrown away during migration.
-
-**When the native migration is done:** Use WhisperKit's streaming transcription API to feed audio chunks in real-time and display partial results.
+**How:** WhisperKit has a built-in streaming transcription API. Feed audio chunks in real-time and display partial results as they arrive.
 
 ---
 

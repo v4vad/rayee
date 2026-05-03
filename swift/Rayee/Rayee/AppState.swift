@@ -16,8 +16,7 @@ import Combine
 
 // What the app is currently doing
 enum AppStatus: String {
-    case startingServer = "Starting server..."
-    case downloadingModels = "Downloading AI models..."
+    case loadingModels = "Loading AI models..."
     case ready = "Ready"
     case recording = "Listening..."
     case transcribing = "Transcribing..."
@@ -40,25 +39,19 @@ class AppState: ObservableObject {
     /// Error message if something goes wrong
     @Published var errorMessage: String?
 
-    /// Whether the Python server is reachable (from HealthMonitor)
-    @Published var isServerOnline: Bool = false
+    /// Whether WhisperKit model is loaded and ready
+    @Published var isWhisperReady: Bool = false
+
+    /// Whether WhisperKit model is currently loading
+    @Published var isWhisperLoading: Bool = false
 
     // MARK: - Dependencies
-
-    /// Bridge for communicating with the Python server
-    private let pythonBridge = PythonBridge()
 
     /// Handles recording → transcription → paste flow
     private let transcriptionCoordinator = TranscriptionCoordinator()
 
-    /// Monitors server health periodically
-    private let healthMonitor = HealthMonitor.shared
-
     /// Manages global hotkey listening
     let hotkeyManager = HotkeyManager.shared
-
-    /// Manages the bundled Python server
-    let serverManager = ServerManager.shared
 
     /// Controls the floating recording panel
     private let recordingPanelController = RecordingPanelController()
@@ -68,19 +61,15 @@ class AppState: ObservableObject {
 
     // MARK: - Initialization
 
-    // Track if we've ever been fully ready - prevents status flickering after initial startup
-    private var hasBeenReady: Bool = false
-
     init() {
         setupBindings()
         setupHotkey()
-        healthMonitor.start()
         startHotkeyListening()
+        loadWhisperModel()
     }
 
     deinit {
         hotkeyManager.stop()
-        healthMonitor.stop()
     }
 
     // MARK: - Public Methods
@@ -114,6 +103,12 @@ class AppState: ObservableObject {
         }
     }
 
+    /// Load the WhisperKit model at startup
+    func loadWhisperModel() {
+        let modelName = SettingsManager.shared.selectedWhisperKitModel
+        Task { await WhisperKitManager.shared.loadModel(modelName) }
+    }
+
     /// Start listening for the global hotkey
     func startHotkeyListening() {
         AppLogger.log("startHotkeyListening() called", category: "hotkey")
@@ -129,8 +124,7 @@ class AppState: ObservableObject {
     /// Icon to show in the menu bar
     var menuBarIcon: String {
         switch status {
-        case .startingServer: return "ellipsis.circle"
-        case .downloadingModels: return "arrow.down.circle"
+        case .loadingModels: return "arrow.down.circle"
         case .ready: return "waveform"
         case .recording: return "waveform.circle.fill"
         case .transcribing: return "text.bubble"
@@ -141,8 +135,7 @@ class AppState: ObservableObject {
     /// Color for the status indicator dot
     var statusColor: Color {
         switch status {
-        case .startingServer: return .orange
-        case .downloadingModels: return .blue
+        case .loadingModels: return .blue
         case .ready: return .green
         case .recording: return .red
         case .transcribing: return .orange
@@ -154,22 +147,27 @@ class AppState: ObservableObject {
 
     /// Set up Combine bindings to observe child components
     private func setupBindings() {
-        // Observe health monitor - when server comes online, ensure we're ready
-        healthMonitor.$isServerOnline
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] isOnline in
-                guard let self = self else { return }
-                self.isServerOnline = isOnline
-                // If server is online and we're in a waiting state, transition to ready
-                if isOnline && (self.status == .startingServer || self.status == .downloadingModels) {
-                    self.status = .ready
+        // Observe WhisperKitManager — model loading state.
+        // WhisperKitManager is @MainActor isolated, so its publishers must be
+        // subscribed on the main actor. We schedule this after init completes.
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            WhisperKitManager.shared.$isLoaded
+                .sink { [weak self] loaded in
+                    self?.isWhisperReady = loaded
+                    if loaded && self?.status == .loadingModels {
+                        self?.status = .ready
+                    }
                 }
-                // Sync settings to server when it comes online
-                if isOnline {
-                    SettingsManager.shared.syncFastModeToServer()
+                .store(in: &self.cancellables)
+
+            WhisperKitManager.shared.$isLoading
+                .sink { [weak self] loading in
+                    self?.isWhisperLoading = loading
+                    if loading { self?.status = .loadingModels }
                 }
-            }
-            .store(in: &cancellables)
+                .store(in: &self.cancellables)
+        }
 
         // Observe transcription coordinator - recording state
         transcriptionCoordinator.$isRecording
@@ -234,13 +232,6 @@ class AppState: ObservableObject {
             self?.handleUseOriginal()
         }
 
-        // Observe server manager state
-        serverManager.$state
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] serverState in
-                self?.handleServerStateChange(serverState)
-            }
-            .store(in: &cancellables)
     }
 
     /// Handle transcription completion results
@@ -270,41 +261,6 @@ class AppState: ObservableObject {
             status = .error
             // Hide the panel on error
             recordingPanelController.hidePanel()
-            if message.contains("not running") {
-                isServerOnline = false
-            }
-        }
-    }
-
-    /// Handle changes to the server manager's state
-    private func handleServerStateChange(_ serverState: ServerManager.ServerState) {
-        switch serverState {
-        case .starting:
-            // Show "Starting server..." only during initial startup
-            // Once we've been ready, don't flip back (prevents flickering)
-            if !hasBeenReady && (status == .ready || status == .error) {
-                status = .startingServer
-            }
-        case .downloadingModels:
-            // Show "Downloading AI models..." only during initial startup
-            if !hasBeenReady && (status == .startingServer || status == .ready) {
-                status = .downloadingModels
-            }
-        case .running:
-            // Server is ready - update status if we were waiting for it
-            if status == .startingServer || status == .downloadingModels {
-                status = .ready
-            }
-            // Mark that we've successfully started once
-            hasBeenReady = true
-            isServerOnline = true
-        case .failed:
-            // Server failed - show error
-            status = .error
-            errorMessage = serverManager.errorMessage ?? "Server failed to start"
-            isServerOnline = false
-        case .notStarted, .stopped:
-            break
         }
     }
 
@@ -354,9 +310,9 @@ class AppState: ObservableObject {
 
         Task { @MainActor in
             do {
-                try await pythonBridge.transformTextStreaming(
+                try await MLXTransformManager.shared.streamTransform(
                     text: text,
-                    type: type.rawValue,
+                    type: type,
                     onToken: { [weak self] token in
                         transformState.appendStreamingToken(token)
                         self?.recordingPanelController.updateWindowSizeForTransform()

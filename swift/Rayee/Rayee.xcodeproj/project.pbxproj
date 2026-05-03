@@ -3,14 +3,13 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		A1000001001 /* RayeeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RayeeApp.swift */; };
 		A1000002001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* AppState.swift */; };
 		A1000004001 /* StatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000 /* StatusIndicator.swift */; };
-		A1000005001 /* PythonBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* PythonBridge.swift */; };
 		A1000007001 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* SettingsManager.swift */; };
 		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
 		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
@@ -19,10 +18,8 @@
 		A100000D001 /* HistoryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000D000 /* HistoryManager.swift */; };
 		A100000E001 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E000 /* HistoryView.swift */; };
 		A100000F001 /* AudioFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000F000 /* AudioFeedback.swift */; };
-		A1000110001 /* ServerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000110000 /* ServerManager.swift */; };
 		A1000120001 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000120000 /* AudioRecorder.swift */; };
 		A1000130001 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000130000 /* Config.swift */; };
-		A1000140001 /* HealthMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000140000 /* HealthMonitor.swift */; };
 		A1000150001 /* TranscriptionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000150000 /* TranscriptionCoordinator.swift */; };
 		A1000170001 /* AudioLevelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000170000 /* AudioLevelMonitor.swift */; };
 		A1000180001 /* RecordingPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000180000 /* RecordingPanelView.swift */; };
@@ -39,7 +36,6 @@
 		A10002F0001 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002F0000 /* GeneralSettingsTab.swift */; };
 		A1000300001 /* UploadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000300000 /* UploadRow.swift */; };
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
-		A1000360001 /* FasterWhisperManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000360000 /* FasterWhisperManager.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 		A1000390001 /* TransformationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000390000 /* TransformationState.swift */; };
 		A10003A0001 /* TransformationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003A0000 /* TransformationButton.swift */; };
@@ -50,18 +46,35 @@
 		A10003F0001 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003F0000 /* SetupGuideView.swift */; };
 		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
 		A1000410001 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000410000 /* MenuBarController.swift */; };
-		A1000420001 /* UnixSocketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000420000 /* UnixSocketProtocol.swift */; };
+		A1000450001 /* WhisperKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000450000 /* WhisperKitManager.swift */; };
+		A1000460001 /* WhisperKitModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000460000 /* WhisperKitModelManager.swift */; };
+		A1000470001 /* MLXTransformManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000470000 /* MLXTransformManager.swift */; };
 		A1000510001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1000510000 /* Sparkle */; };
 		A1000520001 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000520000 /* UpdateManager.swift */; };
+		AD16A4EA2FA77CA500901CBD /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4E92FA77CA500901CBD /* WhisperKit */; };
+		AD16A4EC2FA77CB600901CBD /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4EB2FA77CB600901CBD /* MLXLLM */; };
+		AD16A4EE2FA77CBE00901CBD /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4ED2FA77CBE00901CBD /* MLXLMCommon */; };
+		AD16A52C2FA78AA200901CBD /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A52B2FA78AA200901CBD /* MLXHuggingFace */; };
+		HF0001000001 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = HF0001000000 /* HuggingFace */; };
+		TR0001000001 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = TR0001000000 /* Tokenizers */; };
 		DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AD16A4E32FA769C800901CBD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000050000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1000030000;
+			remoteInfo = Rayee;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A1000000000 /* Rayee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rayee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000001000 /* RayeeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RayeeApp.swift; sourceTree = "<group>"; };
 		A1000002000 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A1000004000 /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
-		A1000005000 /* PythonBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PythonBridge.swift; sourceTree = "<group>"; };
 		A1000006000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000007000 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A1000008000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -72,10 +85,8 @@
 		A100000D000 /* HistoryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryManager.swift; sourceTree = "<group>"; };
 		A100000E000 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		A100000F000 /* AudioFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFeedback.swift; sourceTree = "<group>"; };
-		A1000110000 /* ServerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServerManager.swift; sourceTree = "<group>"; };
 		A1000120000 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		A1000130000 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
-		A1000140000 /* HealthMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthMonitor.swift; sourceTree = "<group>"; };
 		A1000150000 /* TranscriptionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCoordinator.swift; sourceTree = "<group>"; };
 		A1000170000 /* AudioLevelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelMonitor.swift; sourceTree = "<group>"; };
 		A1000180000 /* RecordingPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelView.swift; sourceTree = "<group>"; };
@@ -92,7 +103,6 @@
 		A10002F0000 /* GeneralSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsTab.swift; sourceTree = "<group>"; };
 		A1000300000 /* UploadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadRow.swift; sourceTree = "<group>"; };
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
-		A1000360000 /* FasterWhisperManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FasterWhisperManager.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 		A1000390000 /* TransformationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationState.swift; sourceTree = "<group>"; };
 		A10003A0000 /* TransformationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationButton.swift; sourceTree = "<group>"; };
@@ -103,17 +113,37 @@
 		A10003F0000 /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
 		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
 		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
-		A1000420000 /* UnixSocketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnixSocketProtocol.swift; sourceTree = "<group>"; };
+		A1000450000 /* WhisperKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitManager.swift; sourceTree = "<group>"; };
+		A1000460000 /* WhisperKitModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelManager.swift; sourceTree = "<group>"; };
+		A1000470000 /* MLXTransformManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXTransformManager.swift; sourceTree = "<group>"; };
 		A1000520000 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
+		AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AD16A4E02FA769C800901CBD /* RayeeTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RayeeTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A1000010000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD16A52C2FA78AA200901CBD /* MLXHuggingFace in Frameworks */,
+				HF0001000001 /* HuggingFace in Frameworks */,
+				TR0001000001 /* Tokenizers in Frameworks */,
+				AD16A4EC2FA77CB600901CBD /* MLXLLM in Frameworks */,
+				AD16A4EA2FA77CA500901CBD /* WhisperKit in Frameworks */,
+				AD16A4EE2FA77CBE00901CBD /* MLXLMCommon in Frameworks */,
 				A1000510001 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD16A4DC2FA769C800901CBD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +154,8 @@
 			isa = PBXGroup;
 			children = (
 				A1000021000 /* Rayee */,
+				AD16A4E02FA769C800901CBD /* RayeeTests */,
+				AD16A4E82FA77CA400901CBD /* Frameworks */,
 				A1000022000 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -136,8 +168,6 @@
 				A1000410000 /* MenuBarController.swift */,
 				D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */,
 				A1000004000 /* StatusIndicator.swift */,
-				A1000005000 /* PythonBridge.swift */,
-				A1000420000 /* UnixSocketProtocol.swift */,
 				A1000007000 /* SettingsManager.swift */,
 				A1000008000 /* SettingsView.swift */,
 				A1000009000 /* HotkeyManager.swift */,
@@ -146,10 +176,8 @@
 				A100000D000 /* HistoryManager.swift */,
 				A100000E000 /* HistoryView.swift */,
 				A100000F000 /* AudioFeedback.swift */,
-				A1000110000 /* ServerManager.swift */,
 				A1000120000 /* AudioRecorder.swift */,
 				A1000130000 /* Config.swift */,
-				A1000140000 /* HealthMonitor.swift */,
 				A1000150000 /* TranscriptionCoordinator.swift */,
 				A1000170000 /* AudioLevelMonitor.swift */,
 				A1000180000 /* RecordingPanelView.swift */,
@@ -165,7 +193,9 @@
 				A10002F0000 /* GeneralSettingsTab.swift */,
 				A1000300000 /* UploadRow.swift */,
 				A1000330000 /* ModelsSettingsTab.swift */,
-				A1000360000 /* FasterWhisperManager.swift */,
+				A1000450000 /* WhisperKitManager.swift */,
+				A1000460000 /* WhisperKitModelManager.swift */,
+				A1000470000 /* MLXTransformManager.swift */,
 				A1000370000 /* ModelRow.swift */,
 				A1000390000 /* TransformationState.swift */,
 				A10003A0000 /* TransformationButton.swift */,
@@ -187,8 +217,16 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000 /* Rayee.app */,
+				AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AD16A4E82FA77CA400901CBD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -209,10 +247,37 @@
 			name = Rayee;
 			packageProductDependencies = (
 				A1000510000 /* Sparkle */,
+				AD16A4E92FA77CA500901CBD /* WhisperKit */,
+				AD16A4EB2FA77CB600901CBD /* MLXLLM */,
+				AD16A4ED2FA77CBE00901CBD /* MLXLMCommon */,
+				AD16A52B2FA78AA200901CBD /* MLXHuggingFace */,
 			);
 			productName = Rayee;
 			productReference = A1000000000 /* Rayee.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AD16A4DE2FA769C800901CBD /* RayeeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AD16A4E52FA769C800901CBD /* Build configuration list for PBXNativeTarget "RayeeTests" */;
+			buildPhases = (
+				AD16A4DB2FA769C800901CBD /* Sources */,
+				AD16A4DC2FA769C800901CBD /* Frameworks */,
+				AD16A4DD2FA769C800901CBD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AD16A4E42FA769C800901CBD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AD16A4E02FA769C800901CBD /* RayeeTests */,
+			);
+			name = RayeeTests;
+			packageProductDependencies = (
+			);
+			productName = RayeeTests;
+			productReference = AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -221,11 +286,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					A1000030000 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					AD16A4DE2FA769C800901CBD = {
+						CreatedOnToolsVersion = 26.4.1;
+						TestTargetID = A1000030000;
 					};
 				};
 			};
@@ -240,12 +309,17 @@
 			mainGroup = A1000020000;
 			packageReferences = (
 				A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				AD16A4DA2FA7699500901CBD /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
+				HF0001000010 /* XCRemoteSwiftPackageReference "swift-huggingface" */,
+				TR0001000010 /* XCRemoteSwiftPackageReference "swift-transformers" */,
 			);
 			productRefGroup = A1000022000 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				A1000030000 /* Rayee */,
+				AD16A4DE2FA769C800901CBD /* RayeeTests */,
 			);
 		};
 /* End PBXProject section */
@@ -256,6 +330,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10001E0001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD16A4DD2FA769C800901CBD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,8 +352,6 @@
 				A1000410001 /* MenuBarController.swift in Sources */,
 				DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */,
 				A1000004001 /* StatusIndicator.swift in Sources */,
-				A1000005001 /* PythonBridge.swift in Sources */,
-				A1000420001 /* UnixSocketProtocol.swift in Sources */,
 				A1000007001 /* SettingsManager.swift in Sources */,
 				A1000008001 /* SettingsView.swift in Sources */,
 				A1000009001 /* HotkeyManager.swift in Sources */,
@@ -281,10 +360,8 @@
 				A100000D001 /* HistoryManager.swift in Sources */,
 				A100000E001 /* HistoryView.swift in Sources */,
 				A100000F001 /* AudioFeedback.swift in Sources */,
-				A1000110001 /* ServerManager.swift in Sources */,
 				A1000120001 /* AudioRecorder.swift in Sources */,
 				A1000130001 /* Config.swift in Sources */,
-				A1000140001 /* HealthMonitor.swift in Sources */,
 				A1000150001 /* TranscriptionCoordinator.swift in Sources */,
 				A1000170001 /* AudioLevelMonitor.swift in Sources */,
 				A1000180001 /* RecordingPanelView.swift in Sources */,
@@ -300,7 +377,9 @@
 				A10002F0001 /* GeneralSettingsTab.swift in Sources */,
 				A1000300001 /* UploadRow.swift in Sources */,
 				A1000330001 /* ModelsSettingsTab.swift in Sources */,
-				A1000360001 /* FasterWhisperManager.swift in Sources */,
+				A1000450001 /* WhisperKitManager.swift in Sources */,
+				A1000460001 /* WhisperKitModelManager.swift in Sources */,
+				A1000470001 /* MLXTransformManager.swift in Sources */,
 				A1000370001 /* ModelRow.swift in Sources */,
 				A1000390001 /* TransformationState.swift in Sources */,
 				A10003A0001 /* TransformationButton.swift in Sources */,
@@ -314,7 +393,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AD16A4DB2FA769C800901CBD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AD16A4E42FA769C800901CBD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1000030000 /* Rayee */;
+			targetProxy = AD16A4E32FA769C800901CBD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1000070000 /* Debug */ = {
@@ -370,7 +464,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -428,7 +522,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -501,6 +595,50 @@
 			};
 			name = Release;
 		};
+		AD16A4E62FA769C800901CBD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VXYPQ995EU;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Karthik-Vadlapatla.RayeeTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Rayee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Rayee";
+			};
+			name = Debug;
+		};
+		AD16A4E72FA769C800901CBD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VXYPQ995EU;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Karthik-Vadlapatla.RayeeTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Rayee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Rayee";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -522,6 +660,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AD16A4E52FA769C800901CBD /* Build configuration list for PBXNativeTarget "RayeeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD16A4E62FA769C800901CBD /* Debug */,
+				AD16A4E72FA769C800901CBD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -533,6 +680,38 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.31.3;
+			};
+		};
+		AD16A4DA2FA7699500901CBD /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+		HF0001000010 /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+		TR0001000010 /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -540,6 +719,36 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		AD16A4E92FA77CA500901CBD /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4DA2FA7699500901CBD /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+		AD16A4EB2FA77CB600901CBD /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		AD16A4ED2FA77CBE00901CBD /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
+		};
+		AD16A52B2FA78AA200901CBD /* MLXHuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXHuggingFace;
+		};
+		HF0001000000 /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = HF0001000010 /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
+		TR0001000000 /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = TR0001000010 /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
