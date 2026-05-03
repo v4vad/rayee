@@ -40,8 +40,6 @@
 		A1000300001 /* UploadRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000300000 /* UploadRow.swift */; };
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
 		A1000360001 /* FasterWhisperManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000360000 /* FasterWhisperManager.swift */; };
-		A1000450001 /* WhisperKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000450000 /* WhisperKitManager.swift */; };
-		A1000460001 /* WhisperKitModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000460000 /* WhisperKitModelManager.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 		A1000390001 /* TransformationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000390000 /* TransformationState.swift */; };
 		A10003A0001 /* TransformationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003A0000 /* TransformationButton.swift */; };
@@ -53,6 +51,9 @@
 		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
 		A1000410001 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000410000 /* MenuBarController.swift */; };
 		A1000420001 /* UnixSocketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000420000 /* UnixSocketProtocol.swift */; };
+		A1000450001 /* WhisperKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000450000 /* WhisperKitManager.swift */; };
+		A1000460001 /* WhisperKitModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000460000 /* WhisperKitModelManager.swift */; };
+		A1000470001 /* MLXTransformManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000470000 /* MLXTransformManager.swift */; };
 		A1000510001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1000510000 /* Sparkle */; };
 		A1000520001 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000520000 /* UpdateManager.swift */; };
 		AD16A4EA2FA77CA500901CBD /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4E92FA77CA500901CBD /* WhisperKit */; };
@@ -108,8 +109,6 @@
 		A1000300000 /* UploadRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UploadRow.swift; sourceTree = "<group>"; };
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
 		A1000360000 /* FasterWhisperManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FasterWhisperManager.swift; sourceTree = "<group>"; };
-		A1000450000 /* WhisperKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitManager.swift; sourceTree = "<group>"; };
-		A1000460000 /* WhisperKitModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelManager.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 		A1000390000 /* TransformationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationState.swift; sourceTree = "<group>"; };
 		A10003A0000 /* TransformationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationButton.swift; sourceTree = "<group>"; };
@@ -121,6 +120,9 @@
 		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
 		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1000420000 /* UnixSocketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnixSocketProtocol.swift; sourceTree = "<group>"; };
+		A1000450000 /* WhisperKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitManager.swift; sourceTree = "<group>"; };
+		A1000460000 /* WhisperKitModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelManager.swift; sourceTree = "<group>"; };
+		A1000470000 /* MLXTransformManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXTransformManager.swift; sourceTree = "<group>"; };
 		A1000520000 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
 		AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				A1000360000 /* FasterWhisperManager.swift */,
 				A1000450000 /* WhisperKitManager.swift */,
 				A1000460000 /* WhisperKitModelManager.swift */,
+				A1000470000 /* MLXTransformManager.swift */,
 				A1000370000 /* ModelRow.swift */,
 				A1000390000 /* TransformationState.swift */,
 				A10003A0000 /* TransformationButton.swift */,
@@ -387,6 +390,7 @@
 				A1000360001 /* FasterWhisperManager.swift in Sources */,
 				A1000450001 /* WhisperKitManager.swift in Sources */,
 				A1000460001 /* WhisperKitModelManager.swift in Sources */,
+				A1000470001 /* MLXTransformManager.swift in Sources */,
 				A1000370001 /* ModelRow.swift in Sources */,
 				A1000390001 /* TransformationState.swift in Sources */,
 				A10003A0001 /* TransformationButton.swift in Sources */,
