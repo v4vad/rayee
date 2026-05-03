@@ -79,6 +79,20 @@ success "Swift app built successfully"
 echo ""
 
 # ==========================================
+# Step 1b: Re-sign app bundle
+# ==========================================
+# Sparkle.framework ships with its own Team ID. The ad-hoc signed app binary
+# has no Team ID. macOS rejects loading frameworks whose Team ID doesn't match
+# the host process. Re-signing with --force --deep makes every component
+# consistent (all ad-hoc, no Team ID).
+info "Step 1b: Re-signing app bundle to fix framework Team ID mismatch..."
+ENTITLEMENTS="$SWIFT_DIR/Rayee/Rayee.entitlements"
+codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_PATH"
+codesign --verify --deep --strict "$APP_PATH"
+success "App re-signed"
+echo ""
+
+# ==========================================
 # Step 2: Create DMG
 # ==========================================
 info "Step 2: Creating DMG..."
