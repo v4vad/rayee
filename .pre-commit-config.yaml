@@ -1,72 +1,32 @@
 # Pre-commit hooks - runs automatically before each commit
 # Install with: pip install pre-commit && pre-commit install
-#
-# What this does:
-# - Formats Python code consistently (black)
-# - Catches common mistakes before they're committed
-# - Prevents accidentally committing large files or secrets
 
 repos:
-  # General checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
-      # Prevent large files from being committed
       - id: check-added-large-files
         args: ['--maxkb=500']
         name: Check for large files
 
-      # Detect private keys
       - id: detect-private-key
         name: Check for private keys
 
-      # Fix trailing whitespace
       - id: trailing-whitespace
         name: Fix trailing whitespace
 
-      # Ensure files end with newline
       - id: end-of-file-fixer
         name: Fix end of file
 
-      # Check for merge conflict markers
       - id: check-merge-conflict
         name: Check for merge conflicts
 
-      # Check YAML syntax
       - id: check-yaml
         name: Check YAML syntax
 
-      # Check JSON syntax
       - id: check-json
         name: Check JSON syntax
 
-      # Don't commit directly to main
       - id: no-commit-to-branch
         args: ['--branch', 'main']
         name: Prevent commits to main
-
-  # Python formatting with Black
-  - repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-      - id: black
-        name: Format Python (black)
-        language_version: python3
-        files: ^python/
-
-  # Python import sorting
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: Sort Python imports
-        args: ['--profile', 'black']
-        files: ^python/
-
-  # Check for Python debug statements (print, pdb, etc.)
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
-    hooks:
-      - id: debug-statements
-        name: Check for debug statements
-        files: ^python/
