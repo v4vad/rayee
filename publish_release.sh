@@ -81,13 +81,14 @@ echo ""
 # ==========================================
 # Step 1b: Re-sign app bundle
 # ==========================================
-# Sparkle.framework ships with its own Team ID. The ad-hoc signed app binary
-# has no Team ID. macOS rejects loading frameworks whose Team ID doesn't match
-# the host process. Re-signing with --force --deep makes every component
-# consistent (all ad-hoc, no Team ID).
+# Sparkle.framework ships with its own Team ID. Re-signing --deep with our
+# Apple Development cert makes every component share the same team ID (VXYPQ995EU).
+# Using a real cert (not ad-hoc "-") produces a stable code signature so macOS
+# preserves accessibility/microphone permissions across app updates.
 info "Step 1b: Re-signing app bundle to fix framework Team ID mismatch..."
 ENTITLEMENTS="$SWIFT_DIR/Rayee/Rayee.entitlements"
-codesign --force --deep --sign - --entitlements "$ENTITLEMENTS" "$APP_PATH"
+SIGN_IDENTITY="Apple Development: vadlapatla.karthik@gmail.com (R34JDNZ6DV)"
+codesign --force --deep --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_PATH"
 codesign --verify --deep --strict "$APP_PATH"
 success "App re-signed"
 echo ""
