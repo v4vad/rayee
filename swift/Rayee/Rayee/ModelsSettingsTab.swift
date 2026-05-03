@@ -2,15 +2,14 @@
 //  ModelsSettingsTab.swift
 //  Rayee
 //
-//  "Models" settings tab showing Faster-Whisper transcription models
+//  "Models" settings tab showing WhisperKit transcription models
 //  as a card-based list.
 //
 
 import SwiftUI
 
 struct ModelsSettingsTab: View {
-    @ObservedObject var settings = SettingsManager.shared
-    @StateObject private var fwManager = FasterWhisperManager.shared
+    @StateObject private var modelManager = WhisperKitModelManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +20,7 @@ struct ModelsSettingsTab: View {
             Divider()
 
             // Model list or loading/error state
-            if fwManager.isLoading {
+            if modelManager.isLoading {
                 loadingView
             } else {
                 modelListView
@@ -35,9 +34,7 @@ struct ModelsSettingsTab: View {
                 .padding(.bottom, 8)
         }
         .onAppear {
-            Task {
-                await fwManager.refreshModels()
-            }
+            Task { await modelManager.refreshModels() }
         }
     }
 
@@ -66,21 +63,20 @@ struct ModelsSettingsTab: View {
 
     /// Name of the currently active model
     private var activeModelName: String {
-        if let fwName = fwManager.selectedModelName,
-           let fwModel = fwManager.models.first(where: { $0.id == fwName }) {
-            return fwModel.name
+        if let info = modelManager.models.first(where: { $0.id == modelManager.selectedModelName }) {
+            return info.displayName
         }
-        return settings.selectedModel.displayName
+        return modelManager.selectedModelName
     }
 
     // MARK: - Model List
 
-    private var standardModels: [FWModelInfo] {
-        fwManager.models.filter { $0.category == "standard" }
+    private var standardModels: [WKModelInfo] {
+        modelManager.models.filter { !$0.id.contains("distil") }
     }
 
-    private var distilModels: [FWModelInfo] {
-        fwManager.models.filter { $0.category == "distil" }
+    private var distilModels: [WKModelInfo] {
+        modelManager.models.filter { $0.id.contains("distil") }
     }
 
     private var modelListView: some View {
@@ -104,13 +100,13 @@ struct ModelsSettingsTab: View {
 
             ForEach(standardModels) { model in
                 ModelRow(
-                    name: model.name,
-                    description: model.description,
+                    name: model.displayName,
+                    description: modelDescription(model),
                     sizeText: model.formattedSize,
-                    isActive: isFWModelActive(model.id),
-                    status: fwRowStatus(model),
-                    onUse: { handleFWUse(model) },
-                    onDelete: fwCanDelete(model) ? { handleFWDelete(model) } : nil
+                    isActive: modelManager.selectedModelName == model.id,
+                    status: rowStatus(model),
+                    onUse: { handleUse(model) },
+                    onDelete: canDelete(model) ? { handleDelete(model) } : nil
                 )
             }
         }
@@ -124,13 +120,13 @@ struct ModelsSettingsTab: View {
 
             ForEach(distilModels) { model in
                 ModelRow(
-                    name: model.name,
-                    description: model.description,
+                    name: model.displayName,
+                    description: modelDescription(model),
                     sizeText: model.formattedSize,
-                    isActive: isFWModelActive(model.id),
-                    status: fwRowStatus(model),
-                    onUse: { handleFWUse(model) },
-                    onDelete: fwCanDelete(model) ? { handleFWDelete(model) } : nil
+                    isActive: modelManager.selectedModelName == model.id,
+                    status: rowStatus(model),
+                    onUse: { handleUse(model) },
+                    onDelete: canDelete(model) ? { handleDelete(model) } : nil
                 )
             }
         }
@@ -164,7 +160,7 @@ struct ModelsSettingsTab: View {
 
     @ViewBuilder
     private var errorBannerView: some View {
-        if let error = fwManager.errorMessage {
+        if let error = modelManager.errorMessage {
             HStack {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundColor(.orange)
@@ -172,7 +168,7 @@ struct ModelsSettingsTab: View {
                     .font(.caption)
                 Spacer()
                 Button("Dismiss") {
-                    fwManager.errorMessage = nil
+                    modelManager.errorMessage = nil
                 }
                 .buttonStyle(.plain)
                 .font(.caption)
@@ -183,39 +179,55 @@ struct ModelsSettingsTab: View {
         }
     }
 
-    // MARK: - FW Status & Actions
+    // MARK: - Status & Actions
 
-    private func isFWModelActive(_ name: String) -> Bool {
-        fwManager.selectedModelName == name
-    }
-
-    private func fwRowStatus(_ model: FWModelInfo) -> ModelRowStatus {
+    private func rowStatus(_ model: WKModelInfo) -> ModelRowStatus {
         switch model.status {
-        case .notDownloaded: return .notDownloaded
-        case .downloading: return .downloading(progress: nil)
-        case .ready: return .ready
-        case .error(let msg): return .error(msg)
+        case .notDownloaded:
+            return .notDownloaded
+        case .downloading(let fraction):
+            return .downloading(progress: fraction * 100)
+        case .ready:
+            return .ready
+        case .error(let msg):
+            return .error(msg)
         }
     }
 
-    private func fwCanDelete(_ model: FWModelInfo) -> Bool {
+    private func canDelete(_ model: WKModelInfo) -> Bool {
         if case .ready = model.status {
-            return !isFWModelActive(model.id)
+            return modelManager.selectedModelName != model.id
         }
         return false
     }
 
-    private func handleFWUse(_ model: FWModelInfo) {
-        Task {
-            if case .ready = model.status {
-                await fwManager.selectModel(model.id)
-            } else {
-                await fwManager.downloadAndSelectModel(model.id)
-            }
+    private func handleUse(_ model: WKModelInfo) {
+        if case .ready = model.status {
+            modelManager.selectModel(model.id)
+            AppState.shared.loadWhisperModel()
+        } else {
+            modelManager.downloadModel(model.id)
         }
     }
 
-    private func handleFWDelete(_ model: FWModelInfo) {
-        Task { await fwManager.deleteModel(model.id) }
+    private func handleDelete(_ model: WKModelInfo) {
+        modelManager.deleteModel(model.id)
+    }
+
+    // MARK: - Description Helper
+
+    private func modelDescription(_ model: WKModelInfo) -> String {
+        let name = model.id
+        if name.contains("large-v3-turbo") { return "Fast large model, great accuracy" }
+        if name.contains("large-v3") { return "Highest accuracy, slowest" }
+        if name.contains("large-v2") { return "High accuracy, large size" }
+        if name.contains("distil-large") { return "Distilled large, English only" }
+        if name.contains("distil-medium") { return "Distilled medium, English only" }
+        if name.contains("distil-small") { return "Distilled small, English only" }
+        if name.contains("medium") { return "Good accuracy, moderate speed" }
+        if name.contains("small") { return "Balanced speed and accuracy" }
+        if name.contains("base") { return "Fast with reasonable accuracy" }
+        if name.contains("tiny") { return "Fastest, lower accuracy" }
+        return "WhisperKit model"
     }
 }
