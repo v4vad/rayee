@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -53,8 +53,21 @@
 		A1000420001 /* UnixSocketProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000420000 /* UnixSocketProtocol.swift */; };
 		A1000510001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1000510000 /* Sparkle */; };
 		A1000520001 /* UpdateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000520000 /* UpdateManager.swift */; };
+		AD16A4EA2FA77CA500901CBD /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4E92FA77CA500901CBD /* WhisperKit */; };
+		AD16A4EC2FA77CB600901CBD /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4EB2FA77CB600901CBD /* MLXLLM */; };
+		AD16A4EE2FA77CBE00901CBD /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = AD16A4ED2FA77CBE00901CBD /* MLXLMCommon */; };
 		DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AD16A4E32FA769C800901CBD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A1000050000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A1000030000;
+			remoteInfo = Rayee;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A1000000000 /* Rayee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rayee.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -105,15 +118,30 @@
 		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1000420000 /* UnixSocketProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnixSocketProtocol.swift; sourceTree = "<group>"; };
 		A1000520000 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
+		AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		AD16A4E02FA769C800901CBD /* RayeeTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = RayeeTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A1000010000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AD16A4EC2FA77CB600901CBD /* MLXLLM in Frameworks */,
+				AD16A4EA2FA77CA500901CBD /* WhisperKit in Frameworks */,
+				AD16A4EE2FA77CBE00901CBD /* MLXLMCommon in Frameworks */,
 				A1000510001 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD16A4DC2FA769C800901CBD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +152,8 @@
 			isa = PBXGroup;
 			children = (
 				A1000021000 /* Rayee */,
+				AD16A4E02FA769C800901CBD /* RayeeTests */,
+				AD16A4E82FA77CA400901CBD /* Frameworks */,
 				A1000022000 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -187,8 +217,16 @@
 			isa = PBXGroup;
 			children = (
 				A1000000000 /* Rayee.app */,
+				AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AD16A4E82FA77CA400901CBD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -209,10 +247,36 @@
 			name = Rayee;
 			packageProductDependencies = (
 				A1000510000 /* Sparkle */,
+				AD16A4E92FA77CA500901CBD /* WhisperKit */,
+				AD16A4EB2FA77CB600901CBD /* MLXLLM */,
+				AD16A4ED2FA77CBE00901CBD /* MLXLMCommon */,
 			);
 			productName = Rayee;
 			productReference = A1000000000 /* Rayee.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AD16A4DE2FA769C800901CBD /* RayeeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AD16A4E52FA769C800901CBD /* Build configuration list for PBXNativeTarget "RayeeTests" */;
+			buildPhases = (
+				AD16A4DB2FA769C800901CBD /* Sources */,
+				AD16A4DC2FA769C800901CBD /* Frameworks */,
+				AD16A4DD2FA769C800901CBD /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AD16A4E42FA769C800901CBD /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AD16A4E02FA769C800901CBD /* RayeeTests */,
+			);
+			name = RayeeTests;
+			packageProductDependencies = (
+			);
+			productName = RayeeTests;
+			productReference = AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -221,11 +285,15 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
+				LastSwiftUpdateCheck = 2640;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					A1000030000 = {
 						CreatedOnToolsVersion = 15.0;
+					};
+					AD16A4DE2FA769C800901CBD = {
+						CreatedOnToolsVersion = 26.4.1;
+						TestTargetID = A1000030000;
 					};
 				};
 			};
@@ -240,12 +308,15 @@
 			mainGroup = A1000020000;
 			packageReferences = (
 				A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				AD16A4DA2FA7699500901CBD /* XCRemoteSwiftPackageReference "argmax-oss-swift" */,
 			);
 			productRefGroup = A1000022000 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				A1000030000 /* Rayee */,
+				AD16A4DE2FA769C800901CBD /* RayeeTests */,
 			);
 		};
 /* End PBXProject section */
@@ -256,6 +327,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10001E0001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AD16A4DD2FA769C800901CBD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -314,7 +392,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AD16A4DB2FA769C800901CBD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AD16A4E42FA769C800901CBD /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A1000030000 /* Rayee */;
+			targetProxy = AD16A4E32FA769C800901CBD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1000070000 /* Debug */ = {
@@ -370,7 +463,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -428,7 +521,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -501,6 +594,50 @@
 			};
 			name = Release;
 		};
+		AD16A4E62FA769C800901CBD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VXYPQ995EU;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Karthik-Vadlapatla.RayeeTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Rayee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Rayee";
+			};
+			name = Debug;
+		};
+		AD16A4E72FA769C800901CBD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = VXYPQ995EU;
+				GENERATE_INFOPLIST_FILE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "Karthik-Vadlapatla.RayeeTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Rayee.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Rayee";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -522,6 +659,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AD16A4E52FA769C800901CBD /* Build configuration list for PBXNativeTarget "RayeeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AD16A4E62FA769C800901CBD /* Debug */,
+				AD16A4E72FA769C800901CBD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
@@ -533,6 +679,22 @@
 				minimumVersion = 2.0.0;
 			};
 		};
+		AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.31.3;
+			};
+		};
+		AD16A4DA2FA7699500901CBD /* XCRemoteSwiftPackageReference "argmax-oss-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/argmax-oss-swift";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -540,6 +702,21 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A1000500000 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		AD16A4E92FA77CA500901CBD /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4DA2FA7699500901CBD /* XCRemoteSwiftPackageReference "argmax-oss-swift" */;
+			productName = WhisperKit;
+		};
+		AD16A4EB2FA77CB600901CBD /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLLM;
+		};
+		AD16A4ED2FA77CBE00901CBD /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AD16A4D92FA7696600901CBD /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
+			productName = MLXLMCommon;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
