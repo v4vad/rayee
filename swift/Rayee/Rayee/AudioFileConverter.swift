@@ -78,6 +78,21 @@ class AudioFileConverter {
                format.channelCount == 1
     }
 
+    /// Read an audio file as a flat Float32 array at its native sample rate.
+    /// Pass a WAV already at 16kHz mono (e.g. output of `convertToWav`) for WhisperKit input.
+    static func loadAudioAsFloat32(url: URL) throws -> [Float] {
+        let audioFile = try AVAudioFile(forReading: url)
+        let frameCount = AVAudioFrameCount(audioFile.length)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: audioFile.processingFormat, frameCapacity: frameCount) else {
+            throw AudioFileConverterError.conversionFailed("Cannot allocate audio buffer")
+        }
+        try audioFile.read(into: buffer)
+        guard let channelData = buffer.floatChannelData else {
+            throw AudioFileConverterError.conversionFailed("No audio channel data")
+        }
+        return Array(UnsafeBufferPointer(start: channelData[0], count: Int(buffer.frameLength)))
+    }
+
     /// Perform the actual audio conversion using AVFoundation
     private static func performConversion(input: URL, output: URL) throws {
         // Open the source audio file

@@ -417,10 +417,7 @@ class SettingsManager: ObservableObject {
         adaptiveVADEnabled = false
     }
 
-    /// Sync the fast mode setting to the Python server
     func syncFastModeToServer() {
-        Task {
-            await PythonBridge().updateSettings(beamSize: fastModeEnabled ? 1 : 5)
-        }
+        // No-op: WhisperKit reads fastModeEnabled directly from SettingsManager
     }
 }

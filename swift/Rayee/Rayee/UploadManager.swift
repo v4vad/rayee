@@ -5,7 +5,7 @@
 //  Orchestrates the audio file upload flow:
 //  1. Open file picker to select an audio file
 //  2. Convert it to WAV 16kHz mono using AudioFileConverter
-//  3. Send to the Python server for transcription
+//  3. Transcribe with WhisperKit
 //  4. Save result to UploadHistoryManager
 //
 //  This is a singleton so transcription continues even if the Settings window is closed.
@@ -30,7 +30,6 @@ class UploadManager: ObservableObject {
     @Published var status: UploadStatus = .idle
     @Published var currentFileName: String?
 
-    private let pythonBridge = PythonBridge()
     private let historyManager = UploadHistoryManager.shared
     private let settings = SettingsManager.shared
 
@@ -94,47 +93,29 @@ class UploadManager: ObservableObject {
             return
         }
 
-        // Step 2: Send to Python server for transcription
+        // Step 2: Transcribe with WhisperKit
         status = .transcribing
 
         do {
-            let text: String
-            if settings.backgroundUploadEnabled {
-                // Background mode: uses /transcribe_upload (doesn't block recording)
-                text = try await pythonBridge.transcribeUploadedFile(audioPath: convertedURL)
-            } else {
-                // Blocking mode: uses /transcribe_file (blocks recording)
-                text = try await pythonBridge.transcribeUploadedFileBlocking(audioPath: convertedURL)
-            }
+            let audioData = try AudioFileConverter.loadAudioAsFloat32(url: convertedURL)
+            let text = try await WhisperKitManager.shared.transcribe(
+                audioBuffer: audioData,
+                vocabulary: settings.vocabularyList
+            )
 
             // Step 3: Save result
             if !text.isEmpty {
                 let record = UploadRecord(
                     fileName: fileURL.lastPathComponent,
                     text: text,
-                    modelUsed: settings.selectedModel.rawValue
+                    modelUsed: settings.selectedWhisperKitModel
                 )
                 historyManager.addUpload(record)
             }
 
             status = .success(text.isEmpty ? "(No speech detected)" : text)
         } catch {
-            let message: String
-            if let bridgeError = error as? PythonBridgeError {
-                switch bridgeError {
-                case .serverBusy:
-                    message = "Server is busy with another task. Please wait."
-                case .serverOffline:
-                    message = "Server is not running."
-                case .serverStarting:
-                    message = "AI models are still loading. Please wait."
-                default:
-                    message = bridgeError.localizedDescription
-                }
-            } else {
-                message = error.localizedDescription
-            }
-            status = .error(message)
+            status = .error(error.localizedDescription)
         }
 
         // Step 4: Clean up temp file
