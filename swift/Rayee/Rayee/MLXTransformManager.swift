@@ -4,13 +4,13 @@
 //
 //  Manages on-device LLM text transformations via mlx-swift-lm.
 //
-//  CURRENT STATUS: buildPrompt() is fully implemented. loadModelIfNeeded() and
-//  streamTransform() are stubbed — native MLX model loading requires the
-//  `swift-transformers` package (HuggingFace hub client + tokenizer loader),
-//  which is not yet a project dependency. See ROADMAP.md for the unblocking plan.
-//
 
 import Foundation
+import HuggingFace
+import MLXHuggingFace
+import MLXLLM
+import MLXLMCommon
+import Tokenizers
 
 // MARK: - Error Types
 
@@ -21,7 +21,7 @@ enum MLXTransformError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded:
-            return "MLX native model loading requires swift-transformers + MLXHuggingFace. See ROADMAP.md."
+            return "MLX native model is not loaded. Please wait."
         case .streamingFailed(let reason):
             return "Streaming failed: \(reason)"
         }
@@ -30,13 +30,7 @@ enum MLXTransformError: LocalizedError {
 
 // MARK: - Manager
 
-/// Manages on-device LLM text transformations.
-///
-/// Intended to replace the Python `/transform_stream` endpoint with a
-/// fully native MLX Llama 3.2 1B (4-bit) inference path.
-///
-/// - Note: Model loading is currently stubbed; `swift-transformers` must be
-///   added as a Swift Package dependency before the loading path can be activated.
+/// Manages on-device LLM text transformations using Llama 3.2 1B (4-bit) via MLX.
 @MainActor
 final class MLXTransformManager: ObservableObject {
 
@@ -50,8 +44,7 @@ final class MLXTransformManager: ObservableObject {
 
     // MARK: Private
 
-    /// HuggingFace model identifier for Llama 3.2 1B 4-bit quantised weights.
-    private static let modelID = "mlx-community/Llama-3.2-1B-Instruct-4bit"
+    private var modelContainer: ModelContainer?
 
     /// Idle timer — unloads model after 30 seconds of inactivity.
     private var unloadTimer: Timer?
@@ -87,66 +80,86 @@ final class MLXTransformManager: ObservableObject {
         return (system: system, user: user)
     }
 
-    // MARK: - Model Loading (stubbed — awaiting swift-transformers dependency)
+    // MARK: - Model Loading
 
-    /// Loads the MLX model into memory if it is not already loaded.
-    ///
-    /// - Note: Currently a stub. Full implementation requires:
-    ///   1. Add `swift-transformers` SPM dependency.
-    ///   2. Enable `MLXHuggingFace` product in Package.swift.
-    ///   3. Use `LLMModelFactory.shared.loadContainer(from: hubDownloader, using: tokenizerLoader, configuration:)`.
+    /// Loads the MLX Llama 3.2 1B (4-bit) model if not already loaded.
     func loadModelIfNeeded() async {
-        guard !isModelLoaded && !isModelLoading else { return }
+        guard modelContainer == nil, !isModelLoading else {
+            resetUnloadTimer()
+            return
+        }
 
         isModelLoading = true
-        loadError = "MLX native model loading requires swift-transformers + MLXHuggingFace. See ROADMAP.md."
-        AppLogger.log(
-            "MLXTransformManager: model loading stubbed — swift-transformers not in project",
-            category: "mlx"
-        )
+        loadError = nil
+
+        do {
+            let config = LLMRegistry.llama3_2_1B_4bit
+            modelContainer = try await LLMModelFactory.shared.loadContainer(
+                from: #hubDownloader(),
+                using: #huggingFaceTokenizerLoader(),
+                configuration: config
+            )
+            isModelLoaded = true
+            AppLogger.log("MLXTransformManager: model loaded", category: "mlx")
+            resetUnloadTimer()
+        } catch {
+            loadError = error.localizedDescription
+            AppLogger.log(
+                "MLXTransformManager: model load failed: \(error)", category: "mlx")
+        }
+
         isModelLoading = false
-        // isModelLoaded remains false
     }
 
     /// Unloads the model from memory and cancels the idle timer.
     func unloadModel() {
         unloadTimer?.invalidate()
         unloadTimer = nil
+        modelContainer = nil
         isModelLoaded = false
-        AppLogger.log("MLXTransformManager: model unloaded", category: "mlx")
+        AppLogger.log("MLXTransformManager: model unloaded (idle timeout)", category: "mlx")
     }
 
-    // MARK: - Streaming Transforms (stubbed)
+    // MARK: - Streaming Transforms
 
     /// Streams transformed text tokens for the given input.
     ///
     /// - Parameters:
     ///   - text: The source text to transform.
     ///   - type: The transformation to apply.
-    ///   - onToken: Called for each streamed token string.
+    ///   - onToken: Called on the main actor for each streamed text chunk.
     ///
-    /// - Throws: `MLXTransformError.modelNotLoaded` until the loading path is activated.
+    /// - Throws: `MLXTransformError.modelNotLoaded` if the model could not be loaded.
     func streamTransform(
         text: String,
         type transformType: TransformationType,
         onToken: @escaping (String) -> Void
     ) async throws {
-        guard isModelLoaded else {
+        await loadModelIfNeeded()
+
+        guard let container = modelContainer else {
             throw MLXTransformError.modelNotLoaded
         }
 
-        // Full streaming implementation (to be activated once swift-transformers is added):
-        //
-        //   let (system, user) = Self.buildPrompt(text: text, type: transformType)
-        //   let chat: [Chat.Message] = [.system(system), .user(user)]
-        //   let userInput = UserInput(chat: chat)
-        //   let parameters = GenerateParameters(temperature: 0.3)
-        //
-        //   for await generation in try await container.generate(input: ..., parameters: parameters) {
-        //       if case .chunk(let token) = generation { onToken(token) }
-        //   }
-        //
-        //   resetUnloadTimer()
+        resetUnloadTimer()
+
+        let (systemPrompt, userPrompt) = Self.buildPrompt(text: text, type: transformType)
+        let chat: [Chat.Message] = [
+            .system(systemPrompt),
+            .user(userPrompt),
+        ]
+        let userInput = UserInput(chat: chat)
+        let parameters = GenerateParameters(temperature: 0.0)
+
+        // Prepare input within the container's isolation, then stream generation.
+        let lmInput = try await container.prepare(input: userInput)
+        let stream = try await container.generate(input: lmInput, parameters: parameters)
+
+        for await generation in stream {
+            if case .chunk(let token) = generation {
+                onToken(token)
+            }
+        }
     }
 
     // MARK: - Private helpers
