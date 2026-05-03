@@ -47,9 +47,6 @@ class AppState: ObservableObject {
 
     // MARK: - Dependencies
 
-    /// Bridge for communicating with the Python server (still used for text transforms)
-    private let pythonBridge = PythonBridge()
-
     /// Handles recording → transcription → paste flow
     private let transcriptionCoordinator = TranscriptionCoordinator()
 
@@ -313,9 +310,9 @@ class AppState: ObservableObject {
 
         Task { @MainActor in
             do {
-                try await pythonBridge.transformTextStreaming(
+                try await MLXTransformManager.shared.streamTransform(
                     text: text,
-                    type: type.rawValue,
+                    type: type,
                     onToken: { [weak self] token in
                         transformState.appendStreamingToken(token)
                         self?.recordingPanelController.updateWindowSizeForTransform()
