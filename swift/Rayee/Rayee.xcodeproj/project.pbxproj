@@ -41,6 +41,7 @@
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
 		A1000360001 /* FasterWhisperManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000360000 /* FasterWhisperManager.swift */; };
 		A1000450001 /* WhisperKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000450000 /* WhisperKitManager.swift */; };
+		A1000460001 /* WhisperKitModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000460000 /* WhisperKitModelManager.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 		A1000390001 /* TransformationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000390000 /* TransformationState.swift */; };
 		A10003A0001 /* TransformationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003A0000 /* TransformationButton.swift */; };
@@ -108,6 +109,7 @@
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
 		A1000360000 /* FasterWhisperManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FasterWhisperManager.swift; sourceTree = "<group>"; };
 		A1000450000 /* WhisperKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitManager.swift; sourceTree = "<group>"; };
+		A1000460000 /* WhisperKitModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelManager.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 		A1000390000 /* TransformationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationState.swift; sourceTree = "<group>"; };
 		A10003A0000 /* TransformationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationButton.swift; sourceTree = "<group>"; };
@@ -199,6 +201,7 @@
 				A1000330000 /* ModelsSettingsTab.swift */,
 				A1000360000 /* FasterWhisperManager.swift */,
 				A1000450000 /* WhisperKitManager.swift */,
+				A1000460000 /* WhisperKitModelManager.swift */,
 				A1000370000 /* ModelRow.swift */,
 				A1000390000 /* TransformationState.swift */,
 				A10003A0000 /* TransformationButton.swift */,
@@ -383,6 +386,7 @@
 				A1000330001 /* ModelsSettingsTab.swift in Sources */,
 				A1000360001 /* FasterWhisperManager.swift in Sources */,
 				A1000450001 /* WhisperKitManager.swift in Sources */,
+				A1000460001 /* WhisperKitModelManager.swift in Sources */,
 				A1000370001 /* ModelRow.swift in Sources */,
 				A1000390001 /* TransformationState.swift in Sources */,
 				A10003A0001 /* TransformationButton.swift in Sources */,
