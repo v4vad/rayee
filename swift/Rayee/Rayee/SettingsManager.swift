@@ -28,6 +28,7 @@ enum SettingsKey {
     static let hasCompletedSetup = "hasCompletedSetup"
     static let fastModeEnabled = "fastModeEnabled"
     static let adaptiveVADEnabled = "adaptiveVADEnabled"
+    static let selectedWhisperKitModel = "selectedWhisperKitModel"
 }
 
 // MARK: - AI Model Options
@@ -260,6 +261,34 @@ class SettingsManager: ObservableObject {
     // Whether adaptive VAD is enabled (auto-calibrates silence threshold for 200ms at recording start)
     @Published var adaptiveVADEnabled: Bool {
         didSet { UserDefaults.standard.set(adaptiveVADEnabled, forKey: SettingsKey.adaptiveVADEnabled) }
+    }
+
+    private static let fwToWhisperKitNames: [String: String] = [
+        "tiny": "openai_whisper-tiny",
+        "base": "openai_whisper-base",
+        "small": "openai_whisper-small",
+        "medium": "openai_whisper-medium",
+        "large-v3": "openai_whisper-large-v3",
+        "large-v3-turbo": "openai_whisper-large-v3-turbo",
+        "distil-small.en": "distil-whisper_distil-small.en",
+        "distil-medium.en": "distil-whisper_distil-medium.en",
+        "distil-large-v3": "distil-whisper_distil-large-v3"
+    ]
+
+    var selectedWhisperKitModel: String {
+        get {
+            if let saved = UserDefaults.standard.string(forKey: SettingsKey.selectedWhisperKitModel) {
+                return saved
+            }
+            // Migrate from old FasterWhisper name
+            if let oldName = UserDefaults.standard.string(forKey: SettingsKey.selectedModel),
+               let migrated = Self.fwToWhisperKitNames[oldName] {
+                UserDefaults.standard.set(migrated, forKey: SettingsKey.selectedWhisperKitModel)
+                return migrated
+            }
+            return "openai_whisper-small"
+        }
+        set { UserDefaults.standard.set(newValue, forKey: SettingsKey.selectedWhisperKitModel) }
     }
 
     private init() {
