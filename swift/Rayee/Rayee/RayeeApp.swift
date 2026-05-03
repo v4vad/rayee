@@ -3,7 +3,7 @@
 //  Rayee
 //
 //  Main entry point for the Rayee menu bar app.
-//  Uses SwiftUI MenuBarExtra for the menu bar icon (reliable, Bartender-compatible).
+//  Menu bar icon is managed by MenuBarController (NSStatusItem) for Bartender compatibility.
 //
 
 import SwiftUI
@@ -14,16 +14,6 @@ struct RayeeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        // MenuBarExtra creates the menu bar icon and dropdown menu
-        MenuBarExtra {
-            SimpleMenuView()
-                .environmentObject(AppState.shared)
-        } label: {
-            Image(systemName: AppState.shared.menuBarIcon)
-                .symbolRenderingMode(.hierarchical)
-        }
-        .menuBarExtraStyle(.menu)
-
         // Settings window - opens from menu or floating panel
         Window("Rayee Settings", id: "settings") {
             SettingsView()
@@ -46,9 +36,12 @@ struct RayeeApp: App {
 // MARK: - App Delegate
 // Handles app-level events like activation and termination
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var menuBarController: MenuBarController?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize logging first so we capture everything
         AppLogger.initialize()
+        menuBarController = MenuBarController(appState: AppState.shared)
 
         // Request permissions immediately on first launch
         requestPermissionsOnFirstLaunch()
