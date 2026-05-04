@@ -31,6 +31,19 @@
         -->
 
         <item>
+            <title>Version 0.4.1.1</title>
+            <pubDate>Mon, 05 May 2026 00:00:00 +0000</pubDate>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>0.4.1.1</sparkle:shortVersionString>
+            <enclosure
+                url="https://github.com/v4vad/rayee/releases/download/v0.4.1.1/Rayee.dmg"
+                type="application/octet-stream"
+                sparkle:edSignature="IYW6f2qiroDfSW5Bufg0d8VZD8VpKJgh5o7tY7rEJODon5OmX5VY+qr3fIMTq7cdiC51orGt1TZF03NE8YWrCw=="
+                length="278731210"
+            />
+        </item>
+
+        <item>
             <title>Version 0.4.1</title>
             <pubDate>Sun, 04 May 2026 00:00:00 +0000</pubDate>
             <sparkle:version>6</sparkle:version>
