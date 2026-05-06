@@ -175,7 +175,7 @@ struct RecordingPanelView: View {
         return String(format: "%d:%02d", minutes, seconds)
     }
 
-    // MARK: - Placeholder content (filled in Tasks 6–8)
+    // MARK: - State content
 
     @ViewBuilder
     private var waveformContent: some View {
@@ -319,7 +319,7 @@ struct RecordingPanelView: View {
 
             if transformationsEnabled {
                 Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.easeInOut(duration: 0.25)) {
                         isFormatExpanded.toggle()
                     }
                 }) {

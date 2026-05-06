@@ -9,6 +9,11 @@
 import SwiftUI
 import AppKit
 
+/// NSWindow subclass that allows becoming key so keyboard shortcuts work in the panel.
+private class FloatingPanel: NSWindow {
+    override var canBecomeKey: Bool { true }
+}
+
 /// Controller for the floating recording panel window
 class RecordingPanelController: ObservableObject {
     /// The floating window
@@ -131,7 +136,7 @@ class RecordingPanelController: ObservableObject {
         let panelHeight = Config.recordingPanelHeight
 
         // Create borderless window
-        let panel = NSWindow(
+        let panel = FloatingPanel(
             contentRect: NSRect(x: 0, y: 0, width: panelWidth, height: panelHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
