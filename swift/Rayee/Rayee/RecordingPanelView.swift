@@ -37,6 +37,8 @@ struct RecordingPanelView: View {
     private let accentRed   = Color(hex: 0xFF453A)
     private let accentBlue  = Color(hex: 0x0A84FF)
 
+    @State private var progressFraction: CGFloat = 0.1
+
     var body: some View {
         ZStack(alignment: .top) {
             // Panel background
@@ -225,7 +227,31 @@ struct RecordingPanelView: View {
 
     @ViewBuilder
     private var transcribingContent: some View {
-        Color.clear.frame(height: 54)
+        HStack {
+            Text("Transcribing...")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.white.opacity(0.82))
+                .padding(.leading, 20)
+
+            Spacer()
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 3)
+
+                    Capsule()
+                        .fill(accentBlue)
+                        .frame(width: geo.size.width * progressFraction, height: 3)
+                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: progressFraction)
+                }
+            }
+            .frame(width: 84, height: 3)
+            .padding(.trailing, 20)
+            .onAppear { progressFraction = 0.75 }
+        }
+        .frame(height: 54)
     }
 
     @ViewBuilder
@@ -289,6 +315,19 @@ struct RecordingPanelView: View {
         audioLevelMonitor: monitor,
         transcribedText: .constant(""), showResult: false,
         isFormatExpanded: .constant(false), recordingDuration: 7,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: nil, transformationsEnabled: false, enabledTransformations: []
+    )
+    .padding(24).background(Color.black)
+}
+
+#Preview("Transcribing") {
+    RecordingPanelView(
+        isRecording: false, isTranscribing: true,
+        audioLevelMonitor: AudioLevelMonitor(),
+        transcribedText: .constant(""), showResult: false,
+        isFormatExpanded: .constant(false), recordingDuration: 0,
         onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
         onSettings: {}, onCopy: {},
         transformState: nil, transformationsEnabled: false, enabledTransformations: []
