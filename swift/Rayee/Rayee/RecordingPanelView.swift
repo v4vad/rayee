@@ -177,17 +177,49 @@ struct RecordingPanelView: View {
 
     @ViewBuilder
     private var waveformContent: some View {
-        Color.clear.frame(height: 80)
+        ZStack {
+            // Soft glow bloom behind the bars
+            Ellipse()
+                .fill(Color.white.opacity(0.035))
+                .frame(width: 220, height: 40)
+                .blur(radius: 12)
+
+            // Live bars from AudioLevelMonitor
+            HStack(alignment: .center, spacing: 4) {
+                ForEach(Array(audioLevelMonitor.levels.enumerated()), id: \.offset) { _, level in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Color.white.opacity(0.90))
+                        .frame(width: 2.5, height: barHeight(for: level))
+                        .animation(.easeOut(duration: 0.08), value: level)
+                }
+            }
+        }
+        .frame(height: 80)
+    }
+
+    private func barHeight(for level: Float) -> CGFloat {
+        let clamped = max(0.001, min(1.0, level))
+        let normalized = CGFloat(clamped)
+        return 4 + normalized * 40
     }
 
     @ViewBuilder
     private var recordingFooter: some View {
         HStack {
             Text("Recording")
-                .font(.system(size: 13))
+                .font(.system(size: 13, weight: .regular))
                 .foregroundColor(accentRed)
                 .padding(.leading, 20)
+
             Spacer()
+
+            Button(action: onStop) {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(accentRed)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
         }
     }
 
@@ -245,6 +277,21 @@ struct RecordingPanelView: View {
         onSettings: {}, onCopy: {},
         transformState: TransformationState(), transformationsEnabled: true,
         enabledTransformations: Set(TransformationType.allCases.map(\.rawValue))
+    )
+    .padding(24).background(Color.black)
+}
+
+#Preview("Recording") {
+    let monitor = AudioLevelMonitor()
+    for _ in 0..<27 { monitor.addLevel(Float.random(in: 0.05...0.9)) }
+    return RecordingPanelView(
+        isRecording: true, isTranscribing: false,
+        audioLevelMonitor: monitor,
+        transcribedText: .constant(""), showResult: false,
+        isFormatExpanded: .constant(false), recordingDuration: 7,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: nil, transformationsEnabled: false, enabledTransformations: []
     )
     .padding(24).background(Color.black)
 }
