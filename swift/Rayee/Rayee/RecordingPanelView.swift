@@ -256,22 +256,84 @@ struct RecordingPanelView: View {
 
     @ViewBuilder
     private var resultContent: some View {
-        Text(transcribedText)
-            .font(.system(size: 14, weight: .regular))
-            .foregroundColor(.white.opacity(0.82))
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 16)
+        VStack(spacing: 0) {
+            Text(transcribedText)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.white.opacity(0.82))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+                .textSelection(.enabled)
+
+            if isFormatExpanded && transformationsEnabled {
+                Color.white.opacity(0.08).frame(height: 1)
+                formatOptionsView
+            }
+        }
+    }
+
+    private var formatOptionsView: some View {
+        VStack(spacing: 0) {
+            ForEach(TransformationType.allCases) { type in
+                if enabledTransformations.contains(type.rawValue) {
+                    Button(action: { onTransform?(type) }) {
+                        HStack {
+                            Image(systemName: type.icon)
+                                .font(.system(size: 13))
+                                .foregroundColor(.white.opacity(0.50))
+                                .frame(width: 16, alignment: .center)
+
+                            Text(type.label)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.white.opacity(0.82))
+
+                            Spacer()
+
+                            Text("⌘\(type.shortcutNumber)")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.35))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.white.opacity(0.07)))
+                        }
+                        .padding(.horizontal, 20)
+                        .frame(height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(KeyEquivalent(Character(String(type.shortcutNumber))), modifiers: .command)
+                }
+            }
+        }
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder
     private var resultActions: some View {
         HStack(spacing: 8) {
-            Button("Done", action: onDone).buttonStyle(BluePillButtonStyle())
-            Button("Copy", action: onCopy).buttonStyle(GrayPillButtonStyle())
+            Button("Done", action: onDone)
+                .buttonStyle(BluePillButtonStyle())
+
+            Button("Copy", action: onCopy)
+                .buttonStyle(GrayPillButtonStyle())
+
+            if transformationsEnabled {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isFormatExpanded.toggle()
+                    }
+                }) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.70))
+                }
+                .buttonStyle(IconButtonStyle(isActive: isFormatExpanded))
+            }
+
             Spacer()
-            Button("Discard", action: onDiscard).buttonStyle(GhostButtonStyle())
+
+            Button("Discard", action: onDiscard)
+                .buttonStyle(GhostButtonStyle())
         }
         .padding(.horizontal, 20)
     }
@@ -331,6 +393,22 @@ struct RecordingPanelView: View {
         onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
         onSettings: {}, onCopy: {},
         transformState: nil, transformationsEnabled: false, enabledTransformations: []
+    )
+    .padding(24).background(Color.black)
+}
+
+#Preview("Result — Format Expanded") {
+    RecordingPanelView(
+        isRecording: false, isTranscribing: false,
+        audioLevelMonitor: AudioLevelMonitor(),
+        transcribedText: .constant("Meeting tomorrow at three pm. Don't forget to bring the quarterly report and the updated client list."),
+        showResult: true,
+        isFormatExpanded: .constant(true), recordingDuration: 0,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: TransformationState(), transformationsEnabled: true,
+        enabledTransformations: Set(TransformationType.allCases.map(\.rawValue)),
+        onTransform: { _ in }
     )
     .padding(24).background(Color.black)
 }
