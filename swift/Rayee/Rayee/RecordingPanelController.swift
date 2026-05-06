@@ -192,31 +192,23 @@ struct RecordingPanelHostView: View {
             audioLevelMonitor: controller.audioLevelMonitor,
             transcribedText: $controller.transcribedText,
             showResult: controller.showResult,
-            onStop: {
-                controller.onStop?()
-            },
-            onCancel: {
-                controller.onCancel?()
-            },
+            isFormatExpanded: $controller.isFormatExpanded,
+            recordingDuration: controller.recordingDuration,
+            onStop: { controller.onStop?() },
+            onCancel: { controller.onCancel?() },
+            onDone: { controller.onDone?() },
+            onDiscard: { controller.onDiscard?() },
             onSettings: {
                 openSettings()
                 NSApplication.shared.activate(ignoringOtherApps: true)
             },
-            onCopy: {
-                controller.onCopy?()
-            },
+            onCopy: { controller.onCopy?() },
             transformState: controller.transformState,
             transformationsEnabled: SettingsManager.shared.transformationsEnabled,
             enabledTransformations: SettingsManager.shared.enabledTransformations,
-            onTransform: { type in
-                controller.onTransform?(type)
-            },
-            onUseTransformed: { text in
-                controller.onUseTransformed?(text)
-            },
-            onUseOriginal: {
-                controller.onUseOriginal?()
-            }
+            onTransform: { type in controller.onTransform?(type) },
+            onUseTransformed: { text in controller.onUseTransformed?(text) },
+            onUseOriginal: { controller.onUseOriginal?() }
         )
     }
 }
