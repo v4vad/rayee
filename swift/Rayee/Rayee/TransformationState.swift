@@ -30,11 +30,11 @@ enum TransformationType: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .grammar: return "textformat.abc"
+        case .grammar: return "checkmark.circle"
         case .bullets: return "list.bullet"
         case .rephrase: return "arrow.triangle.2.circlepath"
         case .formal: return "briefcase"
-        case .casual: return "face.smiling"
+        case .casual: return "bubble.left"
         }
     }
 
