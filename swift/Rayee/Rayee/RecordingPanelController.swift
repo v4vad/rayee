@@ -29,8 +29,18 @@ class RecordingPanelController: ObservableObject {
     /// Whether to show result mode (editable text + copy button)
     @Published var showResult = false
 
+    /// Whether the Format options panel is expanded in result state
+    @Published var isFormatExpanded = false {
+        didSet { updateWindowSize() }
+    }
+
+    /// Elapsed recording duration in seconds (drives the timer display)
+    @Published var recordingDuration: TimeInterval = 0
+
     /// Transformation state
     let transformState = TransformationState()
+
+    private var recordingTimer: Timer?
 
     /// Callbacks
     var onStop: (() -> Void)?
@@ -40,6 +50,12 @@ class RecordingPanelController: ObservableObject {
     var onTransform: ((TransformationType) -> Void)?
     var onUseTransformed: ((String) -> Void)?
     var onUseOriginal: (() -> Void)?
+
+    /// Called when user taps Done in result state (accept + dismiss)
+    var onDone: (() -> Void)?
+
+    /// Called when user taps Discard in result state (dismiss without action)
+    var onDiscard: (() -> Void)?
 
     // MARK: - Public Methods
 
@@ -60,9 +76,12 @@ class RecordingPanelController: ObservableObject {
     /// Hide the recording panel
     func hidePanel() {
         window?.orderOut(nil)
-        // Reset result mode and transform state when hiding
         showResult = false
+        isFormatExpanded = false
         transcribedText = ""
+        recordingDuration = 0
+        recordingTimer?.invalidate()
+        recordingTimer = nil
         transformState.reset()
     }
 
@@ -72,6 +91,14 @@ class RecordingPanelController: ObservableObject {
         if recording {
             audioLevelMonitor.reset()
             showResult = false
+            isFormatExpanded = false
+            recordingDuration = 0
+            recordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                self?.recordingDuration += 1
+            }
+        } else {
+            recordingTimer?.invalidate()
+            recordingTimer = nil
         }
         updateWindowSize()
     }
@@ -132,18 +159,22 @@ class RecordingPanelController: ObservableObject {
         let newHeight: CGFloat
         if transformState.showPreview || transformState.isTransforming {
             newHeight = Config.recordingPanelHeightWithTransform
+        } else if showResult && isFormatExpanded {
+            newHeight = Config.recordingPanelHeightResultExpanded
         } else if showResult {
             newHeight = Config.recordingPanelHeightWithResult
+        } else if isTranscribing {
+            newHeight = Config.recordingPanelHeightTranscribing
+        } else if isRecording {
+            newHeight = Config.recordingPanelHeightRecording
         } else {
             newHeight = Config.recordingPanelHeight
         }
 
-        // Animate the size change
         var frame = window.frame
         let heightDiff = newHeight - frame.height
         frame.size.height = newHeight
-        frame.origin.y -= heightDiff  // Keep the top of the window in place
-
+        frame.origin.y -= heightDiff
         window.setFrame(frame, display: true, animate: true)
     }
 }
@@ -152,6 +183,7 @@ class RecordingPanelController: ObservableObject {
 struct RecordingPanelHostView: View {
     @ObservedObject var controller: RecordingPanelController
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         RecordingPanelView(
@@ -167,7 +199,7 @@ struct RecordingPanelHostView: View {
                 controller.onCancel?()
             },
             onSettings: {
-                openWindow(id: "settings")
+                openSettings()
                 NSApplication.shared.activate(ignoringOtherApps: true)
             },
             onCopy: {
