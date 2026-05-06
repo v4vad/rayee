@@ -58,6 +58,7 @@
 		HF0001000001 /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = HF0001000000 /* HuggingFace */; };
 		TR0001000001 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = TR0001000000 /* Tokenizers */; };
 		DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */; };
+		A1000530001 /* VocabularySettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000530000 /* VocabularySettingsTab.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -119,6 +120,7 @@
 		A1000520000 /* UpdateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpdateManager.swift; sourceTree = "<group>"; };
 		AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
+		A1000530000 /* VocabularySettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySettingsTab.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -202,6 +204,7 @@
 				A10003B0000 /* TransformationBar.swift */,
 				A10003C0000 /* TransformationPreviewView.swift */,
 				A10003D0000 /* TransformationsSettingsTab.swift */,
+				A1000530000 /* VocabularySettingsTab.swift */,
 				A10003E0000 /* TransformAPITypes.swift */,
 				A10003F0000 /* SetupGuideView.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
@@ -386,6 +389,7 @@
 				A10003B0001 /* TransformationBar.swift in Sources */,
 				A10003C0001 /* TransformationPreviewView.swift in Sources */,
 				A10003D0001 /* TransformationsSettingsTab.swift in Sources */,
+				A1000530001 /* VocabularySettingsTab.swift in Sources */,
 				A10003E0001 /* TransformAPITypes.swift in Sources */,
 				A10003F0001 /* SetupGuideView.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
