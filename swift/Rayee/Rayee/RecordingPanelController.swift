@@ -9,6 +9,11 @@
 import SwiftUI
 import AppKit
 
+/// NSWindow subclass that allows becoming key so keyboard shortcuts work in the panel.
+private class FloatingPanel: NSWindow {
+    override var canBecomeKey: Bool { true }
+}
+
 /// Controller for the floating recording panel window
 class RecordingPanelController: ObservableObject {
     /// The floating window
@@ -29,8 +34,18 @@ class RecordingPanelController: ObservableObject {
     /// Whether to show result mode (editable text + copy button)
     @Published var showResult = false
 
+    /// Whether the Format options panel is expanded in result state
+    @Published var isFormatExpanded = false {
+        didSet { updateWindowSize() }
+    }
+
+    /// Elapsed recording duration in seconds (drives the timer display)
+    @Published var recordingDuration: TimeInterval = 0
+
     /// Transformation state
     let transformState = TransformationState()
+
+    private var recordingTimer: Timer?
 
     /// Callbacks
     var onStop: (() -> Void)?
@@ -40,6 +55,12 @@ class RecordingPanelController: ObservableObject {
     var onTransform: ((TransformationType) -> Void)?
     var onUseTransformed: ((String) -> Void)?
     var onUseOriginal: (() -> Void)?
+
+    /// Called when user taps Done in result state (accept + dismiss)
+    var onDone: (() -> Void)?
+
+    /// Called when user taps Discard in result state (dismiss without action)
+    var onDiscard: (() -> Void)?
 
     // MARK: - Public Methods
 
@@ -60,9 +81,12 @@ class RecordingPanelController: ObservableObject {
     /// Hide the recording panel
     func hidePanel() {
         window?.orderOut(nil)
-        // Reset result mode and transform state when hiding
         showResult = false
+        isFormatExpanded = false
         transcribedText = ""
+        recordingDuration = 0
+        recordingTimer?.invalidate()
+        recordingTimer = nil
         transformState.reset()
     }
 
@@ -72,6 +96,14 @@ class RecordingPanelController: ObservableObject {
         if recording {
             audioLevelMonitor.reset()
             showResult = false
+            isFormatExpanded = false
+            recordingDuration = 0
+            recordingTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
+                self?.recordingDuration += 1
+            }
+        } else {
+            recordingTimer?.invalidate()
+            recordingTimer = nil
         }
         updateWindowSize()
     }
@@ -104,7 +136,7 @@ class RecordingPanelController: ObservableObject {
         let panelHeight = Config.recordingPanelHeight
 
         // Create borderless window
-        let panel = NSWindow(
+        let panel = FloatingPanel(
             contentRect: NSRect(x: 0, y: 0, width: panelWidth, height: panelHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -132,18 +164,22 @@ class RecordingPanelController: ObservableObject {
         let newHeight: CGFloat
         if transformState.showPreview || transformState.isTransforming {
             newHeight = Config.recordingPanelHeightWithTransform
+        } else if showResult && isFormatExpanded {
+            newHeight = Config.recordingPanelHeightResultExpanded
         } else if showResult {
             newHeight = Config.recordingPanelHeightWithResult
+        } else if isTranscribing {
+            newHeight = Config.recordingPanelHeightTranscribing
+        } else if isRecording {
+            newHeight = Config.recordingPanelHeightRecording
         } else {
             newHeight = Config.recordingPanelHeight
         }
 
-        // Animate the size change
         var frame = window.frame
         let heightDiff = newHeight - frame.height
         frame.size.height = newHeight
-        frame.origin.y -= heightDiff  // Keep the top of the window in place
-
+        frame.origin.y -= heightDiff
         window.setFrame(frame, display: true, animate: true)
     }
 }
@@ -152,6 +188,7 @@ class RecordingPanelController: ObservableObject {
 struct RecordingPanelHostView: View {
     @ObservedObject var controller: RecordingPanelController
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         RecordingPanelView(
@@ -160,31 +197,23 @@ struct RecordingPanelHostView: View {
             audioLevelMonitor: controller.audioLevelMonitor,
             transcribedText: $controller.transcribedText,
             showResult: controller.showResult,
-            onStop: {
-                controller.onStop?()
-            },
-            onCancel: {
-                controller.onCancel?()
-            },
+            isFormatExpanded: $controller.isFormatExpanded,
+            recordingDuration: controller.recordingDuration,
+            onStop: { controller.onStop?() },
+            onCancel: { controller.onCancel?() },
+            onDone: { controller.onDone?() },
+            onDiscard: { controller.onDiscard?() },
             onSettings: {
-                openWindow(id: "settings")
+                openSettings()
                 NSApplication.shared.activate(ignoringOtherApps: true)
             },
-            onCopy: {
-                controller.onCopy?()
-            },
+            onCopy: { controller.onCopy?() },
             transformState: controller.transformState,
             transformationsEnabled: SettingsManager.shared.transformationsEnabled,
             enabledTransformations: SettingsManager.shared.enabledTransformations,
-            onTransform: { type in
-                controller.onTransform?(type)
-            },
-            onUseTransformed: { text in
-                controller.onUseTransformed?(text)
-            },
-            onUseOriginal: {
-                controller.onUseOriginal?()
-            }
+            onTransform: { type in controller.onTransform?(type) },
+            onUseTransformed: { text in controller.onUseTransformed?(text) },
+            onUseOriginal: { controller.onUseOriginal?() }
         )
     }
 }

@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct ModelsSettingsTab: View {
-    @StateObject private var modelManager = WhisperKitModelManager.shared
+    @ObservedObject private var modelManager = WhisperKitModelManager.shared
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,8 +33,10 @@ struct ModelsSettingsTab: View {
                 .padding(.horizontal)
                 .padding(.bottom, 8)
         }
-        .onAppear {
-            Task { await modelManager.refreshModels() }
+        .task {
+            if modelManager.models.isEmpty {
+                await modelManager.refreshModels()
+            }
         }
     }
 

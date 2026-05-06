@@ -10,7 +10,7 @@ import SwiftUI
 
 struct TransformationsSettingsTab: View {
     @ObservedObject var settings = SettingsManager.shared
-    @StateObject private var transformManager = MLXTransformManager.shared
+    @ObservedObject private var transformManager = MLXTransformManager.shared
 
     var body: some View {
         Form {

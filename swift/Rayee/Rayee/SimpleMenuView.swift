@@ -11,6 +11,7 @@ import SwiftUI
 struct SimpleMenuView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @State private var hasCheckedFirstLaunch = false
 
     var body: some View {
@@ -114,7 +115,7 @@ struct SimpleMenuView: View {
         if let tab = tab {
             UserDefaults.standard.set(tab, forKey: "settingsTab")
         }
-        openWindow(id: "settings")
+        openSettings()
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
 }

@@ -231,6 +231,12 @@ class AppState: ObservableObject {
         recordingPanelController.onUseOriginal = { [weak self] in
             self?.handleUseOriginal()
         }
+        recordingPanelController.onDone = { [weak self] in
+            self?.recordingPanelController.hidePanel()
+        }
+        recordingPanelController.onDiscard = { [weak self] in
+            self?.recordingPanelController.hidePanel()
+        }
 
     }
 

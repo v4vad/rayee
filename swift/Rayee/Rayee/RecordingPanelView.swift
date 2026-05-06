@@ -2,237 +2,413 @@
 //  RecordingPanelView.swift
 //  Rayee
 //
-//  The floating panel that appears during recording.
-//  Shows status, transcribed text, and transformation buttons.
+//  Floating recording panel — all states.
+//  Design spec: docs/superpowers/specs/2026-05-06-rayee-ui-redesign.md
 //
 
 import SwiftUI
 
-/// The content view for the floating recording panel
 struct RecordingPanelView: View {
-    /// Whether currently recording (vs transcribing)
     let isRecording: Bool
-
-    /// Whether transcription is in progress
     let isTranscribing: Bool
-
-    /// Audio level monitor (retained for future use)
     @ObservedObject var audioLevelMonitor: AudioLevelMonitor
-
-    /// Transcribed text to display (for result mode)
     @Binding var transcribedText: String
-
-    /// Whether to show result mode (editable text + copy)
     let showResult: Bool
-
-    /// Called when user clicks Done button
+    @Binding var isFormatExpanded: Bool
+    let recordingDuration: TimeInterval
     var onStop: () -> Void
-
-    /// Called when user clicks Cancel button
     var onCancel: () -> Void
-
-    /// Called when user wants to open settings
+    var onDone: () -> Void
+    var onDiscard: () -> Void
     var onSettings: () -> Void
-
-    /// Called when user copies text in result mode
     var onCopy: () -> Void
-
-    /// Transformation state (nil if transformations disabled)
     var transformState: TransformationState?
-
-    /// Whether transformations are enabled
     var transformationsEnabled: Bool
-
-    /// Which transformations the user has enabled
     var enabledTransformations: Set<String>
-
-    /// Called when user taps a transformation button
     var onTransform: ((TransformationType) -> Void)?
-
-    /// Called when user accepts the transformed text
     var onUseTransformed: ((String) -> Void)?
-
-    /// Called when user reverts to original text
     var onUseOriginal: (() -> Void)?
 
+    // MARK: - Design tokens
+
+    private let panelBg    = Color(hex: 0x1C1C1E)
+    private let headerBg   = Color(hex: 0x242426)
+    private let accentGreen = Color(hex: 0x30D158)
+    private let accentRed   = Color(hex: 0xFF453A)
+    private let accentBlue  = Color(hex: 0x0A84FF)
+
+    @State private var progressFraction: CGFloat = 0.1
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Header with title and settings icon
-            headerView
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
+        ZStack(alignment: .top) {
+            // Panel background
+            RoundedRectangle(cornerRadius: Config.panelCornerRadius)
+                .fill(panelBg)
 
-            // Main content area
-            mainContentView
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
+            // Panel border: 0.75px white 9%
+            RoundedRectangle(cornerRadius: Config.panelCornerRadius)
+                .strokeBorder(Color.white.opacity(0.09), lineWidth: 0.75)
 
-            // Bottom buttons
-            if isRecording || isTranscribing || showResult {
-                buttonBar
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
+            VStack(spacing: 0) {
+                // Top highlight — 1px glass edge
+                Color.white.opacity(0.06)
+                    .frame(height: 1)
+
+                // Header
+                headerView
+                    .frame(height: 51)
+                    .background(headerBg)
+
+                // Divider
+                Color.white.opacity(0.08).frame(height: 1)
+
+                // State-specific content
+                contentView
+
+                // Footer / Actions (not shown in Transcribing)
+                if !isTranscribing {
+                    Color.white.opacity(0.08).frame(height: 1)
+                    footerView
+                }
             }
         }
         .frame(width: Config.recordingPanelWidth)
-        .background(panelBackground)
+        .clipShape(RoundedRectangle(cornerRadius: Config.panelCornerRadius))
+        .shadow(color: .black.opacity(0.4), radius: 24, x: 0, y: 8)
     }
 
-    // MARK: - Subviews
+    // MARK: - Header
 
     private var headerView: some View {
+        HStack(alignment: .center, spacing: 0) {
+            Text("RAYEE")
+                .font(.system(size: 13, weight: .semibold, design: .default))
+                .foregroundColor(.white)
+                .tracking(0.5)
+                .padding(.leading, 20)
+
+            Spacer()
+
+            Group {
+                if isRecording {
+                    Text(timerString(recordingDuration))
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.white.opacity(0.45))
+                } else if showResult {
+                    Text("just now")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.white.opacity(0.45))
+                } else if !isTranscribing {
+                    Text("Option + Space to record")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(.white.opacity(0.45))
+                }
+            }
+            .padding(.trailing, 20)
+        }
+    }
+
+    // MARK: - Content zone
+
+    @ViewBuilder
+    private var contentView: some View {
+        if let tState = transformState, tState.isActive {
+            TransformationPreviewView(
+                transformState: tState,
+                onUseTransformed: { text in onUseTransformed?(text) },
+                onUseOriginal: { onUseOriginal?() }
+            )
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        } else if showResult {
+            resultContent
+        } else if isRecording {
+            waveformContent
+        } else if isTranscribing {
+            transcribingContent
+        }
+        // Idle state has no content zone — header + footer only
+    }
+
+    // MARK: - Footer / Actions
+
+    @ViewBuilder
+    private var footerView: some View {
+        if showResult {
+            resultActions
+                .frame(height: 46)
+        } else if isRecording {
+            recordingFooter
+                .frame(height: 29)
+        } else {
+            idleFooter
+                .frame(height: 46)
+        }
+    }
+
+    // MARK: - Idle footer
+
+    private var idleFooter: some View {
         HStack {
-            // Spacer to balance the settings button
-            Color.clear.frame(width: 20, height: 20)
+            Text("Ready")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(accentGreen)
+                .padding(.leading, 20)
 
             Spacer()
 
-            // Title
-            Text("Rayee")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.primary)
-
-            Spacer()
-
-            // Settings button
             Button(action: onSettings) {
-                Image(systemName: "gear")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
+                Image(systemName: "gearshape")
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.white.opacity(0.45))
             }
             .buttonStyle(.plain)
-            .frame(width: 20, height: 20)
+            .padding(.trailing, 20)
+        }
+    }
+
+    // MARK: - Timer helper
+
+    private func timerString(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    // MARK: - State content
+
+    @ViewBuilder
+    private var waveformContent: some View {
+        ZStack {
+            // Soft glow bloom behind the bars
+            Ellipse()
+                .fill(Color.white.opacity(0.035))
+                .frame(width: 220, height: 40)
+                .blur(radius: 12)
+
+            // Live bars from AudioLevelMonitor
+            HStack(alignment: .center, spacing: 4) {
+                ForEach(Array(audioLevelMonitor.levels.enumerated()), id: \.offset) { _, level in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(Color.white.opacity(0.90))
+                        .frame(width: 2.5, height: barHeight(for: level))
+                        .animation(.easeOut(duration: 0.08), value: level)
+                }
+            }
+        }
+        .frame(height: 80)
+    }
+
+    private func barHeight(for level: Float) -> CGFloat {
+        let clamped = max(0.001, min(1.0, level))
+        let normalized = CGFloat(clamped)
+        return 4 + normalized * 40
+    }
+
+    @ViewBuilder
+    private var recordingFooter: some View {
+        HStack {
+            Text("Recording")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(accentRed)
+                .padding(.leading, 20)
+
+            Spacer()
+
+            Button(action: onStop) {
+                Image(systemName: "stop.fill")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(accentRed)
+            }
+            .buttonStyle(.plain)
+            .padding(.trailing, 20)
         }
     }
 
     @ViewBuilder
-    private var mainContentView: some View {
-        if showResult {
-            // Result mode: editable text with copy button
-            resultView
-        } else if isRecording {
-            VStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Recording...")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-        } else if isTranscribing {
-            VStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Transcribing...")
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-
-    private var resultView: some View {
-        VStack(spacing: 8) {
-            // Show transformation preview if active (loading, preview, or error)
-            if let tState = transformState, tState.isActive {
-                TransformationPreviewView(
-                    transformState: tState,
-                    onUseTransformed: { text in onUseTransformed?(text) },
-                    onUseOriginal: { onUseOriginal?() }
-                )
-            } else {
-                // Editable text area
-                TextEditor(text: $transcribedText)
-                    .font(.system(size: 13))
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(NSColor.textBackgroundColor))
-                    )
-                    .frame(height: 60)
-
-                // Transformation bar (below text editor)
-                if transformationsEnabled, let tState = transformState {
-                    TransformationBar(
-                        transformState: tState,
-                        enabledTypes: enabledTransformations,
-                        onTransform: { type in onTransform?(type) }
-                    )
-                }
-
-                // Copy button
-                copyButton
-            }
-        }
-    }
-
-    private var copyButton: some View {
-        Button(action: onCopy) {
-            HStack(spacing: 4) {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 11))
-                Text("Copy")
-                    .font(.system(size: 12, weight: .medium))
-            }
-        }
-        .buttonStyle(PillButtonStyle(isProminent: true))
-        .disabled(transcribedText.isEmpty)
-    }
-
-    private var buttonBar: some View {
+    private var transcribingContent: some View {
         HStack {
-            Button("Cancel", action: onCancel)
-                .buttonStyle(PillButtonStyle(isProminent: false))
+            Text("Transcribing...")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.white.opacity(0.82))
+                .padding(.leading, 20)
+
             Spacer()
-            if isRecording {
-                Button("Done", action: onStop)
-                    .buttonStyle(PillButtonStyle(isProminent: true))
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 3)
+
+                    Capsule()
+                        .fill(accentBlue)
+                        .frame(width: geo.size.width * progressFraction, height: 3)
+                        .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: progressFraction)
+                }
+            }
+            .frame(width: 84, height: 3)
+            .padding(.trailing, 20)
+            .onAppear { progressFraction = 0.75 }
+        }
+        .frame(height: 54)
+    }
+
+    @ViewBuilder
+    private var resultContent: some View {
+        VStack(spacing: 0) {
+            Text(transcribedText)
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(.white.opacity(0.82))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 16)
+                .textSelection(.enabled)
+
+            if isFormatExpanded && transformationsEnabled {
+                Color.white.opacity(0.08).frame(height: 1)
+                formatOptionsView
             }
         }
     }
 
-    private var panelBackground: some View {
-        RoundedRectangle(cornerRadius: Config.panelCornerRadius)
-            .fill(.ultraThinMaterial)
-            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 5)
+    private var formatOptionsView: some View {
+        VStack(spacing: 0) {
+            ForEach(TransformationType.allCases) { type in
+                if enabledTransformations.contains(type.rawValue) {
+                    Button(action: { onTransform?(type) }) {
+                        HStack {
+                            Image(systemName: type.icon)
+                                .font(.system(size: 13))
+                                .foregroundColor(.white.opacity(0.50))
+                                .frame(width: 16, alignment: .center)
+
+                            Text(type.label)
+                                .font(.system(size: 13, weight: .regular))
+                                .foregroundColor(.white.opacity(0.82))
+
+                            Spacer()
+
+                            Text("⌘\(type.shortcutNumber)")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.white.opacity(0.35))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(Color.white.opacity(0.07)))
+                        }
+                        .padding(.horizontal, 20)
+                        .frame(height: 32)
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(KeyEquivalent(Character(String(type.shortcutNumber))), modifiers: .command)
+                }
+            }
+        }
+        .padding(.vertical, 6)
     }
+
+    @ViewBuilder
+    private var resultActions: some View {
+        HStack(spacing: 8) {
+            Button("Done", action: onDone)
+                .buttonStyle(BluePillButtonStyle())
+
+            Button("Copy", action: onCopy)
+                .buttonStyle(GrayPillButtonStyle())
+
+            if transformationsEnabled {
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        isFormatExpanded.toggle()
+                    }
+                }) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 13))
+                        .foregroundColor(.white.opacity(0.70))
+                }
+                .buttonStyle(IconButtonStyle(isActive: isFormatExpanded))
+            }
+
+            Spacer()
+
+            Button("Discard", action: onDiscard)
+                .buttonStyle(GhostButtonStyle())
+        }
+        .padding(.horizontal, 20)
+    }
+}
+
+// MARK: - Previews
+
+#Preview("Idle") {
+    RecordingPanelView(
+        isRecording: false, isTranscribing: false,
+        audioLevelMonitor: AudioLevelMonitor(),
+        transcribedText: .constant(""), showResult: false,
+        isFormatExpanded: .constant(false), recordingDuration: 0,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: nil, transformationsEnabled: false, enabledTransformations: []
+    )
+    .padding(24).background(Color.black)
+}
+
+#Preview("Result") {
+    RecordingPanelView(
+        isRecording: false, isTranscribing: false,
+        audioLevelMonitor: AudioLevelMonitor(),
+        transcribedText: .constant("Meeting tomorrow at three pm. Don't forget to bring the quarterly report and the updated client list."),
+        showResult: true,
+        isFormatExpanded: .constant(false), recordingDuration: 0,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: TransformationState(), transformationsEnabled: true,
+        enabledTransformations: Set(TransformationType.allCases.map(\.rawValue))
+    )
+    .padding(24).background(Color.black)
 }
 
 #Preview("Recording") {
-    RecordingPanelView(
-        isRecording: true,
-        isTranscribing: false,
-        audioLevelMonitor: AudioLevelMonitor(),
-        transcribedText: .constant(""),
-        showResult: false,
-        onStop: {},
-        onCancel: {},
-        onSettings: {},
-        onCopy: {},
-        transformState: nil,
-        transformationsEnabled: false,
-        enabledTransformations: []
+    let monitor = AudioLevelMonitor()
+    for _ in 0..<27 { monitor.addLevel(Float.random(in: 0.05...0.9)) }
+    return RecordingPanelView(
+        isRecording: true, isTranscribing: false,
+        audioLevelMonitor: monitor,
+        transcribedText: .constant(""), showResult: false,
+        isFormatExpanded: .constant(false), recordingDuration: 7,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: nil, transformationsEnabled: false, enabledTransformations: []
     )
-    .padding()
-    .background(Color.gray.opacity(0.3))
+    .padding(24).background(Color.black)
 }
 
-#Preview("Result with Transforms") {
+#Preview("Transcribing") {
     RecordingPanelView(
-        isRecording: false,
-        isTranscribing: false,
+        isRecording: false, isTranscribing: true,
         audioLevelMonitor: AudioLevelMonitor(),
-        transcribedText: .constant("Hello, this is transcribed text."),
-        showResult: true,
-        onStop: {},
-        onCancel: {},
-        onSettings: {},
-        onCopy: {},
-        transformState: TransformationState(),
-        transformationsEnabled: true,
-        enabledTransformations: Set(TransformationType.allCases.map(\.rawValue))
+        transcribedText: .constant(""), showResult: false,
+        isFormatExpanded: .constant(false), recordingDuration: 0,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: nil, transformationsEnabled: false, enabledTransformations: []
     )
-    .padding()
-    .background(Color.gray.opacity(0.3))
+    .padding(24).background(Color.black)
+}
+
+#Preview("Result — Format Expanded") {
+    RecordingPanelView(
+        isRecording: false, isTranscribing: false,
+        audioLevelMonitor: AudioLevelMonitor(),
+        transcribedText: .constant("Meeting tomorrow at three pm. Don't forget to bring the quarterly report and the updated client list."),
+        showResult: true,
+        isFormatExpanded: .constant(true), recordingDuration: 0,
+        onStop: {}, onCancel: {}, onDone: {}, onDiscard: {},
+        onSettings: {}, onCopy: {},
+        transformState: TransformationState(), transformationsEnabled: true,
+        enabledTransformations: Set(TransformationType.allCases.map(\.rawValue)),
+        onTransform: { _ in }
+    )
+    .padding(24).background(Color.black)
 }
