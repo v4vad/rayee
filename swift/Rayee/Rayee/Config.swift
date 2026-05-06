@@ -88,16 +88,28 @@ enum Config {
     static let panelCornerRadius: CGFloat = 12
 
     /// Width of the floating recording panel
-    static let recordingPanelWidth: CGFloat = 260
+    static let recordingPanelWidth: CGFloat = 400
 
-    /// Height of the floating recording panel (normal mode)
-    static let recordingPanelHeight: CGFloat = 120
+    /// Height — Idle state
+    static let recordingPanelHeight: CGFloat = 100
 
-    /// Height of the floating recording panel (with result text)
-    static let recordingPanelHeightWithResult: CGFloat = 200
+    /// Height — Recording state (waveform visible)
+    static let recordingPanelHeightRecording: CGFloat = 164
 
-    /// Number of audio level readings to keep in the buffer
-    static let waveformBarCount = 16
+    /// Height — Transcribing state
+    static let recordingPanelHeightTranscribing: CGFloat = 108
+
+    /// Height — Result state, format options collapsed
+    static let recordingPanelHeightWithResult: CGFloat = 193
+
+    /// Height — Result state, format options expanded
+    static let recordingPanelHeightResultExpanded: CGFloat = 366
+
+    /// Height of the panel when showing transformation preview (TransformationPreviewView)
+    static let recordingPanelHeightWithTransform: CGFloat = 420
+
+    /// Number of waveform bars (matches Figma design)
+    static let waveformBarCount = 27
 
     // MARK: - UI Delays
 
@@ -126,9 +138,6 @@ enum Config {
 
     /// Timeout for transformation requests (LLM inference can take a few seconds)
     static let transformationTimeout: TimeInterval = 30.0
-
-    /// Height of the recording panel when showing transformation preview
-    static let recordingPanelHeightWithTransform: CGFloat = 360
 
     // MARK: - Settings Window
 
