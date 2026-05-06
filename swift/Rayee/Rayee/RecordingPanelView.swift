@@ -31,8 +31,8 @@ struct RecordingPanelView: View {
 
     // MARK: - Design tokens
 
-    private let panelBg    = Color(hex: 0x1C1C1E)
-    private let headerBg   = Color(hex: 0x242426)
+    private let panelBg    = Color(hex: 0x1C1C1E).opacity(0.82)
+    private let headerBg   = Color(hex: 0x242426).opacity(0.88)
     private let accentGreen = Color(hex: 0x30D158)
     private let accentRed   = Color(hex: 0xFF453A)
     private let accentBlue  = Color(hex: 0x0A84FF)
@@ -74,7 +74,6 @@ struct RecordingPanelView: View {
         }
         .frame(width: Config.recordingPanelWidth)
         .clipShape(RoundedRectangle(cornerRadius: Config.panelCornerRadius))
-        .shadow(color: .black.opacity(0.4), radius: 24, x: 0, y: 8)
     }
 
     // MARK: - Header
@@ -200,9 +199,11 @@ struct RecordingPanelView: View {
     }
 
     private func barHeight(for level: Float) -> CGFloat {
-        let clamped = max(0.001, min(1.0, level))
-        let normalized = CGFloat(clamped)
-        return 4 + normalized * 40
+        // Raw mic RMS is typically 0.001–0.15; amplify so normal speech fills the range
+        let amplified = min(1.0, level * 7.0)
+        // Power curve makes quiet sounds more visible without clipping loud ones
+        let curved = pow(CGFloat(amplified), 0.65)
+        return 4 + curved * 40
     }
 
     @ViewBuilder
