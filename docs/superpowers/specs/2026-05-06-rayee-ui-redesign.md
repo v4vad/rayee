@@ -97,7 +97,7 @@ No footer divider or actions.
 
 ### Result — 400 × 193px (collapsed)
 
-**Header:** Green status dot (7px) · RAYEE wordmark · Timestamp "just now" (right, 45%)
+**Header:** RAYEE wordmark · Timestamp "just now" (right, 45%)
 
 **Content (92px):** Transcribed text body, 14px Regular, white 82%, 16px left/right padding, 16px top padding. Multi-line wraps naturally.
 
