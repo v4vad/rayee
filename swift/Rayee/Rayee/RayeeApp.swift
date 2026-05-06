@@ -3,25 +3,31 @@
 //  Rayee
 //
 //  Main entry point for the Rayee menu bar app.
-//  Menu bar icon is managed by MenuBarController (NSStatusItem) for Bartender compatibility.
+//  Uses SwiftUI MenuBarExtra for the menu bar icon — required for Bartender 6 / macOS 26 compatibility.
 //
 
 import SwiftUI
 
 @main
 struct RayeeApp: App {
-    // NSApplication delegate for handling app lifecycle
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @ObservedObject private var appState = AppState.shared
 
     var body: some Scene {
-        // Settings window - opens from menu or floating panel
-        Window("Rayee Settings", id: "settings") {
+        MenuBarExtra {
+            SimpleMenuView()
+                .environmentObject(appState)
+        } label: {
+            Image(systemName: appState.menuBarIcon)
+                .renderingMode(.template)
+        }
+        .menuBarExtraStyle(.menu)
+
+        // Settings window - standard macOS Settings scene (Apple HIG)
+        Settings {
             SettingsView()
                 .environmentObject(AppState.shared)
         }
-        .windowResizability(.contentMinSize)
-        .defaultSize(width: Config.settingsWindowWidth, height: Config.settingsWindowMinHeight)
-        .defaultPosition(.center)
 
         // Setup guide window - shown on first launch or from menu
         Window("System Status", id: "setup-guide") {
@@ -36,12 +42,10 @@ struct RayeeApp: App {
 // MARK: - App Delegate
 // Handles app-level events like activation and termination
 class AppDelegate: NSObject, NSApplicationDelegate {
-    private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize logging first so we capture everything
         AppLogger.initialize()
-        menuBarController = MenuBarController(appState: AppState.shared)
 
         // Request permissions immediately on first launch
         requestPermissionsOnFirstLaunch()
