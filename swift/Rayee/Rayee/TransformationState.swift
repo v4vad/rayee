@@ -15,6 +15,7 @@ enum TransformationType: String, CaseIterable, Identifiable {
     case rephrase
     case formal
     case casual
+    case smartDictation
 
     var id: String { rawValue }
 
@@ -25,6 +26,7 @@ enum TransformationType: String, CaseIterable, Identifiable {
         case .rephrase: return "Rephrase"
         case .formal: return "Formal"
         case .casual: return "Casual"
+        case .smartDictation: return "Smart Dictation"
         }
     }
 
@@ -35,10 +37,11 @@ enum TransformationType: String, CaseIterable, Identifiable {
         case .rephrase: return "arrow.triangle.2.circlepath"
         case .formal: return "briefcase"
         case .casual: return "bubble.left"
+        case .smartDictation: return "wand.and.sparkles"
         }
     }
 
-    /// Keyboard shortcut number (1-5)
+    /// Keyboard shortcut number (1-5). smartDictation is not a manual button so uses 0.
     var shortcutNumber: Int {
         switch self {
         case .grammar: return 1
@@ -46,6 +49,7 @@ enum TransformationType: String, CaseIterable, Identifiable {
         case .rephrase: return 3
         case .formal: return 4
         case .casual: return 5
+        case .smartDictation: return 0
         }
     }
 }

@@ -21,12 +21,18 @@ struct TransformationsSettingsTab: View {
             }
 
             if settings.transformationsEnabled {
+                Section("Smart Dictation") {
+                    Toggle("Auto-clean after transcription", isOn: $settings.smartDictationEnabled)
+                } footer: {
+                    Text("Fixes grammar and runs your voice commands automatically after every recording — no tapping required.")
+                }
+
                 Section("Model") {
                     modelStatusRow
                 }
 
                 Section("Visible Transformations") {
-                    ForEach(TransformationType.allCases) { type in
+                    ForEach(TransformationType.allCases.filter { $0 != .smartDictation }) { type in
                         Toggle(isOn: transformationBinding(for: type)) {
                             HStack(spacing: 8) {
                                 Image(systemName: type.icon)

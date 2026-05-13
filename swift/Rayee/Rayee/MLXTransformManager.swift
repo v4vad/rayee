@@ -61,7 +61,7 @@ final class MLXTransformManager: ObservableObject {
     nonisolated static func buildPrompt(
         text: String, type transformType: TransformationType
     ) -> (system: String, user: String) {
-        let system = "You are a concise text transformation assistant. Output only the transformed text, no explanations."
+        var system = "You are a concise text transformation assistant. Output only the transformed text, no explanations."
 
         let user: String
         switch transformType {
@@ -75,6 +75,24 @@ final class MLXTransformManager: ObservableObject {
             user = "Rewrite the following text in a formal, professional tone. Output only the formal version.\n\nText: \(text)"
         case .casual:
             user = "Rewrite the following text in a friendly, casual tone. Output only the casual version.\n\nText: \(text)"
+        case .smartDictation:
+            system = "You are a voice dictation processor. Receive raw speech and output only the final clean text. No explanations."
+            user = """
+                Process this dictated speech. Apply both steps:
+                1. Fix grammar, punctuation, and natural phrasing.
+                2. Execute inline voice commands (remove the command words from the output):
+                   - "next point" / "new bullet" → start a new bullet: -
+                   - "new paragraph" / "new line" → insert a paragraph break
+                   - "remove that" / "scratch that" / "delete that" → remove the preceding sentence or phrase
+                   - "actually [text]" → replace the preceding clause with [text]
+                   - "make that a heading" → format preceding text as a Markdown heading (#)
+                   - "bold that" → wrap preceding text in **bold**
+                   - "make that formal" → rewrite preceding clause in formal tone
+                   - "make that casual" → rewrite preceding clause in casual tone
+                Output only the final result with all commands applied.
+
+                Text: \(text)
+                """
         }
 
         return (system: system, user: user)

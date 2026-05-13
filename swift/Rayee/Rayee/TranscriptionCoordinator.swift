@@ -38,6 +38,9 @@ class TranscriptionCoordinator: ObservableObject {
     /// Whether to auto-paste after current transcription
     private var pendingAutoPaste = false
 
+    /// Whether smart dictation should paste the transformed result (set when auto-paste is deferred)
+    var pendingSmartDictationPaste = false
+
     /// Callback when transcription completes
     var onTranscriptionComplete: ((TranscriptionResult) -> Void)?
 
@@ -69,6 +72,7 @@ class TranscriptionCoordinator: ObservableObject {
         }
 
         pendingAutoPaste = autoPaste
+        pendingSmartDictationPaste = false
         startRecording()
     }
 
@@ -205,13 +209,18 @@ class TranscriptionCoordinator: ObservableObject {
 
         // Determine if we should and can paste
         var didPaste = false
+        pendingSmartDictationPaste = false
         if pendingAutoPaste && settings.autoPasteEnabled && !text.isEmpty {
-            // Check if there's a valid place to paste
             if PasteTargetDetector.hasValidPasteTarget() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-                    self.pasteManager.pasteText(text)
+                if settings.smartDictationEnabled && settings.transformationsEnabled {
+                    // Defer paste — smart dictation will paste the transformed result
+                    pendingSmartDictationPaste = true
+                } else {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
+                        self.pasteManager.pasteText(text)
+                    }
+                    didPaste = true
                 }
-                didPaste = true
             }
         }
 
