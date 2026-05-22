@@ -21,8 +21,10 @@ struct TransformationsSettingsTab: View {
             }
 
             if settings.transformationsEnabled {
-                Section("Smart Dictation") {
+                Section {
                     Toggle("Auto-clean after transcription", isOn: $settings.smartDictationEnabled)
+                } header: {
+                    Text("Smart Dictation")
                 } footer: {
                     Text("Fixes grammar and runs your voice commands automatically after every recording — no tapping required.")
                 }
