@@ -29,6 +29,7 @@ enum SettingsKey {
     static let fastModeEnabled = "fastModeEnabled"
     static let adaptiveVADEnabled = "adaptiveVADEnabled"
     static let selectedWhisperKitModel = "selectedWhisperKitModel"
+    static let smartDictationEnabled = "smartDictationEnabled"
 }
 
 // MARK: - AI Model Options
@@ -263,6 +264,11 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(adaptiveVADEnabled, forKey: SettingsKey.adaptiveVADEnabled) }
     }
 
+    // Whether Smart Dictation auto-processes transcriptions with the LLM (default: off)
+    @Published var smartDictationEnabled: Bool {
+        didSet { UserDefaults.standard.set(smartDictationEnabled, forKey: SettingsKey.smartDictationEnabled) }
+    }
+
     private static let fwToWhisperKitNames: [String: String] = [
         "tiny": "openai_whisper-tiny",
         "base": "openai_whisper-base",
@@ -364,12 +370,12 @@ class SettingsManager: ObservableObject {
             self.keepTransformModelLoaded = false
         }
 
-        // Load enabled transformations (default: all 5)
-        let allTypes = Set(TransformationType.allCases.map(\.rawValue))
+        // Load enabled transformations (default: all manual types — smartDictation is not a button)
+        let manualTypes = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         if let saved = UserDefaults.standard.stringArray(forKey: SettingsKey.enabledTransformations) {
             self.enabledTransformations = Set(saved)
         } else {
-            self.enabledTransformations = allTypes
+            self.enabledTransformations = manualTypes
         }
 
         // Load setup completion flag (default: false)
@@ -380,6 +386,13 @@ class SettingsManager: ObservableObject {
 
         // Load adaptive VAD setting (default: false)
         self.adaptiveVADEnabled = UserDefaults.standard.bool(forKey: SettingsKey.adaptiveVADEnabled)
+
+        // Load smart dictation setting (default: false — opt-in)
+        if UserDefaults.standard.object(forKey: SettingsKey.smartDictationEnabled) != nil {
+            self.smartDictationEnabled = UserDefaults.standard.bool(forKey: SettingsKey.smartDictationEnabled)
+        } else {
+            self.smartDictationEnabled = false
+        }
     }
 
     // Save hotkey configuration to UserDefaults
@@ -412,9 +425,10 @@ class SettingsManager: ObservableObject {
         backgroundUploadEnabled = Config.defaultBackgroundUpload
         transformationsEnabled = true
         keepTransformModelLoaded = false
-        enabledTransformations = Set(TransformationType.allCases.map(\.rawValue))
+        enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         fastModeEnabled = false
         adaptiveVADEnabled = false
+        smartDictationEnabled = false
     }
 
     func syncFastModeToServer() {

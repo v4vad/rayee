@@ -21,13 +21,12 @@ macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, 
 | `AudioFeedback.swift` | Start/stop/error sounds |
 | `AudioFileConverter.swift` | Converts uploaded audio files to 16kHz mono WAV |
 
-### Server Communication
+### AI — Transcription & Transforms
 | File | Purpose |
 |------|---------|
-| `PythonBridge.swift` | Raw Unix socket HTTP client — all server calls go through here |
-| `UnixSocketProtocol.swift` | URLProtocol adapter for URLSession-based calls |
-| `ServerManager.swift` | Launches/monitors/restarts the bundled Python server process |
-| `HealthMonitor.swift` | Derives server online status from ServerManager + socket checks |
+| `WhisperKitManager.swift` | CoreML Whisper wrapper — load model, transcribe `[Float]`, vocabulary |
+| `WhisperKitModelManager.swift` | Model list/download/delete via WhisperKit APIs + FileManager |
+| `MLXTransformManager.swift` | MLX Llama 3.2 1B wrapper — streaming transforms, 30s auto-unload |
 
 ### UI — Recording Panel
 | File | Purpose |
@@ -80,7 +79,6 @@ macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, 
 | `HotkeyManager.swift` | Global hotkey via CGEvent tap |
 | `PasteManager.swift` | Auto-paste via Accessibility API |
 | `PasteTargetDetector.swift` | Detects if a text field is focused |
-| `FasterWhisperManager.swift` | Model download/delete via Python server |
 | `ModelRow.swift` | Reusable model list row component |
 | `UpdateManager.swift` | Sparkle auto-update integration |
 | `SetupGuideView.swift` | First-launch setup checklist |
@@ -91,10 +89,10 @@ Everywhere in the app: **16kHz, mono, Float32 PCM**. `AudioRecorder` converts fr
 
 ## Key Patterns
 
-- **Singletons**: `AppState.shared`, `SettingsManager.shared`, `HistoryManager.shared`, `HealthMonitor.shared`, `ServerManager.shared`
-- **Combine**: AppState observes child publishers (`$isRecording`, `$isTranscribing`, `$isServerOnline`)
-- **PythonBridge**: Raw Unix socket HTTP — bypasses URLSession to avoid VPN/WARP interference. Each request creates a new socket connection.
-- **Streaming**: `/transform_stream` uses chunked response reading — `rawSocketStreamingRequest` reads body incrementally and calls `onToken` callback
+- **Singletons**: `AppState.shared`, `SettingsManager.shared`, `HistoryManager.shared`, `WhisperKitManager.shared`, `MLXTransformManager.shared`
+- **Combine**: AppState observes child publishers (`$isRecording`, `$isTranscribing`, `$isWhisperReady`)
+- **Streaming**: `MLXTransformManager.streamTransform()` yields tokens via `AsyncStream<Generation>` — `onToken` callback updates `TransformationState` on each chunk
+- **MLX auto-unload**: `MLXTransformManager` schedules a 30s `Timer` after each generation; idle model is released to free GPU memory
 
 ## Recording Flow Detail
 
@@ -102,6 +100,6 @@ Everywhere in the app: **16kHz, mono, Float32 PCM**. `AudioRecorder` converts fr
 2. Creates `AudioRecorder(silenceDuration:, timeoutEnabled:, adaptiveVADEnabled:)`
 3. Adaptive VAD: first 200ms measures ambient RMS, sets threshold to `max(avgRMS * 1.5, 0.005)`
 4. Audio tap processes 100ms chunks, computes RMS, detects speech
-5. On silence timeout: `stopRecording()` → saves WAV + passes `audioBuffer` as `[Float]`
-6. `transcribeRecording()` sends raw Float32 bytes to `/transcribe_raw` (falls back to WAV path)
+5. On silence timeout: `stopRecording()` → passes `audioBuffer` as `[Float]`
+6. `WhisperKitManager.transcribe(audioBuffer:vocabulary:)` runs CoreML Whisper on-device
 7. Result → save to history, auto-paste if enabled, show in panel

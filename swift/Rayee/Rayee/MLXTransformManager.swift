@@ -61,7 +61,7 @@ final class MLXTransformManager: ObservableObject {
     nonisolated static func buildPrompt(
         text: String, type transformType: TransformationType
     ) -> (system: String, user: String) {
-        let system = "You are a concise text transformation assistant. Output only the transformed text, no explanations."
+        var system = "You are a concise text transformation assistant. Output only the transformed text, no explanations."
 
         let user: String
         switch transformType {
@@ -75,6 +75,18 @@ final class MLXTransformManager: ObservableObject {
             user = "Rewrite the following text in a formal, professional tone. Output only the formal version.\n\nText: \(text)"
         case .casual:
             user = "Rewrite the following text in a friendly, casual tone. Output only the casual version.\n\nText: \(text)"
+        case .smartDictation:
+            system = "You are a voice dictation processor. Receive raw speech and output only the final clean text. No explanations."
+            user = """
+                Clean up this dictated speech:
+                - Fix grammar, punctuation, and sentence structure
+                - Remove filler words (uh, um, like, you know)
+                - Convert spoken punctuation to symbols ("comma" → ,  "period" → .  "new paragraph" → paragraph break)
+                - Preserve the speaker's words and meaning exactly — do not rephrase, summarize, or add content
+                Output only the cleaned text, nothing else.
+
+                Text: \(text)
+                """
         }
 
         return (system: system, user: user)

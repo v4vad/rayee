@@ -59,6 +59,9 @@ class AppState: ObservableObject {
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
+    /// Tracks whether a deferred auto-paste is waiting for smart dictation to finish
+    private var pendingSmartDictationPaste = false
+
     // MARK: - Initialization
 
     init() {
@@ -252,6 +255,13 @@ class AppState: ObservableObject {
             if !didPaste && !text.isEmpty {
                 // Show result mode in the floating panel
                 recordingPanelController.showResultMode(text: text)
+
+                let settings = SettingsManager.shared
+                if settings.smartDictationEnabled && settings.transformationsEnabled {
+                    let thenPaste = transcriptionCoordinator.pendingSmartDictationPaste
+                    pendingSmartDictationPaste = thenPaste
+                    handleTransformation(type: .smartDictation, thenPaste: thenPaste)
+                }
             } else {
                 // Paste happened successfully, hide the panel
                 recordingPanelController.hidePanel()
@@ -305,33 +315,51 @@ class AppState: ObservableObject {
 
     // MARK: - Transformation Handling
 
-    /// Handle a transformation request from the recording panel
-    private func handleTransformation(type: TransformationType) {
-        let text = recordingPanelController.transcribedText
-        guard !text.isEmpty else { return }
+    /// Handle a transformation request from the recording panel.
+    /// When thenPaste is true, automatically pastes the result and hides the panel on completion.
+    private func handleTransformation(type: TransformationType, thenPaste: Bool = false) {
+        let rawText = recordingPanelController.transcribedText
+        guard !rawText.isEmpty else { return }
 
         let transformState = recordingPanelController.transformState
-        transformState.startTransformation(text: text, type: type)
+        transformState.startTransformation(text: rawText, type: type)
         recordingPanelController.updateWindowSizeForTransform()
 
         Task { @MainActor in
             do {
                 try await MLXTransformManager.shared.streamTransform(
-                    text: text,
+                    text: rawText,
                     type: type,
                     onToken: { [weak self] token in
                         transformState.appendStreamingToken(token)
                         self?.recordingPanelController.updateWindowSizeForTransform()
                     }
                 )
-                // Streaming complete — finalize with accumulated text
-                transformState.completeTransformation(transformedText: transformState.streamingText)
-                recordingPanelController.updateWindowSizeForTransform()
+                let result = transformState.streamingText
+                if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    // LLM produced nothing — treat as failure and keep raw text
+                    transformState.failTransformation(message: "No output produced")
+                    recordingPanelController.updateWindowSizeForTransform()
+                    if thenPaste { pasteAndHidePanel(rawText) }
+                } else {
+                    transformState.completeTransformation(transformedText: result)
+                    recordingPanelController.updateWindowSizeForTransform()
+                    if thenPaste { pasteAndHidePanel(result) }
+                }
             } catch {
                 transformState.failTransformation(message: error.localizedDescription)
                 recordingPanelController.updateWindowSizeForTransform()
+                if thenPaste { pasteAndHidePanel(rawText) }
             }
         }
+    }
+
+    private func pasteAndHidePanel(_ text: String) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
+            PasteManager.shared.pasteText(text)
+        }
+        recordingPanelController.hidePanel()
+        pendingSmartDictationPaste = false
     }
 
     /// Handle user accepting the transformed text
@@ -351,6 +379,8 @@ class AppState: ObservableObject {
         }
         recordingPanelController.transformState.reset()
         recordingPanelController.updateWindowSizeForTransform()
+        // User explicitly reverted — cancel any deferred auto-paste
+        pendingSmartDictationPaste = false
     }
 
     /// Cancel recording without transcribing (called when user presses Escape)
