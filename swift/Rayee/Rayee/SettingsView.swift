@@ -38,10 +38,6 @@ struct SettingsView: View {
             HistoryView()
                 .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
                 .tag(4)
-
-            UploadsView()
-                .tabItem { Label("Uploads", systemImage: "square.and.arrow.up") }
-                .tag(5)
         }
         .frame(width: 540, height: 420)
         .onAppear {
@@ -52,7 +48,6 @@ struct SettingsView: View {
                 case "transformations": selectedTab = 2
                 case "vocabulary":    selectedTab = 3
                 case "history":       selectedTab = 4
-                case "uploads":       selectedTab = 5
                 default:              break
                 }
                 UserDefaults.standard.removeObject(forKey: "settingsTab")

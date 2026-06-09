@@ -21,7 +21,6 @@ enum SettingsKey {
     static let soundsEnabled = "soundsEnabled"
     static let silenceDuration = "silenceDuration"
     static let timeoutEnabled = "timeoutEnabled"
-    static let backgroundUploadEnabled = "backgroundUploadEnabled"
     static let transformationsEnabled = "transformationsEnabled"
     static let keepTransformModelLoaded = "keepTransformModelLoaded"
     static let enabledTransformations = "enabledTransformations"
@@ -225,12 +224,6 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(timeoutEnabled, forKey: SettingsKey.timeoutEnabled) }
     }
 
-    // Whether upload transcription runs in the background (allows recording during upload)
-    // When false (default), uploading blocks recording until it finishes
-    @Published var backgroundUploadEnabled: Bool {
-        didSet { UserDefaults.standard.set(backgroundUploadEnabled, forKey: SettingsKey.backgroundUploadEnabled) }
-    }
-
     // Whether text transformations are enabled
     @Published var transformationsEnabled: Bool {
         didSet { UserDefaults.standard.set(transformationsEnabled, forKey: SettingsKey.transformationsEnabled) }
@@ -349,13 +342,6 @@ class SettingsManager: ObservableObject {
             self.timeoutEnabled = true
         }
 
-        // Load background upload setting (default: false - blocking mode)
-        if UserDefaults.standard.object(forKey: SettingsKey.backgroundUploadEnabled) != nil {
-            self.backgroundUploadEnabled = UserDefaults.standard.bool(forKey: SettingsKey.backgroundUploadEnabled)
-        } else {
-            self.backgroundUploadEnabled = Config.defaultBackgroundUpload
-        }
-
         // Load transformations enabled (default: true)
         if UserDefaults.standard.object(forKey: SettingsKey.transformationsEnabled) != nil {
             self.transformationsEnabled = UserDefaults.standard.bool(forKey: SettingsKey.transformationsEnabled)
@@ -422,7 +408,6 @@ class SettingsManager: ObservableObject {
         soundsEnabled = true
         silenceDuration = 30.0
         timeoutEnabled = true
-        backgroundUploadEnabled = Config.defaultBackgroundUpload
         transformationsEnabled = true
         keepTransformModelLoaded = false
         enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))

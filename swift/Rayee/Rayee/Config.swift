@@ -123,17 +123,6 @@ enum Config {
     /// How often to poll for accessibility permission when not yet granted (seconds)
     static let hotkeyPermissionPollInterval: TimeInterval = 3.0
 
-    // MARK: - File Upload
-
-    /// Timeout for file upload transcription (10 minutes for long audio files)
-    static let fileUploadTranscriptionTimeout: TimeInterval = 600.0
-
-    /// Audio file types the user can select in the file picker
-    static let allowedAudioExtensions = ["mp3", "m4a", "aac", "wav", "aiff", "flac", "caf"]
-
-    /// Whether background upload transcription is enabled by default
-    static let defaultBackgroundUpload = false
-
     // MARK: - Text Transformations
 
     /// Timeout for transformation requests (LLM inference can take a few seconds)

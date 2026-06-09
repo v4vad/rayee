@@ -19,7 +19,6 @@ macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, 
 | `TranscriptionCoordinator.swift` | Orchestrates: record → send to server → save history → auto-paste |
 | `AudioLevelMonitor.swift` | Circular buffer of RMS levels for waveform visualization |
 | `AudioFeedback.swift` | Start/stop/error sounds |
-| `AudioFileConverter.swift` | Converts uploaded audio files to 16kHz mono WAV |
 
 ### AI — Transcription & Transforms
 | File | Purpose |
@@ -60,17 +59,12 @@ macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, 
 | `TransformationPreviewView.swift` | Live streaming preview + before/after comparison |
 | `TransformAPITypes.swift` | Codable types for transform API requests/responses |
 
-### UI — History & Uploads
+### UI — History
 | File | Purpose |
 |------|---------|
 | `HistoryView.swift` | Paginated history list with debounced search |
 | `HistoryManager.swift` | SQLite storage with pagination (WAL, FULLMUTEX) |
 | `TranscriptionRecord.swift` | Data model for a transcription entry |
-| `UploadsView.swift` | Upload history list |
-| `UploadManager.swift` | File upload → convert → transcribe flow |
-| `UploadHistoryManager.swift` | In-memory upload history |
-| `UploadRecord.swift` | Data model for an upload entry |
-| `UploadRow.swift` | Single upload list row |
 
 ### Other
 | File | Purpose |

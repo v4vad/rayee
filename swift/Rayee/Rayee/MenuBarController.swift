@@ -107,11 +107,6 @@ class MenuBarController: NSObject, NSMenuDelegate {
         historyItem.target = self
         menu.addItem(historyItem)
 
-        // Upload Audio
-        let uploadItem = NSMenuItem(title: "Upload Audio...", action: #selector(openUploads), keyEquivalent: "")
-        uploadItem.target = self
-        menu.addItem(uploadItem)
-
         menu.addItem(.separator())
 
         // System Status
@@ -156,10 +151,6 @@ class MenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func openHistory() {
         openSettingsWindow(tab: "history")
-    }
-
-    @objc private func openUploads() {
-        openSettingsWindow(tab: "uploads")
     }
 
     @objc private func openSystemStatus() {
