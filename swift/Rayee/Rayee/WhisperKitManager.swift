@@ -22,7 +22,7 @@ class WhisperKitManager: ObservableObject {
         loadError = nil
 
         do {
-            whisperKit = try await WhisperKit(model: modelName)
+            whisperKit = try await WhisperKit(WhisperKitConfig(model: modelName, downloadBase: Config.whisperKitDownloadBase))
             currentModelName = modelName
             isLoaded = true
             AppLogger.log("WhisperKit loaded: \(modelName)", category: "whisper")

@@ -26,6 +26,16 @@ enum Config {
         return "\(home)/.rayee/server.sock"
     }()
 
+    /// Local directory for WhisperKit model downloads.
+    /// Kept under ~/.rayee (NOT ~/Documents/huggingface) so models never sync to
+    /// iCloud and waste the user's iCloud storage. Mirrors the MLX model location.
+    static let whisperKitDownloadBase: URL = {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let base = home.appendingPathComponent(".rayee").appendingPathComponent("whisperkit_models")
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base
+    }()
+
     // MARK: - Timeouts
 
     /// Timeout for regular API requests (health check, status)

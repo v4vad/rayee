@@ -49,7 +49,7 @@ class WhisperKitModelManager: ObservableObject {
         errorMessage = nil
 
         do {
-            let available = try await WhisperKit.fetchAvailableModels()
+            let available = try await WhisperKit.fetchAvailableModels(downloadBase: Config.whisperKitDownloadBase)
             let downloaded = downloadedModelNames()
             models = available.map { name in
                 WKModelInfo(
@@ -74,7 +74,7 @@ class WhisperKitModelManager: ObservableObject {
 
         downloadTasks[name] = Task {
             do {
-                _ = try await WhisperKit.download(variant: name) { [weak self] progress in
+                _ = try await WhisperKit.download(variant: name, downloadBase: Config.whisperKitDownloadBase) { [weak self] progress in
                     guard let self else { return }
                     Task { @MainActor in
                         self.updateStatus(name, .downloading(fractionCompleted: progress.fractionCompleted))
@@ -125,7 +125,7 @@ class WhisperKitModelManager: ObservableObject {
     /// Returns the base directory where WhisperKit caches downloaded models.
     /// Layout: <base>/models/argmaxinc/whisperkit-coreml/<model-name>/
     private func whisperKitCacheBase() -> URL {
-        let hub = HubApiWrapper()
+        let hub = HubApiWrapper(downloadBase: Config.whisperKitDownloadBase)
         let repo = HubApiWrapper.Repo(id: "argmaxinc/whisperkit-coreml", type: .models)
         return hub.localRepoLocation(repo)
     }
