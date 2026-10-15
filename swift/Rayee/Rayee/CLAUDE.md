@@ -9,7 +9,7 @@ macOS menu bar app built with SwiftUI. Handles recording, on-device transcriptio
 |------|---------|
 | `RayeeApp.swift` | App entry point, menu bar setup, window management |
 | `AppState.swift` | Central state machine — observes all subsystems, drives UI |
-| `Config.swift` | All constants: audio settings, timeouts, UI dimensions |
+| `Config.swift` | All constants: audio and silence settings, panel sizes, delays, model download folder |
 | `AppLogger.swift` | Structured logging with categories |
 
 ### Recording Pipeline

@@ -48,7 +48,7 @@ enum AppLogger {
     /// Log a message with a category
     /// - Parameters:
     ///   - message: What happened
-    ///   - category: Type of event (lifecycle, server, error)
+    ///   - category: Type of event (lifecycle, hotkey, error)
     static func log(_ message: String, category: String = "info") {
         let timestamp = dateFormatter.string(from: Date())
         let logLine = "[\(timestamp)] [\(category.uppercased())] \(message)\n"
@@ -69,11 +69,6 @@ enum AppLogger {
             fullMessage += " - \(error.localizedDescription)"
         }
         log(fullMessage, category: "error")
-    }
-
-    /// Log server-related events
-    static func logServer(_ message: String) {
-        log(message, category: "server")
     }
 
     // MARK: - Private Methods
