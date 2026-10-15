@@ -27,6 +27,7 @@ enum SettingsKey {
     static let adaptiveVADEnabled = "adaptiveVADEnabled"
     static let selectedWhisperKitModel = "selectedWhisperKitModel"
     static let smartDictationEnabled = "smartDictationEnabled"
+    static let transformModel = "transformModel"
 }
 
 // MARK: - Hotkey Configuration
@@ -177,6 +178,11 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(smartDictationEnabled, forKey: SettingsKey.smartDictationEnabled) }
     }
 
+    // Which on-device text model runs transformations (TransformModel raw value)
+    @Published var transformModel: String {
+        didSet { UserDefaults.standard.set(transformModel, forKey: SettingsKey.transformModel) }
+    }
+
     private static let fwToWhisperKitNames: [String: String] = [
         "tiny": "openai_whisper-tiny",
         "base": "openai_whisper-base",
@@ -288,6 +294,11 @@ class SettingsManager: ObservableObject {
         } else {
             self.smartDictationEnabled = false
         }
+
+        // Load text model choice (unknown or missing → default)
+        self.transformModel = TransformModel.from(
+            savedValue: UserDefaults.standard.string(forKey: SettingsKey.transformModel)
+        ).rawValue
     }
 
     // Save hotkey configuration to UserDefaults
@@ -320,5 +331,6 @@ class SettingsManager: ObservableObject {
         enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         adaptiveVADEnabled = false
         smartDictationEnabled = false
+        transformModel = TransformModel.defaultModel.rawValue
     }
 }

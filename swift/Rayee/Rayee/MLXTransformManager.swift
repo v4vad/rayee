@@ -25,9 +25,60 @@ enum MLXTransformError: LocalizedError {
     }
 }
 
+// MARK: - Model Choice
+
+/// The on-device text models the user can choose from (Settings → Transforms).
+enum TransformModel: String, CaseIterable, Identifiable {
+    case llama3_2_1B
+    case qwen3_1_7B
+    case qwen3_4B
+
+    /// Used for new installs and for any saved value this version doesn't recognise.
+    static let defaultModel: TransformModel = .llama3_2_1B
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .llama3_2_1B: return "Llama 3.2 1B (fastest)"
+        case .qwen3_1_7B: return "Qwen3 1.7B (better writing)"
+        case .qwen3_4B: return "Qwen3 4B (best, needs more memory)"
+        }
+    }
+
+    var approximateDownload: String {
+        switch self {
+        case .llama3_2_1B: return "about 0.7 GB"
+        case .qwen3_1_7B: return "about 1 GB"
+        case .qwen3_4B: return "about 2.3 GB"
+        }
+    }
+
+    var configuration: ModelConfiguration {
+        switch self {
+        case .llama3_2_1B: return LLMRegistry.llama3_2_1B_4bit
+        case .qwen3_1_7B: return LLMRegistry.qwen3_1_7b_4bit
+        case .qwen3_4B: return LLMRegistry.qwen3_4b_4bit
+        }
+    }
+
+    /// Extra values for the model's chat template. Qwen3 writes out its "thinking"
+    /// before answering unless the template is told not to.
+    var additionalContext: [String: any Sendable]? {
+        switch self {
+        case .llama3_2_1B: return nil
+        case .qwen3_1_7B, .qwen3_4B: return ["enable_thinking": false]
+        }
+    }
+
+    static func from(savedValue: String?) -> TransformModel {
+        savedValue.flatMap(TransformModel.init(rawValue:)) ?? defaultModel
+    }
+}
+
 // MARK: - Manager
 
-/// Manages on-device LLM text transformations using Llama 3.2 1B (4-bit) via MLX.
+/// Manages on-device LLM text transformations via MLX, using the model chosen in Settings → Transforms.
 @MainActor
 final class MLXTransformManager: ObservableObject {
 
@@ -42,6 +93,9 @@ final class MLXTransformManager: ObservableObject {
     // MARK: Private
 
     private var modelContainer: ModelContainer?
+
+    /// Which model `modelContainer` holds, so a change in Settings triggers a reload.
+    private var loadedModel: TransformModel?
 
     /// Idle timer — unloads model after 30 seconds of inactivity.
     private var unloadTimer: Timer?
@@ -91,8 +145,14 @@ final class MLXTransformManager: ObservableObject {
 
     // MARK: - Model Loading
 
-    /// Loads the MLX Llama 3.2 1B (4-bit) model if not already loaded.
+    /// Loads the text model chosen in Settings, if it isn't loaded already.
+    /// If a different model is loaded, unloads it first.
     func loadModelIfNeeded() async {
+        let wanted = TransformModel.from(savedValue: SettingsManager.shared.transformModel)
+        if modelContainer != nil, loadedModel != wanted, !isModelLoading {
+            unloadModel()
+        }
+
         guard modelContainer == nil, !isModelLoading else {
             resetUnloadTimer()
             return
@@ -102,14 +162,14 @@ final class MLXTransformManager: ObservableObject {
         loadError = nil
 
         do {
-            let config = LLMRegistry.llama3_2_1B_4bit
             modelContainer = try await LLMModelFactory.shared.loadContainer(
                 from: #hubDownloader(),
                 using: #huggingFaceTokenizerLoader(),
-                configuration: config
+                configuration: wanted.configuration
             )
+            loadedModel = wanted
             isModelLoaded = true
-            AppLogger.log("MLXTransformManager: model loaded", category: "mlx")
+            AppLogger.log("MLXTransformManager: model loaded (\(wanted.rawValue))", category: "mlx")
             resetUnloadTimer()
         } catch {
             loadError = error.localizedDescription
@@ -125,8 +185,9 @@ final class MLXTransformManager: ObservableObject {
         unloadTimer?.invalidate()
         unloadTimer = nil
         modelContainer = nil
+        loadedModel = nil
         isModelLoaded = false
-        AppLogger.log("MLXTransformManager: model unloaded (idle timeout)", category: "mlx")
+        AppLogger.log("MLXTransformManager: model unloaded", category: "mlx")
     }
 
     // MARK: - Streaming Transforms
@@ -157,7 +218,7 @@ final class MLXTransformManager: ObservableObject {
             .system(systemPrompt),
             .user(userPrompt),
         ]
-        let userInput = UserInput(chat: chat)
+        let userInput = UserInput(chat: chat, additionalContext: loadedModel?.additionalContext)
         let parameters = GenerateParameters(temperature: 0.0)
 
         // Prepare input within the container's isolation, then stream generation.

@@ -17,7 +17,7 @@ struct TransformationsSettingsTab: View {
             Section {
                 Toggle("Enable text transformations", isOn: $settings.transformationsEnabled)
             } footer: {
-                Text("Transform transcribed text using a local AI model (Llama 3.2 1B)")
+                Text("Transform transcribed text using a local AI model. Choose the model below.")
             }
 
             if settings.transformationsEnabled {
@@ -29,8 +29,22 @@ struct TransformationsSettingsTab: View {
                     Text("After every recording, fixes grammar and punctuation and removes filler words like \"um\" — automatically.")
                 }
 
-                Section("Model") {
+                Section {
+                    Picker("Text model", selection: $settings.transformModel) {
+                        ForEach(TransformModel.allCases) { model in
+                            Text("\(model.displayName) — \(model.approximateDownload)")
+                                .tag(model.rawValue)
+                        }
+                    }
+                    .onChange(of: settings.transformModel) { _ in
+                        // Free the old model now; the new one loads on next use
+                        transformManager.unloadModel()
+                    }
                     modelStatusRow
+                } header: {
+                    Text("Model")
+                } footer: {
+                    Text("Bigger models write better but load slower and use more memory. A model downloads the first time you use it.")
                 }
 
                 Section("Visible Transformations") {
