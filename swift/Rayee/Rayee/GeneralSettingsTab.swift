@@ -62,7 +62,7 @@ struct GeneralSettingsTab: View {
             Section {
                 Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
             } footer: {
-                Text("When enabled, recording stops after 60 seconds")
+                Text("When enabled, recording stops after 5 minutes")
             }
 
             // Silence Detection Section

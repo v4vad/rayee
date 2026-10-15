@@ -146,7 +146,7 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(silenceDuration, forKey: SettingsKey.silenceDuration) }
     }
 
-    // Whether to enforce a 60-second maximum recording time
+    // Whether to enforce the Config.maxRecordingDuration (5-minute) recording limit
     // When false, recording continues until you stop it or silence is detected
     @Published var timeoutEnabled: Bool {
         didSet { UserDefaults.standard.set(timeoutEnabled, forKey: SettingsKey.timeoutEnabled) }

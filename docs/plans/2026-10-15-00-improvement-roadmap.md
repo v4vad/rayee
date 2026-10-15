@@ -151,6 +151,7 @@ installed `argmax-oss-swift` version's documentation for it first.
 | 2026-10-15 | Remove the "Fast mode" switch instead of wiring it up | WhisperKit already decodes greedily, so there's no slower mode to switch away from. The switch can't do anything useful. |
 | 2026-10-15 | Keep `PillButtonStyle` | `TransformationPreviewView` still uses it. |
 | 2026-10-15 | Phases 1 and 2 ship together as v0.8 | Phase 1 has almost nothing a user would notice. |
+| 2026-10-16 | Phase 2 Task 2: user kept the 30 s silence auto-stop (default 30 s, slider 5–60 s, no reset of saved settings); only the recording limit changes, 1 min → 5 min. F3 (stop at a natural pause) is not done in v0.8. | User decision. The brief asked for a bullet, but this log is a table, so the entry follows the table style. |
 
 ## Session log
 

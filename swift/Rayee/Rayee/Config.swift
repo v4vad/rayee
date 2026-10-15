@@ -36,8 +36,8 @@ enum Config {
     /// Minimum threshold floor for adaptive VAD (prevents near-zero threshold in dead-silent rooms)
     static let minSilenceThreshold: Float = 0.005
 
-    /// Maximum recording duration before auto-stop (seconds)
-    static let maxRecordingDuration: TimeInterval = 60.0
+    /// Maximum recording duration before auto-stop (seconds), when the timeout switch is on
+    static let maxRecordingDuration: TimeInterval = 300.0
 
     /// Default timeout before stopping (seconds) - user can override in settings
     static let defaultSilenceDuration: TimeInterval = 30.0
