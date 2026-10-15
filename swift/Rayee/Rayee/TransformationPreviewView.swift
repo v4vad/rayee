@@ -12,6 +12,9 @@ import SwiftUI
 struct TransformationPreviewView: View {
     @ObservedObject var transformState: TransformationState
 
+    /// Watched so the panel can say "Downloading model… 45%" instead of a bare "Transforming..."
+    @ObservedObject private var transformManager = MLXTransformManager.shared
+
     /// Called when user chooses to use the transformed text
     let onUseTransformed: (String) -> Void
 
@@ -37,7 +40,9 @@ struct TransformationPreviewView: View {
             if transformState.streamingText.isEmpty {
                 ProgressView()
                     .controlSize(.small)
-                Text("Transforming...")
+                Text(MLXTransformManager.preparingText(
+                    isLoading: transformManager.isModelLoading,
+                    downloadFraction: transformManager.downloadProgress) ?? "Transforming...")
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             } else {

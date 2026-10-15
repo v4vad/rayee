@@ -79,4 +79,22 @@ final class MLXTransformManagerTests: XCTestCase {
         XCTAssertEqual(MLXTransformManager.unloadDelay(smartDictationEnabled: true), 300)
         XCTAssertEqual(MLXTransformManager.unloadDelay(smartDictationEnabled: false), 30)
     }
+
+    // MARK: - Download / load status
+
+    func testPreparingTextShowsDownloadPercent() {
+        XCTAssertEqual(
+            MLXTransformManager.preparingText(isLoading: true, downloadFraction: 0.456),
+            "Downloading model… 45%")
+    }
+
+    func testPreparingTextShowsLoadingOnceDownloaded() {
+        XCTAssertEqual(MLXTransformManager.preparingText(isLoading: true, downloadFraction: 1.0), "Loading model…")
+        XCTAssertEqual(MLXTransformManager.preparingText(isLoading: true, downloadFraction: nil), "Loading model…")
+    }
+
+    func testPreparingTextIsNilWhenNotLoading() {
+        // A late progress update after loading finished must not show a stale "Downloading".
+        XCTAssertNil(MLXTransformManager.preparingText(isLoading: false, downloadFraction: 0.5))
+    }
 }

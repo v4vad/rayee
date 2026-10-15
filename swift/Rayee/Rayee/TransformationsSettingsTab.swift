@@ -78,7 +78,8 @@ struct TransformationsSettingsTab: View {
             if transformManager.isModelLoading {
                 ProgressView()
                     .controlSize(.small)
-                Text("Loading...")
+                Text(MLXTransformManager.preparingText(
+                    isLoading: true, downloadFraction: transformManager.downloadProgress) ?? "Loading model…")
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else if transformManager.isModelLoaded {

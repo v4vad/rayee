@@ -90,6 +90,9 @@ final class MLXTransformManager: ObservableObject {
     @Published private(set) var isModelLoading = false
     @Published private(set) var loadError: String?
 
+    /// Download progress (0–1) while the model is being fetched for the first time, else nil.
+    @Published private(set) var downloadProgress: Double?
+
     // MARK: Private
 
     private var modelContainer: ModelContainer?
@@ -168,6 +171,15 @@ final class MLXTransformManager: ObservableObject {
         smartDictationEnabled ? 300 : 30
     }
 
+    /// Short status for the UI while the model is being prepared, or nil when nothing is loading.
+    nonisolated static func preparingText(isLoading: Bool, downloadFraction: Double?) -> String? {
+        guard isLoading else { return nil }
+        if let fraction = downloadFraction, fraction < 1 {
+            return "Downloading model… \(Int((fraction * 100).rounded(.down)))%"
+        }
+        return "Loading model…"
+    }
+
     // MARK: - Model Loading
 
     /// Loads the text model chosen in Settings, if it isn't loaded already.
@@ -185,16 +197,26 @@ final class MLXTransformManager: ObservableObject {
 
         isModelLoading = true
         loadError = nil
+        downloadProgress = nil
+        let started = Date()
+        AppLogger.log("MLXTransformManager: loading \(wanted.rawValue)", category: "mlx")
 
         do {
             modelContainer = try await LLMModelFactory.shared.loadContainer(
                 from: #hubDownloader(),
                 using: #huggingFaceTokenizerLoader(),
-                configuration: wanted.configuration
+                configuration: wanted.configuration,
+                progressHandler: { [weak self] progress in
+                    let fraction = progress.fractionCompleted
+                    Task { @MainActor in self?.downloadProgress = fraction }
+                }
             )
             loadedModel = wanted
             isModelLoaded = true
-            AppLogger.log("MLXTransformManager: model loaded (\(wanted.rawValue))", category: "mlx")
+            AppLogger.log(
+                String(format: "MLXTransformManager: model loaded (%@) in %.1fs",
+                       wanted.rawValue, Date().timeIntervalSince(started)),
+                category: "mlx")
             resetUnloadTimer()
         } catch {
             loadError = error.localizedDescription
@@ -202,6 +224,7 @@ final class MLXTransformManager: ObservableObject {
                 "MLXTransformManager: model load failed: \(error)", category: "mlx")
         }
 
+        downloadProgress = nil
         isModelLoading = false
     }
 
