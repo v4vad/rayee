@@ -40,6 +40,15 @@ enum UserFacingError {
     }
 }
 
+/// Whether Smart Dictation will clean up a transcription automatically.
+/// TranscriptionCoordinator (to hold the history save) and AppState (to start the clean-up)
+/// both use it, so the two can never disagree.
+enum SmartDictationPolicy {
+    static func willRun(smartDictationEnabled: Bool, transformationsEnabled: Bool, text: String) -> Bool {
+        smartDictationEnabled && transformationsEnabled && !text.isEmpty
+    }
+}
+
 /// Coordinates the recording → transcription → paste flow
 class TranscriptionCoordinator: ObservableObject {
     /// Current phase of the transcription process
@@ -221,8 +230,15 @@ class TranscriptionCoordinator: ObservableObject {
         AppLogger.log("Transcription succeeded: \(text.prefix(80))...", category: "transcription")
         audioFeedback.playStopSound()
 
-        // Save to history if we got text
-        if !text.isEmpty {
+        let smartDictationWillRun = SmartDictationPolicy.willRun(
+            smartDictationEnabled: settings.smartDictationEnabled,
+            transformationsEnabled: settings.transformationsEnabled,
+            text: text
+        )
+
+        // Save to history now, unless Smart Dictation is about to clean the text up.
+        // In that case AppState saves the final text when the clean-up ends.
+        if !text.isEmpty && !smartDictationWillRun {
             historyManager.saveTranscription(
                 text: text,
                 model: settings.selectedWhisperKitModel
@@ -234,7 +250,7 @@ class TranscriptionCoordinator: ObservableObject {
         pendingSmartDictationPaste = false
         if pendingAutoPaste && settings.autoPasteEnabled && !text.isEmpty {
             if PasteTargetDetector.hasValidPasteTarget() {
-                if settings.smartDictationEnabled && settings.transformationsEnabled {
+                if smartDictationWillRun {
                     // Defer paste — smart dictation will paste the transformed result
                     pendingSmartDictationPaste = true
                 } else {

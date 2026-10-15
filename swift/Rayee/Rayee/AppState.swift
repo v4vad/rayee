@@ -56,6 +56,9 @@ class AppState: ObservableObject {
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
+    /// The transformation currently streaming, so it can be stopped if the panel is dismissed
+    private var transformTask: Task<Void, Never>?
+
     // MARK: - Initialization
 
     init() {
@@ -76,6 +79,7 @@ class AppState: ObservableObject {
     func startTranscription(autoPaste: Bool = false) {
         guard status == .ready || status == .error else { return }
         errorMessage = nil
+        cancelTransformation()
         transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
     }
 
@@ -202,9 +206,11 @@ class AppState: ObservableObject {
             self?.handleUseOriginal()
         }
         recordingPanelController.onDone = { [weak self] in
+            self?.cancelTransformation()
             self?.recordingPanelController.hidePanel()
         }
         recordingPanelController.onDiscard = { [weak self] in
+            self?.cancelTransformation()
             self?.recordingPanelController.hidePanel()
         }
 
@@ -224,7 +230,11 @@ class AppState: ObservableObject {
                 recordingPanelController.showResultMode(text: text)
 
                 let settings = SettingsManager.shared
-                if settings.smartDictationEnabled && settings.transformationsEnabled {
+                if SmartDictationPolicy.willRun(
+                    smartDictationEnabled: settings.smartDictationEnabled,
+                    transformationsEnabled: settings.transformationsEnabled,
+                    text: text
+                ) {
                     handleTransformation(
                         type: .smartDictation,
                         thenPaste: transcriptionCoordinator.pendingSmartDictationPaste
@@ -293,7 +303,9 @@ class AppState: ObservableObject {
         transformState.startTransformation(text: rawText, type: type)
         recordingPanelController.updateWindowSizeForTransform()
 
-        Task { @MainActor in
+        cancelTransformation()
+        transformTask = Task { @MainActor in
+            var cleanedText: String?
             do {
                 try await MLXTransformManager.shared.streamTransform(
                     text: rawText,
@@ -310,15 +322,44 @@ class AppState: ObservableObject {
                     recordingPanelController.updateWindowSizeForTransform()
                     if thenPaste { pasteAndHidePanel(rawText) }
                 } else {
+                    cleanedText = result
                     transformState.completeTransformation(transformedText: result)
                     recordingPanelController.updateWindowSizeForTransform()
                     if thenPaste { pasteAndHidePanel(result) }
                 }
+            } catch is CancellationError {
+                // The panel was dismissed mid-way: it's already reset, and nothing should be pasted.
             } catch {
                 transformState.failTransformation(message: error.localizedDescription)
                 recordingPanelController.updateWindowSizeForTransform()
                 if thenPaste { pasteAndHidePanel(rawText) }
             }
+
+            if type == .smartDictation {
+                saveSmartDictationHistory(raw: rawText, cleaned: cleanedText)
+            }
+        }
+    }
+
+    /// Stops any transformation still streaming (for example, the panel was dismissed)
+    private func cancelTransformation() {
+        transformTask?.cancel()
+        transformTask = nil
+    }
+
+    /// Smart Dictation holds back the history save until the clean-up ends.
+    /// Saves the cleaned text (with the original), or just the original if the clean-up didn't finish.
+    private func saveSmartDictationHistory(raw: String, cleaned: String?) {
+        let model = SettingsManager.shared.selectedWhisperKitModel
+        if let cleaned {
+            HistoryManager.shared.saveTranscription(
+                text: cleaned,
+                model: model,
+                originalText: raw,
+                transformations: TransformationType.smartDictation.rawValue
+            )
+        } else {
+            HistoryManager.shared.saveTranscription(text: raw, model: model)
         }
     }
 
@@ -350,6 +391,7 @@ class AppState: ObservableObject {
 
     /// Cancel recording without transcribing (called when user presses Escape)
     func cancelRecording() {
+        cancelTransformation()
         transcriptionCoordinator.cancel()
         recordingPanelController.hidePanel()
         status = .ready
