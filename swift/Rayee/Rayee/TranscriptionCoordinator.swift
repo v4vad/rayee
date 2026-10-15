@@ -20,6 +20,26 @@ enum TranscriptionResult {
     case error(message: String)
 }
 
+/// Turns internal errors into short, plain-language messages for the recording panel.
+enum UserFacingError {
+    static func message(for error: Error) -> String {
+        if let recorderError = error as? AudioRecorderError {
+            switch recorderError {
+            case .noMicrophonePermission:
+                return "Rayee can't use the microphone. Allow it in System Settings → Privacy & Security → Microphone, then try again."
+            case .engineStartFailed:
+                return "Couldn't start the microphone. Check that one is connected and not in use by another app."
+            case .noAudioRecorded:
+                return "Rayee didn't hear anything. Check your microphone and try again."
+            }
+        }
+        if let whisperError = error as? WhisperKitError, case .modelNotLoaded = whisperError {
+            return "The speech model is still loading. Try again in a few seconds."
+        }
+        return "Transcription failed: \(error.localizedDescription)"
+    }
+}
+
 /// Coordinates the recording → transcription → paste flow
 class TranscriptionCoordinator: ObservableObject {
     /// Current phase of the transcription process
@@ -152,6 +172,12 @@ class TranscriptionCoordinator: ObservableObject {
 
         case .failure(let error):
             if case .noAudioRecorded = error {
+                // A denied microphone records pure silence. Say so instead of silently closing.
+                if !AudioRecorder.hasMicrophonePermission() {
+                    AppLogger.log("No speech heard and microphone permission is missing", category: "transcription")
+                    handleRecordingError(AudioRecorderError.noMicrophonePermission)
+                    return
+                }
                 AppLogger.log("Recording ended with no speech detected", category: "transcription")
                 audioFeedback.playStopSound()
                 onTranscriptionComplete?(.cancelled)
@@ -167,7 +193,7 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = false
         audioRecorder = nil
         audioFeedback.playErrorSound()
-        onTranscriptionComplete?(.error(message: error.localizedDescription))
+        onTranscriptionComplete?(.error(message: UserFacingError.message(for: error)))
     }
 
     /// Transcribe recording using WhisperKit (on-device)
@@ -228,6 +254,6 @@ class TranscriptionCoordinator: ObservableObject {
         isTranscribing = false
         AppLogger.log("Transcription failed: \(error.localizedDescription)", category: "transcription")
         audioFeedback.playErrorSound()
-        onTranscriptionComplete?(.error(message: error.localizedDescription))
+        onTranscriptionComplete?(.error(message: UserFacingError.message(for: error)))
     }
 }

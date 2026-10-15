@@ -42,6 +42,9 @@ class RecordingPanelController: ObservableObject {
     /// Elapsed recording duration in seconds (drives the timer display)
     @Published var recordingDuration: TimeInterval = 0
 
+    /// Error message shown in the panel (nil = no error)
+    @Published var errorMessage: String?
+
     /// Transformation state
     let transformState = TransformationState()
 
@@ -84,6 +87,7 @@ class RecordingPanelController: ObservableObject {
         showResult = false
         isFormatExpanded = false
         transcribedText = ""
+        errorMessage = nil
         recordingDuration = 0
         recordingTimer?.invalidate()
         recordingTimer = nil
@@ -95,6 +99,7 @@ class RecordingPanelController: ObservableObject {
         isRecording = recording
         if recording {
             audioLevelMonitor.reset()
+            errorMessage = nil
             showResult = false
             isFormatExpanded = false
             recordingDuration = 0
@@ -121,6 +126,15 @@ class RecordingPanelController: ObservableObject {
         isRecording = false
         isTranscribing = false
         updateWindowSize()
+    }
+
+    /// Show an error message in the panel until the user dismisses it
+    func showErrorMode(message: String) {
+        errorMessage = message
+        showResult = false
+        isRecording = false
+        isTranscribing = false
+        showPanel()
     }
 
     /// Update window size when transformation state changes
@@ -162,7 +176,9 @@ class RecordingPanelController: ObservableObject {
         guard let window = window else { return }
 
         let newHeight: CGFloat
-        if transformState.showPreview || transformState.isTransforming {
+        if errorMessage != nil {
+            newHeight = Config.recordingPanelHeightError
+        } else if transformState.showPreview || transformState.isTransforming {
             newHeight = Config.recordingPanelHeightWithTransform
         } else if showResult && isFormatExpanded {
             newHeight = Config.recordingPanelHeightResultExpanded
@@ -213,7 +229,8 @@ struct RecordingPanelHostView: View {
             enabledTransformations: SettingsManager.shared.enabledTransformations,
             onTransform: { type in controller.onTransform?(type) },
             onUseTransformed: { text in controller.onUseTransformed?(text) },
-            onUseOriginal: { controller.onUseOriginal?() }
+            onUseOriginal: { controller.onUseOriginal?() },
+            errorMessage: controller.errorMessage
         )
     }
 }

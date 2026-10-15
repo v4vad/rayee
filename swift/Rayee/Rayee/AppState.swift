@@ -243,8 +243,8 @@ class AppState: ObservableObject {
         case .error(let message):
             errorMessage = message
             status = .error
-            // Hide the panel on error
-            recordingPanelController.hidePanel()
+            // Keep the panel open and explain what went wrong; Dismiss closes it
+            recordingPanelController.showErrorMode(message: message)
         }
     }
 

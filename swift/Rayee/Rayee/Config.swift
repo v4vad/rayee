@@ -74,6 +74,9 @@ enum Config {
     /// Height of the panel when showing transformation preview (TransformationPreviewView)
     static let recordingPanelHeightWithTransform: CGFloat = 420
 
+    /// Height — Error state (message + Dismiss)
+    static let recordingPanelHeightError: CGFloat = 170
+
     /// Number of waveform bars (matches Figma design)
     static let waveformBarCount = 27
 
