@@ -34,7 +34,7 @@ After transcribing, transform your text with one click (or Cmd+1 through Cmd+5):
 | Formal    | Cmd+4    | Make it sound professional |
 | Casual    | Cmd+5    | Make it conversational |
 
-Powered by Llama 3.2 1B (4-bit quantized via MLX). Runs entirely on Apple Silicon — no cloud, no API keys.
+Transforms use an on-device text model you can choose in Settings (Llama 3.2 1B by default, or Qwen3 1.7B / 4B), 4-bit quantized via MLX. Runs entirely on Apple Silicon — no cloud, no API keys.
 
 ## How It Works
 

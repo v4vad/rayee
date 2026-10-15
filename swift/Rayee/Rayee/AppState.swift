@@ -318,7 +318,7 @@ class AppState: ObservableObject {
                         self?.recordingPanelController.updateWindowSizeForTransform()
                     }
                 )
-                let result = transformState.streamingText
+                let result = MLXTransformManager.cleanedOutput(transformState.streamingText)
                 if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     // LLM produced nothing — treat as failure and keep raw text
                     transformState.failTransformation(message: "No output produced")

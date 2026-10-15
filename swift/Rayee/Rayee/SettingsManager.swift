@@ -27,6 +27,7 @@ enum SettingsKey {
     static let adaptiveVADEnabled = "adaptiveVADEnabled"
     static let selectedWhisperKitModel = "selectedWhisperKitModel"
     static let smartDictationEnabled = "smartDictationEnabled"
+    static let transformModel = "transformModel"
 }
 
 // MARK: - Hotkey Configuration
@@ -177,13 +178,18 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(smartDictationEnabled, forKey: SettingsKey.smartDictationEnabled) }
     }
 
+    // Which on-device text model runs transformations (TransformModel raw value)
+    @Published var transformModel: String {
+        didSet { UserDefaults.standard.set(transformModel, forKey: SettingsKey.transformModel) }
+    }
+
     private static let fwToWhisperKitNames: [String: String] = [
         "tiny": "openai_whisper-tiny",
         "base": "openai_whisper-base",
         "small": "openai_whisper-small",
         "medium": "openai_whisper-medium",
         "large-v3": "openai_whisper-large-v3",
-        "large-v3-turbo": "openai_whisper-large-v3-turbo",
+        "large-v3-turbo": "openai_whisper-large-v3_turbo",
         "distil-small.en": "distil-whisper_distil-small.en",
         "distil-medium.en": "distil-whisper_distil-medium.en",
         "distil-large-v3": "distil-whisper_distil-large-v3"
@@ -194,13 +200,13 @@ class SettingsManager: ObservableObject {
             if let saved = UserDefaults.standard.string(forKey: SettingsKey.selectedWhisperKitModel) {
                 return saved
             }
-            // Migrate from old FasterWhisper name
-            if let oldName = UserDefaults.standard.string(forKey: SettingsKey.selectedModel),
-               let migrated = Self.fwToWhisperKitNames[oldName] {
+            // Migrate from old FasterWhisper name; unmapped old names fall back to the old default
+            if let oldName = UserDefaults.standard.string(forKey: SettingsKey.selectedModel) {
+                let migrated = Self.fwToWhisperKitNames[oldName] ?? WhisperModelCatalog.legacyDefault
                 UserDefaults.standard.set(migrated, forKey: SettingsKey.selectedWhisperKitModel)
                 return migrated
             }
-            return "openai_whisper-small"
+            return WhisperModelCatalog.recommended
         }
         set { UserDefaults.standard.set(newValue, forKey: SettingsKey.selectedWhisperKitModel) }
     }
@@ -265,7 +271,28 @@ class SettingsManager: ObservableObject {
         }
 
         // Load setup completion flag (default: false)
-        self.hasCompletedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
+        let completedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
+        self.hasCompletedSetup = completedSetup
+
+        // v0.9: save a speech model choice once. Existing installs keep the old default
+        // (small); new installs get the recommended turbo model.
+        // (Uses the local `completedSetup`: `self` can't be read until init has set every property.)
+        let legacyModelFolder = Config.whisperKitDownloadBase
+            .appendingPathComponent("models/argmaxinc/whisperkit-coreml")
+            .appendingPathComponent(WhisperModelCatalog.legacyDefault)
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        // Only created once the user has transcribed something.
+        let historyDB = home.appendingPathComponent(".rayee/history.db")
+        // Models lived in Documents before v0.7.1.
+        let preV071Models = home.appendingPathComponent("Documents/huggingface/models/argmaxinc/whisperkit-coreml")
+        let fm = FileManager.default
+        WhisperModelCatalog.pinDefaultIfNeeded(
+            in: UserDefaults.standard,
+            isExistingInstall: completedSetup
+                || fm.fileExists(atPath: legacyModelFolder.path)
+                || fm.fileExists(atPath: historyDB.path)
+                || fm.fileExists(atPath: preV071Models.path)
+        )
 
         // Load adaptive VAD setting (default: false)
         self.adaptiveVADEnabled = UserDefaults.standard.bool(forKey: SettingsKey.adaptiveVADEnabled)
@@ -276,6 +303,11 @@ class SettingsManager: ObservableObject {
         } else {
             self.smartDictationEnabled = false
         }
+
+        // Load text model choice (unknown or missing → default)
+        self.transformModel = TransformModel.from(
+            savedValue: UserDefaults.standard.string(forKey: SettingsKey.transformModel)
+        ).rawValue
     }
 
     // Save hotkey configuration to UserDefaults
@@ -308,5 +340,6 @@ class SettingsManager: ObservableObject {
         enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         adaptiveVADEnabled = false
         smartDictationEnabled = false
+        transformModel = TransformModel.defaultModel.rawValue
     }
 }
