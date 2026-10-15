@@ -18,8 +18,7 @@ struct RayeeApp: App {
             SimpleMenuView()
                 .environmentObject(appState)
         } label: {
-            Image(systemName: appState.menuBarIcon)
-                .renderingMode(.template)
+            MenuBarLabel(icon: appState.menuBarIcon)
         }
         .menuBarExtraStyle(.menu)
 
@@ -36,6 +35,25 @@ struct RayeeApp: App {
         }
         .windowResizability(.contentSize)
         .defaultPosition(.center)
+    }
+}
+
+/// The menu bar icon. It also opens the setup guide on first launch: the icon is drawn
+/// at launch, while the menu's contents only appear once the user clicks the icon.
+private struct MenuBarLabel: View {
+    let icon: String
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Image(systemName: icon)
+            .renderingMode(.template)
+            .onAppear {
+                guard !SettingsManager.shared.hasCompletedSetup else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    openWindow(id: "setup-guide")
+                    NSApplication.shared.activate(ignoringOtherApps: true)
+                }
+            }
     }
 }
 
