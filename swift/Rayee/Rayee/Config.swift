@@ -36,6 +36,13 @@ enum Config {
     /// Minimum threshold floor for adaptive VAD (prevents near-zero threshold in dead-silent rooms)
     static let minSilenceThreshold: Float = 0.005
 
+    /// Highest threshold adaptive VAD may choose. Stops speech during calibration from
+    /// pushing the threshold above normal speaking level.
+    static let maxAdaptiveSilenceThreshold: Float = 0.03
+
+    /// Audio kept from just before speech is detected, so soft first sounds aren't clipped (seconds)
+    static let preRollDuration: TimeInterval = 0.3
+
     /// Maximum recording duration before auto-stop (seconds), when the timeout switch is on
     static let maxRecordingDuration: TimeInterval = 300.0
 

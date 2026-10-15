@@ -39,18 +39,13 @@ class AudioRecorder {
     private let channels: AVAudioChannelCount = 1  // Mono
 
     // Silence detection settings
-    private let silenceThreshold: Float = Config.silenceThreshold
     private var silenceDuration: TimeInterval   // How long silence triggers stop
     private let maxDuration: TimeInterval = Config.maxRecordingDuration
     private let timeoutEnabled: Bool            // Whether to enforce maxDuration
 
-    // Adaptive VAD
-    private var adaptiveVADEnabled: Bool
-    private var isCalibrating = false
-    private var calibrationRMSValues: [Float] = []
-    private var calibrationChunkCount = 0
-    private let calibrationChunkTarget = 2  // 2 chunks × 100ms = 200ms
-    private var adaptedThreshold: Float
+    // Speech detection and which samples to keep (see SpeechGate)
+    private let adaptiveVADEnabled: Bool
+    private var gate: SpeechGate
 
     // Audio engine components
     private var audioEngine: AVAudioEngine?
@@ -58,10 +53,8 @@ class AudioRecorder {
 
     // Recording state
     private var isRecording = false
-    private var audioBuffer: [Float] = []
     private var recordingStartTime: Date?
     private var lastSpeechTime: Date?
-    private var speechDetected = false
 
     // Callbacks
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
@@ -73,7 +66,7 @@ class AudioRecorder {
         self.silenceDuration = silenceDuration
         self.timeoutEnabled = timeoutEnabled
         self.adaptiveVADEnabled = adaptiveVADEnabled
-        self.adaptedThreshold = Config.silenceThreshold
+        self.gate = SpeechGate(adaptive: adaptiveVADEnabled)
     }
 
     // MARK: - Public Methods
@@ -121,18 +114,10 @@ class AudioRecorder {
         }
 
         // Reset state
-        audioBuffer = []
-        audioBuffer.reserveCapacity(Int(maxDuration * sampleRate))
+        gate = SpeechGate(adaptive: adaptiveVADEnabled)
         recordingStartTime = Date()
         lastSpeechTime = nil
-        speechDetected = false
         isRecording = true
-
-        // Reset adaptive VAD calibration
-        isCalibrating = adaptiveVADEnabled
-        calibrationRMSValues = []
-        calibrationChunkCount = 0
-        adaptedThreshold = Config.silenceThreshold
 
         // Create audio engine
         audioEngine = AVAudioEngine()
@@ -198,13 +183,14 @@ class AudioRecorder {
         print("[AudioRecorder] Recording stopped")
 
         // Check if we got any audio
-        if audioBuffer.isEmpty {
+        let audioData = gate.kept
+        if audioData.isEmpty {
             onRecordingComplete?(.failure(.noAudioRecorded))
             return
         }
 
-        let duration = Double(audioBuffer.count) / sampleRate
-        onRecordingComplete?(.success(RecordingResult(duration: duration, audioData: audioBuffer)))
+        let duration = Double(audioData.count) / sampleRate
+        onRecordingComplete?(.success(RecordingResult(duration: duration, audioData: audioData)))
     }
 
     /// Cancel recording without saving
@@ -214,7 +200,7 @@ class AudioRecorder {
         audioEngine?.stop()
         audioEngine = nil
         inputNode = nil
-        audioBuffer = []
+        gate = SpeechGate(adaptive: adaptiveVADEnabled)
         print("[AudioRecorder] Recording cancelled")
     }
 
@@ -263,57 +249,26 @@ class AudioRecorder {
         guard isRecording else { return }
 
         // Convert to our target format (16kHz mono)
-        guard let convertedBuffer = AudioRecorder.convert(buffer, using: converter, to: targetFormat) else {
+        guard let convertedBuffer = AudioRecorder.convert(buffer, using: converter, to: targetFormat),
+              let channelData = convertedBuffer.floatChannelData?[0] else {
             return
         }
-
-        // Get the audio data
-        guard let channelData = convertedBuffer.floatChannelData?[0] else { return }
         let frameLength = Int(convertedBuffer.frameLength)
+        guard frameLength > 0 else { return }
+        let samples = Array(UnsafeBufferPointer(start: channelData, count: frameLength))
 
         // Calculate audio level (RMS)
-        var sumSquares: Float = 0
-        for i in 0..<frameLength {
-            let sample = channelData[i]
-            sumSquares += sample * sample
-        }
-        let rms = sqrt(sumSquares / Float(frameLength))
+        let rms = sqrt(samples.reduce(0) { $0 + $1 * $1 } / Float(frameLength))
 
         // Report audio level to UI
         DispatchQueue.main.async { [weak self] in
             self?.onAudioLevel?(rms)
         }
 
-        // Adaptive VAD: calibrate during first 200ms
-        if isCalibrating {
-            calibrationRMSValues.append(rms)
-            calibrationChunkCount += 1
-            if calibrationChunkCount >= calibrationChunkTarget {
-                let avgRMS = calibrationRMSValues.reduce(0, +) / Float(calibrationRMSValues.count)
-                adaptedThreshold = max(avgRMS * 1.5, Config.minSilenceThreshold)
-                isCalibrating = false
-                print("[AudioRecorder] Adaptive VAD calibrated: threshold=\(adaptedThreshold)")
-            }
-            return
-        }
-
-        // Check for speech vs silence
-        let effectiveThreshold = adaptiveVADEnabled ? adaptedThreshold : silenceThreshold
-        let isSpeech = rms > effectiveThreshold
+        // Decide whether this is speech and which samples to keep
         let now = Date()
-
-        if isSpeech {
-            if !speechDetected {
-                speechDetected = true
-                print("[AudioRecorder] Speech detected")
-            }
+        if gate.feed(samples, rms: rms) {
             lastSpeechTime = now
-        }
-
-        // Only keep audio after speech is detected
-        if speechDetected {
-            // Append samples to buffer
-            audioBuffer.append(contentsOf: UnsafeBufferPointer(start: channelData, count: frameLength))
         }
 
         // Check stopping conditions
@@ -329,14 +284,80 @@ class AudioRecorder {
         }
 
         // Stop if silence after speech
-        if speechDetected, let lastSpeech = lastSpeechTime {
-            let silenceTime = now.timeIntervalSince(lastSpeech)
-            if silenceTime >= silenceDuration {
-                print("[AudioRecorder] Silence detected, stopping")
-                DispatchQueue.main.async { [weak self] in
-                    self?.stopRecording()
-                }
+        if gate.speechDetected, let lastSpeech = lastSpeechTime,
+           now.timeIntervalSince(lastSpeech) >= silenceDuration {
+            print("[AudioRecorder] Silence detected, stopping")
+            DispatchQueue.main.async { [weak self] in
+                self?.stopRecording()
             }
+        }
+    }
+}
+
+/// Decides which samples to keep and whether each chunk is speech.
+/// Pure logic with no audio hardware, so it can be unit-tested with made-up chunks.
+struct SpeechGate {
+    private let adaptive: Bool
+    private let preRollSampleLimit: Int
+    private let calibrationChunkTarget = 2  // 2 chunks × 100ms = 200ms
+
+    private(set) var threshold: Float
+    private(set) var speechDetected = false
+    private(set) var kept: [Float] = []
+
+    private var preRoll: [Float] = []
+    private var calibrationRMS: [Float] = []
+
+    init(
+        fixedThreshold: Float = Config.silenceThreshold,
+        adaptive: Bool,
+        preRollSampleLimit: Int = Int(Config.audioSampleRate * Config.preRollDuration)
+    ) {
+        self.threshold = fixedThreshold
+        self.adaptive = adaptive
+        self.preRollSampleLimit = preRollSampleLimit
+    }
+
+    /// Feeds one chunk of 16kHz samples with its RMS level. Returns true if the chunk is speech.
+    mutating func feed(_ samples: [Float], rms: Float) -> Bool {
+        // Adaptive mode: the first chunks measure the room. Keep their audio in the
+        // pre-roll anyway, because the user may already be talking.
+        if adaptive && calibrationRMS.count < calibrationChunkTarget {
+            calibrationRMS.append(rms)
+            if calibrationRMS.count == calibrationChunkTarget {
+                threshold = Self.adaptedThreshold(from: calibrationRMS)
+                print("[SpeechGate] Adaptive VAD calibrated: threshold=\(threshold)")
+            }
+            appendToPreRoll(samples)
+            return false
+        }
+
+        let isSpeech = rms > threshold
+        if isSpeech && !speechDetected {
+            speechDetected = true
+            kept.append(contentsOf: preRoll)
+            preRoll.removeAll()
+            print("[SpeechGate] Speech detected")
+        }
+
+        if speechDetected {
+            kept.append(contentsOf: samples)
+        } else {
+            appendToPreRoll(samples)
+        }
+        return isSpeech
+    }
+
+    /// 1.5× the room's average level, kept between the minimum and maximum allowed thresholds.
+    static func adaptedThreshold(from rmsValues: [Float]) -> Float {
+        let average = rmsValues.reduce(0, +) / Float(max(rmsValues.count, 1))
+        return min(max(average * 1.5, Config.minSilenceThreshold), Config.maxAdaptiveSilenceThreshold)
+    }
+
+    private mutating func appendToPreRoll(_ samples: [Float]) {
+        preRoll.append(contentsOf: samples)
+        if preRoll.count > preRollSampleLimit {
+            preRoll.removeFirst(preRoll.count - preRollSampleLimit)
         }
     }
 }
