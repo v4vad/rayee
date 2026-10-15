@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// Available transformation types (must match Python's AVAILABLE_TRANSFORMATIONS)
+/// Available transformation types. Prompts for each live in MLXTransformManager.buildPrompt.
 enum TransformationType: String, CaseIterable, Identifiable {
     case grammar
     case bullets

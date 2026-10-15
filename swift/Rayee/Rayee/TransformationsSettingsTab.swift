@@ -26,7 +26,7 @@ struct TransformationsSettingsTab: View {
                 } header: {
                     Text("Smart Dictation")
                 } footer: {
-                    Text("Fixes grammar and runs your voice commands automatically after every recording — no tapping required.")
+                    Text("After every recording, fixes grammar and punctuation and removes filler words like \"um\" — automatically.")
                 }
 
                 Section("Model") {

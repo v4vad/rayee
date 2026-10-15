@@ -98,7 +98,7 @@ struct RecordingPanelView: View {
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.white.opacity(0.45))
                 } else if !isTranscribing {
-                    Text("Option + Space to record")
+                    Text("\(SettingsManager.shared.hotkeyConfig.displayString) to record")
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.white.opacity(0.45))
                 }

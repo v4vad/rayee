@@ -31,7 +31,6 @@ struct SimpleMenuView: View {
             }
         }
         .disabled(!canRecord)
-        .keyboardShortcut(.space, modifiers: .option)
 
         Divider()
 

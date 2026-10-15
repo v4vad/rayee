@@ -65,7 +65,7 @@ struct TransformationPreviewView: View {
                 .font(.system(size: 20))
                 .foregroundColor(.orange)
 
-            Text(userFriendlyError(message))
+            Text(Self.friendlyError(message))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -82,16 +82,13 @@ struct TransformationPreviewView: View {
     }
 
     /// Convert technical errors into plain language
-    private func userFriendlyError(_ message: String) -> String {
+    static func friendlyError(_ message: String) -> String {
         let lower = message.lowercased()
-        if lower.contains("connect") || lower.contains("server") {
-            return "Server not running. Check System Status."
+        if lower.contains("not loaded") {
+            return "The writing model couldn't load. The first time, it needs an internet connection to download (about 700 MB)."
         }
-        if lower.contains("not downloaded") || lower.contains("model") {
-            return "Transform model not downloaded. Download it in Settings."
-        }
-        if lower.contains("timeout") || lower.contains("timed out") {
-            return "Transformation timed out. Try again?"
+        if lower.contains("no output") {
+            return "The writing model didn't return any text. Your original text is unchanged."
         }
         return message
     }
