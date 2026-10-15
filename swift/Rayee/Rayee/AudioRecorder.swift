@@ -220,6 +220,40 @@ class AudioRecorder {
 
     // MARK: - Private Methods
 
+    /// Converts one microphone buffer to 16kHz mono.
+    /// The input block hands the buffer over exactly once, then reports "no data for now".
+    /// Returning the same buffer on every call makes the converter read the same audio twice
+    /// whenever it asks for more input to fill its output.
+    static func convert(
+        _ buffer: AVAudioPCMBuffer,
+        using converter: AVAudioConverter,
+        to targetFormat: AVAudioFormat
+    ) -> AVAudioPCMBuffer? {
+        let ratio = targetFormat.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 1
+        guard let output = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else {
+            return nil
+        }
+
+        var delivered = false
+        var error: NSError?
+        let status = converter.convert(to: output, error: &error) { _, inputStatus in
+            if delivered {
+                inputStatus.pointee = .noDataNow
+                return nil
+            }
+            delivered = true
+            inputStatus.pointee = .haveData
+            return buffer
+        }
+
+        guard status != .error, error == nil else {
+            print("[AudioRecorder] Conversion error: \(error?.localizedDescription ?? "unknown")")
+            return nil
+        }
+        return output
+    }
+
     /// Process incoming audio buffer
     private func processAudioBuffer(
         _ buffer: AVAudioPCMBuffer,
@@ -229,23 +263,7 @@ class AudioRecorder {
         guard isRecording else { return }
 
         // Convert to our target format (16kHz mono)
-        let frameCount = AVAudioFrameCount(
-            Double(buffer.frameLength) * (sampleRate / buffer.format.sampleRate)
-        )
-
-        guard let convertedBuffer = AVAudioPCMBuffer(
-            pcmFormat: targetFormat,
-            frameCapacity: frameCount
-        ) else { return }
-
-        var error: NSError?
-        let status = converter.convert(to: convertedBuffer, error: &error) { inNumPackets, outStatus in
-            outStatus.pointee = .haveData
-            return buffer
-        }
-
-        guard status != .error, error == nil else {
-            print("[AudioRecorder] Conversion error: \(error?.localizedDescription ?? "unknown")")
+        guard let convertedBuffer = AudioRecorder.convert(buffer, using: converter, to: targetFormat) else {
             return
         }
 
