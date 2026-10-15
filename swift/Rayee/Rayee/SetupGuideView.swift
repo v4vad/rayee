@@ -99,8 +99,9 @@ struct SetupGuideView: View {
                 title: "Whisper Model",
                 status: isSelectedModelDownloaded ? .ready : .notReady,
                 detail: isSelectedModelDownloaded ? "Downloaded" : "Not downloaded",
-                actionLabel: isSelectedModelDownloaded ? nil : "Download",
-                action: { downloadWhisperModel() }
+                actionLabel: isSelectedModelDownloaded ? nil : (appState.isWhisperLoading ? "Downloading…" : "Download"),
+                action: { downloadWhisperModel() },
+                actionDisabled: appState.isWhisperLoading
             )
 
             // Transform Model (optional)
@@ -135,7 +136,10 @@ struct SetupGuideView: View {
     }
 
     private var transformModelDetail: String {
-        if transformManager.isModelLoading { return "Loading..." }
+        if transformManager.isModelLoading {
+            return MLXTransformManager.preparingText(
+                isLoading: true, downloadFraction: transformManager.downloadProgress) ?? "Loading..."
+        }
         if transformManager.isModelLoaded { return "Ready" }
         return "Loads automatically on first use"
     }
@@ -203,6 +207,7 @@ struct ChecklistRow: View {
     let actionLabel: String?
     let action: () -> Void
     var isOptional: Bool = false
+    var actionDisabled: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -233,6 +238,7 @@ struct ChecklistRow: View {
             if let label = actionLabel {
                 Button(label, action: action)
                     .controlSize(.small)
+                    .disabled(actionDisabled)
             }
         }
         .padding(.vertical, 8)

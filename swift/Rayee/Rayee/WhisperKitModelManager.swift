@@ -30,7 +30,19 @@ enum WKModelStatus: Equatable {
 /// Pure logic with no downloads, so it can be unit-tested.
 enum WhisperModelCatalog {
     /// Large v3 turbo (September 2024 weights), compressed: close to large-v3 accuracy at a fraction of the size.
-    static let recommended = "openai_whisper-large-v3-v20240930_turbo_632MB"
+    /// Preferred where the Mac supports it (M2 and later).
+    static let preferred = "openai_whisper-large-v3-v20240930_turbo_632MB"
+
+    /// The preferred turbo model if this Mac supports it, otherwise WhisperKit's default for this Mac.
+    static func recommendedModel(supported: [String], deviceDefault: String) -> String {
+        supported.contains(preferred) ? preferred : deviceDefault
+    }
+
+    /// The model to recommend on this Mac.
+    static var recommended: String {
+        let support = WhisperKit.recommendedModels()
+        return recommendedModel(supported: support.supported, deviceDefault: support.default)
+    }
 
     /// The default before v0.9. Existing installs that never picked a model keep it.
     static let legacyDefault = "openai_whisper-small"

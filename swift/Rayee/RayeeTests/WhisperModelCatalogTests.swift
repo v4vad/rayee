@@ -19,8 +19,24 @@ final class WhisperModelCatalogTests: XCTestCase {
         super.tearDown()
     }
 
-    func testRecommendedIsTheTurboModel() {
-        XCTAssertEqual(WhisperModelCatalog.recommended, "openai_whisper-large-v3-v20240930_turbo_632MB")
+    func testPreferredIsTheTurboModel() {
+        XCTAssertEqual(WhisperModelCatalog.preferred, "openai_whisper-large-v3-v20240930_turbo_632MB")
+    }
+
+    func testM1FallsBackToTheDeviceDefault() {
+        let m1Default = "openai_whisper-large-v3-v20240930_626MB"
+        XCTAssertEqual(
+            WhisperModelCatalog.recommendedModel(
+                supported: ["openai_whisper-small", m1Default], deviceDefault: m1Default),
+            m1Default)
+    }
+
+    func testSupportedMacGetsTurbo() {
+        XCTAssertEqual(
+            WhisperModelCatalog.recommendedModel(
+                supported: ["openai_whisper-small", WhisperModelCatalog.preferred],
+                deviceDefault: "openai_whisper-large-v3-v20240930_626MB"),
+            WhisperModelCatalog.preferred)
     }
 
     func testNewInstallGetsTheRecommendedModel() {

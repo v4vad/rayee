@@ -159,10 +159,18 @@ final class MLXTransformManager: ObservableObject {
             .replacingOccurrences(of: "</dictation>", with: "")
     }
 
-    /// Caps the output at about twice the input (roughly 4 characters per token), with a floor
-    /// for short text. Stops a model that starts answering or rambling from running on.
+    /// Caps the output generously relative to the input (UTF-8 bytes ≥ tokens for every script), with a floor for short text. Stops a model that starts answering or rambling from running on.
     nonisolated static func maxOutputTokens(for text: String) -> Int {
-        max(64, text.count / 2 + 32)
+        max(64, text.utf8.count + 32)
+    }
+
+    /// Removes prompt scaffolding a small model sometimes repeats: the <dictation> tags and a leading "Output:".
+    nonisolated static func cleanedOutput(_ text: String) -> String {
+        var result = sanitized(text).trimmingCharacters(in: .whitespacesAndNewlines)
+        if result.lowercased().hasPrefix("output:") {
+            result = String(result.dropFirst("output:".count)).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return result
     }
 
     /// How long the model stays loaded after its last use. Smart Dictation runs after every
@@ -267,18 +275,26 @@ final class MLXTransformManager: ObservableObject {
             .user(userPrompt),
         ]
         let userInput = UserInput(chat: chat, additionalContext: loadedModel?.additionalContext)
-        let parameters = GenerateParameters(maxTokens: Self.maxOutputTokens(for: text), temperature: 0.0)
+        let cap = Self.maxOutputTokens(for: text)
+        let parameters = GenerateParameters(maxTokens: cap, temperature: 0.0)
 
         // Prepare input within the container's isolation, then stream generation.
         let lmInput = try await container.prepare(input: userInput)
         let stream = try await container.generate(input: lmInput, parameters: parameters)
 
+        var chunkCount = 0
         for await generation in stream {
             try Task.checkCancellation()
             if case .chunk(let token) = generation {
+                chunkCount += 1
                 onToken(token)
             }
         }
+        if chunkCount >= cap {
+            AppLogger.log("MLXTransformManager: output hit the \(cap)-token cap", category: "mlx")
+        }
+        // Generation may have taken a while; keep the model loaded for a full delay from now.
+        resetUnloadTimer()
         // The stream also ends early when the task is cancelled. Report that as a cancellation, not a result.
         try Task.checkCancellation()
     }

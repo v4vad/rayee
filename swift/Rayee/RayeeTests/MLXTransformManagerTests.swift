@@ -68,9 +68,25 @@ final class MLXTransformManagerTests: XCTestCase {
         XCTAssertEqual(MLXTransformManager.maxOutputTokens(for: "hi"), 64)
     }
 
-    func testOutputCapIsAboutTwiceTheInput() {
-        // ~4 characters per token, so 4,000 characters ≈ 1,000 tokens in → about 2,000 out.
-        XCTAssertEqual(MLXTransformManager.maxOutputTokens(for: String(repeating: "a", count: 4_000)), 2_032)
+    func testOutputCapScalesWithInput() {
+        XCTAssertEqual(MLXTransformManager.maxOutputTokens(for: String(repeating: "a", count: 4_000)), 4_032)
+    }
+
+    func testOutputCapLeavesRoomForNonLatinScripts() {
+        let hindi = String(repeating: "न", count: 1_000)
+        XCTAssertGreaterThanOrEqual(MLXTransformManager.maxOutputTokens(for: hindi), 2_000)
+    }
+
+    func testCleanedOutputRemovesTags() {
+        XCTAssertEqual(MLXTransformManager.cleanedOutput("<dictation>Hello there.</dictation>"), "Hello there.")
+    }
+
+    func testCleanedOutputRemovesLeadingOutputLabel() {
+        XCTAssertEqual(MLXTransformManager.cleanedOutput("Output: Can you send it?"), "Can you send it?")
+    }
+
+    func testCleanedOutputKeepsNormalText() {
+        XCTAssertEqual(MLXTransformManager.cleanedOutput("Output is ready."), "Output is ready.")
     }
 
     // MARK: - Unload timer

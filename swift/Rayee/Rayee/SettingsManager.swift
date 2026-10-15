@@ -200,9 +200,9 @@ class SettingsManager: ObservableObject {
             if let saved = UserDefaults.standard.string(forKey: SettingsKey.selectedWhisperKitModel) {
                 return saved
             }
-            // Migrate from old FasterWhisper name
-            if let oldName = UserDefaults.standard.string(forKey: SettingsKey.selectedModel),
-               let migrated = Self.fwToWhisperKitNames[oldName] {
+            // Migrate from old FasterWhisper name; unmapped old names fall back to the old default
+            if let oldName = UserDefaults.standard.string(forKey: SettingsKey.selectedModel) {
+                let migrated = Self.fwToWhisperKitNames[oldName] ?? WhisperModelCatalog.legacyDefault
                 UserDefaults.standard.set(migrated, forKey: SettingsKey.selectedWhisperKitModel)
                 return migrated
             }
@@ -280,9 +280,18 @@ class SettingsManager: ObservableObject {
         let legacyModelFolder = Config.whisperKitDownloadBase
             .appendingPathComponent("models/argmaxinc/whisperkit-coreml")
             .appendingPathComponent(WhisperModelCatalog.legacyDefault)
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        // Only created once the user has transcribed something.
+        let historyDB = home.appendingPathComponent(".rayee/history.db")
+        // Models lived in Documents before v0.7.1.
+        let preV071Models = home.appendingPathComponent("Documents/huggingface/models/argmaxinc/whisperkit-coreml")
+        let fm = FileManager.default
         WhisperModelCatalog.pinDefaultIfNeeded(
             in: UserDefaults.standard,
-            isExistingInstall: completedSetup || FileManager.default.fileExists(atPath: legacyModelFolder.path)
+            isExistingInstall: completedSetup
+                || fm.fileExists(atPath: legacyModelFolder.path)
+                || fm.fileExists(atPath: historyDB.path)
+                || fm.fileExists(atPath: preV071Models.path)
         )
 
         // Load adaptive VAD setting (default: false)
