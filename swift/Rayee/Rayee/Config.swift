@@ -93,6 +93,10 @@ enum Config {
     /// Gives time for the previous app to regain focus
     static let autoPasteDelay: TimeInterval = 0.1
 
+    /// How long after pasting before the user's own clipboard is put back (seconds).
+    /// Gives the target app time to read the pasted text first.
+    static let clipboardRestoreDelay: TimeInterval = 0.5
+
     /// Delay before backup hotkey start attempt from AppDelegate (seconds)
     static let hotkeyBackupStartDelay: TimeInterval = 2.0
 

@@ -38,14 +38,23 @@ class PasteManager: ObservableObject {
             return
         }
 
-        // Step 1: Copy the text to the clipboard
+        // Step 1: Remember what the user had copied, then put our text on the clipboard
         let pasteboard = NSPasteboard.general
+        let snapshot = ClipboardSnapshot(of: pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let ourChangeCount = pasteboard.changeCount
 
-        // Step 2: Small delay to ensure the clipboard is ready
+        // Step 2: Small delay to ensure the clipboard is ready, then paste
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
             self?.simulatePaste()
+
+            // Step 3: Give the user's clipboard back, unless something new was copied meanwhile
+            DispatchQueue.main.asyncAfter(deadline: .now() + Config.clipboardRestoreDelay) {
+                if pasteboard.changeCount == ourChangeCount {
+                    snapshot.restore(to: pasteboard)
+                }
+            }
         }
     }
 
@@ -83,5 +92,36 @@ class PasteManager: ObservableObject {
             keyUp.post(tap: .cghidEventTap)
             print("PasteManager: Paste command sent")
         }
+    }
+}
+
+/// A copy of everything on a pasteboard (text, images, files, rich text),
+/// so it can be put back after Rayee borrows the clipboard to paste.
+struct ClipboardSnapshot {
+    private let items: [[NSPasteboard.PasteboardType: Data]]
+
+    init(of pasteboard: NSPasteboard) {
+        items = (pasteboard.pasteboardItems ?? []).map { item in
+            var dataByType: [NSPasteboard.PasteboardType: Data] = [:]
+            for type in item.types {
+                if let data = item.data(forType: type) {
+                    dataByType[type] = data
+                }
+            }
+            return dataByType
+        }
+    }
+
+    func restore(to pasteboard: NSPasteboard) {
+        pasteboard.clearContents()
+        guard !items.isEmpty else { return }
+        let restoredItems = items.map { dataByType -> NSPasteboardItem in
+            let item = NSPasteboardItem()
+            for (type, data) in dataByType {
+                item.setData(data, forType: type)
+            }
+            return item
+        }
+        pasteboard.writeObjects(restoredItems)
     }
 }
