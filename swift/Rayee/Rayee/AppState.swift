@@ -4,10 +4,7 @@
 //
 //  Tracks the app's current state: what it's doing, transcribed text, errors, etc.
 //  This is the "brain" that all UI components read from.
-//
-//  Note: Recording and health check logic have been extracted to:
-//  - TranscriptionCoordinator: handles recording → transcription → paste
-//  - HealthMonitor: handles periodic server health checks
+//  Recording → transcription → paste lives in TranscriptionCoordinator.
 //
 
 import Foundation
@@ -59,9 +56,6 @@ class AppState: ObservableObject {
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
-    /// Tracks whether a deferred auto-paste is waiting for smart dictation to finish
-    private var pendingSmartDictationPaste = false
-
     // MARK: - Initialization
 
     init() {
@@ -90,22 +84,6 @@ class AppState: ObservableObject {
         transcriptionCoordinator.stopRecording()
     }
 
-    /// Copy the transcribed text to the clipboard
-    func copyToClipboard() {
-        guard !transcribedText.isEmpty else { return }
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(transcribedText, forType: .string)
-    }
-
-    /// Clear any error message
-    func clearError() {
-        errorMessage = nil
-        if status == .error {
-            status = .ready
-        }
-    }
-
     /// Load the WhisperKit model at startup
     func loadWhisperModel() {
         let modelName = SettingsManager.shared.selectedWhisperKitModel
@@ -132,17 +110,6 @@ class AppState: ObservableObject {
         case .recording: return "waveform.circle.fill"
         case .transcribing: return "text.bubble"
         case .error: return "exclamationmark.triangle"
-        }
-    }
-
-    /// Color for the status indicator dot
-    var statusColor: Color {
-        switch status {
-        case .loadingModels: return .blue
-        case .ready: return .green
-        case .recording: return .red
-        case .transcribing: return .orange
-        case .error: return .red
         }
     }
 
@@ -258,9 +225,10 @@ class AppState: ObservableObject {
 
                 let settings = SettingsManager.shared
                 if settings.smartDictationEnabled && settings.transformationsEnabled {
-                    let thenPaste = transcriptionCoordinator.pendingSmartDictationPaste
-                    pendingSmartDictationPaste = thenPaste
-                    handleTransformation(type: .smartDictation, thenPaste: thenPaste)
+                    handleTransformation(
+                        type: .smartDictation,
+                        thenPaste: transcriptionCoordinator.pendingSmartDictationPaste
+                    )
                 }
             } else {
                 // Paste happened successfully, hide the panel
@@ -359,7 +327,6 @@ class AppState: ObservableObject {
             PasteManager.shared.pasteText(text)
         }
         recordingPanelController.hidePanel()
-        pendingSmartDictationPaste = false
     }
 
     /// Handle user accepting the transformed text
@@ -379,8 +346,6 @@ class AppState: ObservableObject {
         }
         recordingPanelController.transformState.reset()
         recordingPanelController.updateWindowSizeForTransform()
-        // User explicitly reverted — cancel any deferred auto-paste
-        pendingSmartDictationPaste = false
     }
 
     /// Cancel recording without transcribing (called when user presses Escape)

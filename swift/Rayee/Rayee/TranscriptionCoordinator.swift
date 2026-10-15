@@ -4,7 +4,7 @@
 //
 //  Coordinates the entire transcription flow:
 //  1. Start recording (via AudioRecorder)
-//  2. Send audio to Python server for transcription
+//  2. Transcribe the audio on-device with WhisperKit
 //  3. Save to history and auto-paste if enabled
 //
 //  This keeps AppState simple - it just observes the coordinator's state.
@@ -91,7 +91,7 @@ class TranscriptionCoordinator: ObservableObject {
             isRecording = false
             audioFeedback.playErrorSound()
         }
-        // Can't cancel transcription once audio is sent to server
+        // A transcription already in progress runs to completion
     }
 
     // MARK: - Private Methods
@@ -123,10 +123,6 @@ class TranscriptionCoordinator: ObservableObject {
         )
 
         // Set up callbacks
-        audioRecorder?.onSpeechDetected = {
-            print("[TranscriptionCoordinator] Speech detected")
-        }
-
         audioRecorder?.onRecordingComplete = { [weak self] result in
             self?.handleRecordingComplete(result)
         }

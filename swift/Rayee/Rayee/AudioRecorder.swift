@@ -2,8 +2,8 @@
 //  AudioRecorder.swift
 //  Rayee
 //
-//  Records audio using AVFoundation and detects silence to auto-stop.
-//  This runs in Swift (not Python) so it can use the app's microphone permission.
+//  Records 16kHz mono Float32 audio with AVAudioEngine and stops automatically
+//  after the user has been silent for the configured time.
 //
 
 import Foundation
@@ -14,7 +14,6 @@ enum AudioRecorderError: LocalizedError {
     case noMicrophonePermission
     case engineStartFailed(String)
     case noAudioRecorded
-    case failedToSaveFile(String)
 
     var errorDescription: String? {
         switch self {
@@ -24,21 +23,18 @@ enum AudioRecorderError: LocalizedError {
             return "Failed to start audio recording: \(message)"
         case .noAudioRecorded:
             return "No audio was recorded."
-        case .failedToSaveFile(let message):
-            return "Failed to save audio file: \(message)"
         }
     }
 }
 
 // Result of a recording session
 struct RecordingResult {
-    let audioPath: URL      // Path to the saved WAV file
     let duration: TimeInterval  // How long the recording was
-    let audioData: [Float]
+    let audioData: [Float]      // 16kHz mono samples, passed straight to WhisperKit
 }
 
 class AudioRecorder {
-    // Audio format settings - must match what Python/Whisper expects
+    // Audio format settings - Whisper expects 16kHz mono
     private let sampleRate: Double = Config.audioSampleRate
     private let channels: AVAudioChannelCount = 1  // Mono
 
@@ -68,7 +64,6 @@ class AudioRecorder {
     private var speechDetected = false
 
     // Callbacks
-    var onSpeechDetected: (() -> Void)?
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
 
@@ -208,17 +203,8 @@ class AudioRecorder {
             return
         }
 
-        // Save to WAV file
-        do {
-            let audioPath = try saveToWavFile()
-            let duration = Double(audioBuffer.count) / sampleRate
-            let result = RecordingResult(audioPath: audioPath, duration: duration, audioData: audioBuffer)
-            onRecordingComplete?(.success(result))
-        } catch let error as AudioRecorderError {
-            onRecordingComplete?(.failure(error))
-        } catch {
-            onRecordingComplete?(.failure(.failedToSaveFile(error.localizedDescription)))
-        }
+        let duration = Double(audioBuffer.count) / sampleRate
+        onRecordingComplete?(.success(RecordingResult(duration: duration, audioData: audioBuffer)))
     }
 
     /// Cancel recording without saving
@@ -301,9 +287,6 @@ class AudioRecorder {
         if isSpeech {
             if !speechDetected {
                 speechDetected = true
-                DispatchQueue.main.async { [weak self] in
-                    self?.onSpeechDetected?()
-                }
                 print("[AudioRecorder] Speech detected")
             }
             lastSpeechTime = now
@@ -337,65 +320,5 @@ class AudioRecorder {
                 }
             }
         }
-    }
-
-    /// Save audio buffer to WAV file
-    private func saveToWavFile() throws -> URL {
-        // Create the .rayee directory if needed
-        let rayeeDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".rayee")
-
-        try? FileManager.default.createDirectory(
-            at: rayeeDir,
-            withIntermediateDirectories: true
-        )
-
-        let audioPath = rayeeDir.appendingPathComponent("audio_buffer.wav")
-
-        // Create WAV file
-        guard let format = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: sampleRate,
-            channels: channels,
-            interleaved: false
-        ) else {
-            throw AudioRecorderError.failedToSaveFile("Failed to create audio format")
-        }
-
-        guard let audioFile = try? AVAudioFile(
-            forWriting: audioPath,
-            settings: format.settings,
-            commonFormat: .pcmFormatFloat32,
-            interleaved: false
-        ) else {
-            throw AudioRecorderError.failedToSaveFile("Failed to create audio file")
-        }
-
-        // Create buffer with our audio data
-        let frameCount = AVAudioFrameCount(audioBuffer.count)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
-            throw AudioRecorderError.failedToSaveFile("Failed to create audio buffer")
-        }
-
-        buffer.frameLength = frameCount
-
-        // Copy our samples to the buffer
-        if let channelData = buffer.floatChannelData?[0] {
-            audioBuffer.withUnsafeBufferPointer { src in
-                channelData.update(from: src.baseAddress!, count: src.count)
-            }
-        }
-
-        // Write to file
-        do {
-            try audioFile.write(from: buffer)
-        } catch {
-            throw AudioRecorderError.failedToSaveFile(error.localizedDescription)
-        }
-
-        let duration = Double(audioBuffer.count) / sampleRate
-        print("[AudioRecorder] Saved \(duration)s of audio to \(audioPath.path)")
-
-        return audioPath
     }
 }

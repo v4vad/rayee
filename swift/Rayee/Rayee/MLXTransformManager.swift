@@ -16,14 +16,11 @@ import Tokenizers
 
 enum MLXTransformError: LocalizedError {
     case modelNotLoaded
-    case streamingFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded:
-            return "MLX native model is not loaded. Please wait."
-        case .streamingFailed(let reason):
-            return "Streaming failed: \(reason)"
+            return "The writing model is not loaded."
         }
     }
 }
