@@ -35,7 +35,7 @@ the app only when a step says "Manual check".
 |---|---|---|---|---|
 | 1. Clean-up (dead code, wrong text, stale docs) | `2026-10-15-01-cleanup.md` | `release/v0.8` | part of v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
 | 2. Recording and feedback fixes | `2026-10-15-02-recording-fixes.md` | `release/v0.8` | v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
-| 3. AI model upgrades | write it at the start of Phase 3 (see below) | `release/v0.9` | v0.9 | Not planned yet |
+| 3. AI model upgrades | `2026-10-16-03-model-upgrades.md` | `release/v0.9` | v0.9 | Done, awaiting user testing (default text model still Llama) |
 | 4. Live transcription | brainstorm, then plan (see below) | `feature/live-transcription` | v1.0 | Not planned yet |
 
 Phases 1 and 2 share one branch and ship together as v0.8. Phase 1 changes nothing you can see in
@@ -151,6 +151,10 @@ installed `argmax-oss-swift` version's documentation for it first.
 | 2026-10-15 | Remove the "Fast mode" switch instead of wiring it up | WhisperKit already decodes greedily, so there's no slower mode to switch away from. The switch can't do anything useful. |
 | 2026-10-15 | Keep `PillButtonStyle` | `TransformationPreviewView` still uses it. |
 | 2026-10-15 | Phases 1 and 2 ship together as v0.8 | Phase 1 has almost nothing a user would notice. |
+| 2026-10-16 | v0.9 keeps Llama 3.2 1B as the default text model; Qwen3 1.7B and 4B are opt-in | User will score the candidates later with `2026-10-16-03-model-eval-set.md`; changing the default is one line. |
+| 2026-10-16 | Qwen3 over Gemma 4 for the two upgrade choices | Longer support in mlx-swift-lm and a documented thinking-off switch. |
+| 2026-10-16 | Speech default follows WhisperKit's per-Mac support: large-v3 turbo (632 MB) where supported (M2+), WhisperKit's own default on M1; existing installs pinned to small | Turbo isn't in WhisperKit's M1 support list; existing users must not get a surprise download. |
+| 2026-10-16 | Show text-model download progress | User reported a "slow load" that was really a 695 MB first-time download shown as "Loading...". |
 | 2026-10-16 | Ship v0.8 without the hands-on check; fix anything users hit afterwards | User decision. All 32 unit tests pass and a whole-branch review was done and its findings fixed. |
 | 2026-10-16 | Phase 2 Task 2: user kept the 30 s silence auto-stop (default 30 s, slider 5–60 s, no reset of saved settings); only the recording limit changes, 1 min → 5 min. F3 (stop at a natural pause) is not done in v0.8. | User decision. The brief asked for a bullet, but this log is a table, so the entry follows the table style. |
 
@@ -160,3 +164,4 @@ installed `argmax-oss-swift` version's documentation for it first.
 - **2026-10-16:** Phase 1 Tasks 0-5 implemented on release/v0.8 via subagents with per-task review. Task 3 Step 2h (deleting ~/.rayee/audio_buffer.wav) skipped as it is outside the repo, left for the user. Task 4 manual hotkey check pending with the user. Next: final review of Phase 1, then Phase 2 Task 1.
 - **2026-10-16:** Phase 2 Task 3 (F10, convert each mic buffer once): F10 confirmed. With the old repeat-input behaviour, `testAudioIsNeverRepeated` fails; with the fix it passes. The resampler holds back ~15 ms (about 236 frames at 16kHz, measured on 5 buffers and about 231 on 10), so the length test tolerance was widened to ±300 frames. Next: Phase 2 Task 4 (SpeechGate, pre-roll).
 - **2026-10-16:** Phase 2 Tasks 1-7 done via subagents (user chose one whole-branch review instead of per-task reviews). Final review: 0 critical, 2 important (start-failure error wiped by a stale isRecording update; transform UI stuck when a new recording starts mid-transform), both fixed with 4 minor fixes (error panel 190pt, clipboard restore 1.0s, setup-guide once-only guard, stale comment). Parked: two pastes within ~1s can lose the clipboard; large clipboard snapshot can stall; adaptive VAD cap can block auto-stop in noisy rooms. 32 tests pass. User skipped the hands-on check and released v0.8. Next: Phase 3.
+- **2026-10-16:** Phase 3 done on release/v0.9 (Tasks 1-3, plus 3b download progress after a user report). Whole-branch review: 0 critical, 2 important (turbo unsupported on M1; character-based output cap truncated non-Latin scripts), both fixed with 6 minors. 64 tests pass. Not yet released: waiting on the user's testing and the text-model scoring (eval set). Next: user testing, then /publish-release v0.9.
