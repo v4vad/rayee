@@ -33,8 +33,8 @@ the app only when a step says "Manual check".
 
 | Phase | Plan file | Branch | Ships as | Status |
 |---|---|---|---|---|
-| 1. Clean-up (dead code, wrong text, stale docs) | `2026-10-15-01-cleanup.md` | `release/v0.8` | part of v0.8 | Done (manual hotkey check pending) |
-| 2. Recording and feedback fixes | `2026-10-15-02-recording-fixes.md` | `release/v0.8` | v0.8 | Not started |
+| 1. Clean-up (dead code, wrong text, stale docs) | `2026-10-15-01-cleanup.md` | `release/v0.8` | part of v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
+| 2. Recording and feedback fixes | `2026-10-15-02-recording-fixes.md` | `release/v0.8` | v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
 | 3. AI model upgrades | write it at the start of Phase 3 (see below) | `release/v0.9` | v0.9 | Not planned yet |
 | 4. Live transcription | brainstorm, then plan (see below) | `feature/live-transcription` | v1.0 | Not planned yet |
 
@@ -151,6 +151,7 @@ installed `argmax-oss-swift` version's documentation for it first.
 | 2026-10-15 | Remove the "Fast mode" switch instead of wiring it up | WhisperKit already decodes greedily, so there's no slower mode to switch away from. The switch can't do anything useful. |
 | 2026-10-15 | Keep `PillButtonStyle` | `TransformationPreviewView` still uses it. |
 | 2026-10-15 | Phases 1 and 2 ship together as v0.8 | Phase 1 has almost nothing a user would notice. |
+| 2026-10-16 | Ship v0.8 without the hands-on check; fix anything users hit afterwards | User decision. All 32 unit tests pass and a whole-branch review was done and its findings fixed. |
 | 2026-10-16 | Phase 2 Task 2: user kept the 30 s silence auto-stop (default 30 s, slider 5–60 s, no reset of saved settings); only the recording limit changes, 1 min → 5 min. F3 (stop at a natural pause) is not done in v0.8. | User decision. The brief asked for a bullet, but this log is a table, so the entry follows the table style. |
 
 ## Session log
@@ -158,3 +159,4 @@ installed `argmax-oss-swift` version's documentation for it first.
 - **2026-10-15:** Reviewed the whole app and wrote this roadmap and the Phase 1 and Phase 2 plans. Nothing implemented yet. Next: Phase 1, Task 0. Tests can't run until the Metal Toolchain is installed (Task 0 covers it).
 - **2026-10-16:** Phase 1 Tasks 0-5 implemented on release/v0.8 via subagents with per-task review. Task 3 Step 2h (deleting ~/.rayee/audio_buffer.wav) skipped as it is outside the repo, left for the user. Task 4 manual hotkey check pending with the user. Next: final review of Phase 1, then Phase 2 Task 1.
 - **2026-10-16:** Phase 2 Task 3 (F10, convert each mic buffer once): F10 confirmed. With the old repeat-input behaviour, `testAudioIsNeverRepeated` fails; with the fix it passes. The resampler holds back ~15 ms (about 236 frames at 16kHz, measured on 5 buffers and about 231 on 10), so the length test tolerance was widened to ±300 frames. Next: Phase 2 Task 4 (SpeechGate, pre-roll).
+- **2026-10-16:** Phase 2 Tasks 1-7 done via subagents (user chose one whole-branch review instead of per-task reviews). Final review: 0 critical, 2 important (start-failure error wiped by a stale isRecording update; transform UI stuck when a new recording starts mid-transform), both fixed with 4 minor fixes (error panel 190pt, clipboard restore 1.0s, setup-guide once-only guard, stale comment). Parked: two pastes within ~1s can lose the clipboard; large clipboard snapshot can stall; adaptive VAD cap can block auto-stop in noisy rooms. 32 tests pass. User skipped the hands-on check and released v0.8. Next: Phase 3.

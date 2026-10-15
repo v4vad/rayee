@@ -1,5 +1,15 @@
 # Rayee Roadmap
 
+## Completed: v0.8 reliability release
+
+- Errors (like a blocked microphone) now show in the panel instead of it silently closing
+- Recordings can run up to 5 minutes (was 1 minute)
+- The first word is no longer clipped, and audio is never repeated
+- Your clipboard is put back after auto-paste
+- Smart Dictation saves the cleaned text to History, and Discard really stops it
+
+---
+
 ## Completed: Eliminated Python — Pure Native App
 
 **Shipped in v0.4.** Replaced the Python server with:
