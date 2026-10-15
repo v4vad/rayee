@@ -183,7 +183,7 @@ class SettingsManager: ObservableObject {
         "small": "openai_whisper-small",
         "medium": "openai_whisper-medium",
         "large-v3": "openai_whisper-large-v3",
-        "large-v3-turbo": "openai_whisper-large-v3-turbo",
+        "large-v3-turbo": "openai_whisper-large-v3_turbo",
         "distil-small.en": "distil-whisper_distil-small.en",
         "distil-medium.en": "distil-whisper_distil-medium.en",
         "distil-large-v3": "distil-whisper_distil-large-v3"
@@ -200,7 +200,7 @@ class SettingsManager: ObservableObject {
                 UserDefaults.standard.set(migrated, forKey: SettingsKey.selectedWhisperKitModel)
                 return migrated
             }
-            return "openai_whisper-small"
+            return WhisperModelCatalog.recommended
         }
         set { UserDefaults.standard.set(newValue, forKey: SettingsKey.selectedWhisperKitModel) }
     }
@@ -265,7 +265,19 @@ class SettingsManager: ObservableObject {
         }
 
         // Load setup completion flag (default: false)
-        self.hasCompletedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
+        let completedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
+        self.hasCompletedSetup = completedSetup
+
+        // v0.9: save a speech model choice once. Existing installs keep the old default
+        // (small); new installs get the recommended turbo model.
+        // (Uses the local `completedSetup`: `self` can't be read until init has set every property.)
+        let legacyModelFolder = Config.whisperKitDownloadBase
+            .appendingPathComponent("models/argmaxinc/whisperkit-coreml")
+            .appendingPathComponent(WhisperModelCatalog.legacyDefault)
+        WhisperModelCatalog.pinDefaultIfNeeded(
+            in: UserDefaults.standard,
+            isExistingInstall: completedSetup || FileManager.default.fileExists(atPath: legacyModelFolder.path)
+        )
 
         // Load adaptive VAD setting (default: false)
         self.adaptiveVADEnabled = UserDefaults.standard.bool(forKey: SettingsKey.adaptiveVADEnabled)

@@ -219,17 +219,6 @@ struct ModelsSettingsTab: View {
     // MARK: - Description Helper
 
     private func modelDescription(_ model: WKModelInfo) -> String {
-        let name = model.id
-        if name.contains("large-v3-turbo") { return "Fast large model, great accuracy" }
-        if name.contains("large-v3") { return "Highest accuracy, slowest" }
-        if name.contains("large-v2") { return "High accuracy, large size" }
-        if name.contains("distil-large") { return "Distilled large, English only" }
-        if name.contains("distil-medium") { return "Distilled medium, English only" }
-        if name.contains("distil-small") { return "Distilled small, English only" }
-        if name.contains("medium") { return "Good accuracy, moderate speed" }
-        if name.contains("small") { return "Balanced speed and accuracy" }
-        if name.contains("base") { return "Fast with reasonable accuracy" }
-        if name.contains("tiny") { return "Fastest, lower accuracy" }
-        return "WhisperKit model"
+        WhisperModelCatalog.description(for: model.id)
     }
 }

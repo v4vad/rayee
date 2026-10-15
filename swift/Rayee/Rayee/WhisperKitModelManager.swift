@@ -26,20 +26,71 @@ enum WKModelStatus: Equatable {
     case error(String)
 }
 
+/// Which speech model to recommend, plus size and description estimates for the Models tab.
+/// Pure logic with no downloads, so it can be unit-tested.
+enum WhisperModelCatalog {
+    /// Large v3 turbo (September 2024 weights), compressed: close to large-v3 accuracy at a fraction of the size.
+    static let recommended = "openai_whisper-large-v3-v20240930_turbo_632MB"
+
+    /// The default before v0.9. Existing installs that never picked a model keep it.
+    static let legacyDefault = "openai_whisper-small"
+
+    /// Saves a speech model choice once, for installs that don't have one yet.
+    /// Rayee used to save the choice only when the user picked a model, so an existing user
+    /// with nothing saved would otherwise be moved to the new default and a large download.
+    static func pinDefaultIfNeeded(in defaults: UserDefaults, isExistingInstall: Bool) {
+        guard defaults.string(forKey: SettingsKey.selectedWhisperKitModel) == nil,
+              defaults.string(forKey: SettingsKey.selectedModel) == nil else { return }
+        defaults.set(isExistingInstall ? legacyDefault : recommended, forKey: SettingsKey.selectedWhisperKitModel)
+    }
+
+    /// Download size in MB. Compressed models carry their size in the name, e.g. "..._632MB".
+    static func estimatedSizeMB(for name: String) -> Int {
+        if let range = name.range(of: #"_(\d+)MB$"#, options: .regularExpression) {
+            let digits = name[range].dropFirst().dropLast(2)
+            if let size = Int(digits) { return size }
+        }
+        if name.contains("distil-large") { return 756 }
+        if name.contains("distil-medium") { return 394 }
+        if name.contains("distil-small") { return 166 }
+        if name.contains("large") { return 1600 }
+        if name.contains("medium") { return 793 }
+        if name.contains("small") { return 244 }
+        if name.contains("base") { return 145 }
+        if name.contains("tiny") { return 75 }
+        return 244
+    }
+
+    /// One-line description for the Models tab.
+    static func description(for name: String) -> String {
+        if name == recommended { return "Recommended — fast large model, great accuracy" }
+        if name.contains("distil-large") { return "Distilled large, English only" }
+        if name.contains("distil-medium") { return "Distilled medium, English only" }
+        if name.contains("distil-small") { return "Distilled small, English only" }
+        if name.contains("turbo") { return "Fast large model, great accuracy" }
+        if name.contains("large-v3") { return "Highest accuracy, slowest" }
+        if name.contains("large-v2") { return "High accuracy, large size" }
+        if name.contains("medium") { return "Good accuracy, moderate speed" }
+        if name.contains("small") { return "Balanced speed and accuracy" }
+        if name.contains("base") { return "Fast with reasonable accuracy" }
+        if name.contains("tiny") { return "Fastest, lower accuracy" }
+        return "WhisperKit model"
+    }
+}
+
 @MainActor
 class WhisperKitModelManager: ObservableObject {
     static let shared = WhisperKitModelManager()
 
     @Published var models: [WKModelInfo] = []
-    @Published var selectedModelName: String = "openai_whisper-small"
+    @Published var selectedModelName: String = WhisperModelCatalog.recommended
     @Published var isLoading = false
     @Published var errorMessage: String?
 
     private var downloadTasks: [String: Task<Void, Never>] = [:]
 
     private init() {
-        selectedModelName = UserDefaults.standard.string(forKey: "selectedWhisperKitModel")
-            ?? "openai_whisper-small"
+        selectedModelName = SettingsManager.shared.selectedWhisperKitModel
     }
 
     // MARK: - Model Listing
@@ -55,7 +106,7 @@ class WhisperKitModelManager: ObservableObject {
                 WKModelInfo(
                     id: name,
                     status: downloaded.contains(name) ? .ready : .notDownloaded,
-                    sizeMB: estimatedSizeMB(for: name)
+                    sizeMB: WhisperModelCatalog.estimatedSizeMB(for: name)
                 )
             }
         } catch {
@@ -107,7 +158,7 @@ class WhisperKitModelManager: ObservableObject {
             }
             updateStatus(name, .notDownloaded)
             if selectedModelName == name {
-                selectModel("openai_whisper-small")
+                selectModel(WhisperModelCatalog.recommended)
             }
         } catch {
             errorMessage = "Failed to delete model: \(error.localizedDescription)"
@@ -143,18 +194,5 @@ class WhisperKitModelManager: ObservableObject {
                 .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true }
                 .map { $0.lastPathComponent }
         )
-    }
-
-    private func estimatedSizeMB(for name: String) -> Int {
-        if name.contains("large-v3-turbo") { return 809 }
-        if name.contains("large-v3") { return 1600 }
-        if name.contains("distil-large") { return 756 }
-        if name.contains("distil-medium") { return 394 }
-        if name.contains("distil-small") { return 166 }
-        if name.contains("medium") { return 793 }
-        if name.contains("small") { return 244 }
-        if name.contains("base") { return 145 }
-        if name.contains("tiny") { return 75 }
-        return 244
     }
 }
