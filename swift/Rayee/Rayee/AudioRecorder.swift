@@ -2,8 +2,8 @@
 //  AudioRecorder.swift
 //  Rayee
 //
-//  Records audio using AVFoundation and detects silence to auto-stop.
-//  This runs in Swift (not Python) so it can use the app's microphone permission.
+//  Records 16kHz mono Float32 audio with AVAudioEngine and stops automatically
+//  after the user has been silent for the configured time.
 //
 
 import Foundation
@@ -14,7 +14,6 @@ enum AudioRecorderError: LocalizedError {
     case noMicrophonePermission
     case engineStartFailed(String)
     case noAudioRecorded
-    case failedToSaveFile(String)
 
     var errorDescription: String? {
         switch self {
@@ -24,37 +23,29 @@ enum AudioRecorderError: LocalizedError {
             return "Failed to start audio recording: \(message)"
         case .noAudioRecorded:
             return "No audio was recorded."
-        case .failedToSaveFile(let message):
-            return "Failed to save audio file: \(message)"
         }
     }
 }
 
 // Result of a recording session
 struct RecordingResult {
-    let audioPath: URL      // Path to the saved WAV file
     let duration: TimeInterval  // How long the recording was
-    let audioData: [Float]
+    let audioData: [Float]      // 16kHz mono samples, passed straight to WhisperKit
 }
 
 class AudioRecorder {
-    // Audio format settings - must match what Python/Whisper expects
+    // Audio format settings - Whisper expects 16kHz mono
     private let sampleRate: Double = Config.audioSampleRate
     private let channels: AVAudioChannelCount = 1  // Mono
 
     // Silence detection settings
-    private let silenceThreshold: Float = Config.silenceThreshold
     private var silenceDuration: TimeInterval   // How long silence triggers stop
     private let maxDuration: TimeInterval = Config.maxRecordingDuration
     private let timeoutEnabled: Bool            // Whether to enforce maxDuration
 
-    // Adaptive VAD
-    private var adaptiveVADEnabled: Bool
-    private var isCalibrating = false
-    private var calibrationRMSValues: [Float] = []
-    private var calibrationChunkCount = 0
-    private let calibrationChunkTarget = 2  // 2 chunks × 100ms = 200ms
-    private var adaptedThreshold: Float
+    // Speech detection and which samples to keep (see SpeechGate)
+    private let adaptiveVADEnabled: Bool
+    private var gate: SpeechGate
 
     // Audio engine components
     private var audioEngine: AVAudioEngine?
@@ -62,13 +53,10 @@ class AudioRecorder {
 
     // Recording state
     private var isRecording = false
-    private var audioBuffer: [Float] = []
     private var recordingStartTime: Date?
     private var lastSpeechTime: Date?
-    private var speechDetected = false
 
     // Callbacks
-    var onSpeechDetected: (() -> Void)?
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
 
@@ -78,7 +66,7 @@ class AudioRecorder {
         self.silenceDuration = silenceDuration
         self.timeoutEnabled = timeoutEnabled
         self.adaptiveVADEnabled = adaptiveVADEnabled
-        self.adaptedThreshold = Config.silenceThreshold
+        self.gate = SpeechGate(adaptive: adaptiveVADEnabled)
     }
 
     // MARK: - Public Methods
@@ -126,18 +114,10 @@ class AudioRecorder {
         }
 
         // Reset state
-        audioBuffer = []
-        audioBuffer.reserveCapacity(Int(maxDuration * sampleRate))
+        gate = SpeechGate(adaptive: adaptiveVADEnabled)
         recordingStartTime = Date()
         lastSpeechTime = nil
-        speechDetected = false
         isRecording = true
-
-        // Reset adaptive VAD calibration
-        isCalibrating = adaptiveVADEnabled
-        calibrationRMSValues = []
-        calibrationChunkCount = 0
-        adaptedThreshold = Config.silenceThreshold
 
         // Create audio engine
         audioEngine = AVAudioEngine()
@@ -203,22 +183,14 @@ class AudioRecorder {
         print("[AudioRecorder] Recording stopped")
 
         // Check if we got any audio
-        if audioBuffer.isEmpty {
+        let audioData = gate.kept
+        if audioData.isEmpty {
             onRecordingComplete?(.failure(.noAudioRecorded))
             return
         }
 
-        // Save to WAV file
-        do {
-            let audioPath = try saveToWavFile()
-            let duration = Double(audioBuffer.count) / sampleRate
-            let result = RecordingResult(audioPath: audioPath, duration: duration, audioData: audioBuffer)
-            onRecordingComplete?(.success(result))
-        } catch let error as AudioRecorderError {
-            onRecordingComplete?(.failure(error))
-        } catch {
-            onRecordingComplete?(.failure(.failedToSaveFile(error.localizedDescription)))
-        }
+        let duration = Double(audioData.count) / sampleRate
+        onRecordingComplete?(.success(RecordingResult(duration: duration, audioData: audioData)))
     }
 
     /// Cancel recording without saving
@@ -228,11 +200,45 @@ class AudioRecorder {
         audioEngine?.stop()
         audioEngine = nil
         inputNode = nil
-        audioBuffer = []
+        gate = SpeechGate(adaptive: adaptiveVADEnabled)
         print("[AudioRecorder] Recording cancelled")
     }
 
     // MARK: - Private Methods
+
+    /// Converts one microphone buffer to 16kHz mono.
+    /// The input block hands the buffer over exactly once, then reports "no data for now".
+    /// Returning the same buffer on every call makes the converter read the same audio twice
+    /// whenever it asks for more input to fill its output.
+    static func convert(
+        _ buffer: AVAudioPCMBuffer,
+        using converter: AVAudioConverter,
+        to targetFormat: AVAudioFormat
+    ) -> AVAudioPCMBuffer? {
+        let ratio = targetFormat.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up)) + 1
+        guard let output = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else {
+            return nil
+        }
+
+        var delivered = false
+        var error: NSError?
+        let status = converter.convert(to: output, error: &error) { _, inputStatus in
+            if delivered {
+                inputStatus.pointee = .noDataNow
+                return nil
+            }
+            delivered = true
+            inputStatus.pointee = .haveData
+            return buffer
+        }
+
+        guard status != .error, error == nil else {
+            print("[AudioRecorder] Conversion error: \(error?.localizedDescription ?? "unknown")")
+            return nil
+        }
+        return output
+    }
 
     /// Process incoming audio buffer
     private func processAudioBuffer(
@@ -243,76 +249,26 @@ class AudioRecorder {
         guard isRecording else { return }
 
         // Convert to our target format (16kHz mono)
-        let frameCount = AVAudioFrameCount(
-            Double(buffer.frameLength) * (sampleRate / buffer.format.sampleRate)
-        )
-
-        guard let convertedBuffer = AVAudioPCMBuffer(
-            pcmFormat: targetFormat,
-            frameCapacity: frameCount
-        ) else { return }
-
-        var error: NSError?
-        let status = converter.convert(to: convertedBuffer, error: &error) { inNumPackets, outStatus in
-            outStatus.pointee = .haveData
-            return buffer
-        }
-
-        guard status != .error, error == nil else {
-            print("[AudioRecorder] Conversion error: \(error?.localizedDescription ?? "unknown")")
+        guard let convertedBuffer = AudioRecorder.convert(buffer, using: converter, to: targetFormat),
+              let channelData = convertedBuffer.floatChannelData?[0] else {
             return
         }
-
-        // Get the audio data
-        guard let channelData = convertedBuffer.floatChannelData?[0] else { return }
         let frameLength = Int(convertedBuffer.frameLength)
+        guard frameLength > 0 else { return }
+        let samples = Array(UnsafeBufferPointer(start: channelData, count: frameLength))
 
         // Calculate audio level (RMS)
-        var sumSquares: Float = 0
-        for i in 0..<frameLength {
-            let sample = channelData[i]
-            sumSquares += sample * sample
-        }
-        let rms = sqrt(sumSquares / Float(frameLength))
+        let rms = sqrt(samples.reduce(0) { $0 + $1 * $1 } / Float(frameLength))
 
         // Report audio level to UI
         DispatchQueue.main.async { [weak self] in
             self?.onAudioLevel?(rms)
         }
 
-        // Adaptive VAD: calibrate during first 200ms
-        if isCalibrating {
-            calibrationRMSValues.append(rms)
-            calibrationChunkCount += 1
-            if calibrationChunkCount >= calibrationChunkTarget {
-                let avgRMS = calibrationRMSValues.reduce(0, +) / Float(calibrationRMSValues.count)
-                adaptedThreshold = max(avgRMS * 1.5, Config.minSilenceThreshold)
-                isCalibrating = false
-                print("[AudioRecorder] Adaptive VAD calibrated: threshold=\(adaptedThreshold)")
-            }
-            return
-        }
-
-        // Check for speech vs silence
-        let effectiveThreshold = adaptiveVADEnabled ? adaptedThreshold : silenceThreshold
-        let isSpeech = rms > effectiveThreshold
+        // Decide whether this is speech and which samples to keep
         let now = Date()
-
-        if isSpeech {
-            if !speechDetected {
-                speechDetected = true
-                DispatchQueue.main.async { [weak self] in
-                    self?.onSpeechDetected?()
-                }
-                print("[AudioRecorder] Speech detected")
-            }
+        if gate.feed(samples, rms: rms) {
             lastSpeechTime = now
-        }
-
-        // Only keep audio after speech is detected
-        if speechDetected {
-            // Append samples to buffer
-            audioBuffer.append(contentsOf: UnsafeBufferPointer(start: channelData, count: frameLength))
         }
 
         // Check stopping conditions
@@ -328,74 +284,80 @@ class AudioRecorder {
         }
 
         // Stop if silence after speech
-        if speechDetected, let lastSpeech = lastSpeechTime {
-            let silenceTime = now.timeIntervalSince(lastSpeech)
-            if silenceTime >= silenceDuration {
-                print("[AudioRecorder] Silence detected, stopping")
-                DispatchQueue.main.async { [weak self] in
-                    self?.stopRecording()
-                }
+        if gate.speechDetected, let lastSpeech = lastSpeechTime,
+           now.timeIntervalSince(lastSpeech) >= silenceDuration {
+            print("[AudioRecorder] Silence detected, stopping")
+            DispatchQueue.main.async { [weak self] in
+                self?.stopRecording()
             }
         }
     }
+}
 
-    /// Save audio buffer to WAV file
-    private func saveToWavFile() throws -> URL {
-        // Create the .rayee directory if needed
-        let rayeeDir = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".rayee")
+/// Decides which samples to keep and whether each chunk is speech.
+/// Pure logic with no audio hardware, so it can be unit-tested with made-up chunks.
+struct SpeechGate {
+    private let adaptive: Bool
+    private let preRollSampleLimit: Int
+    private let calibrationChunkTarget = 2  // 2 chunks × 100ms = 200ms
 
-        try? FileManager.default.createDirectory(
-            at: rayeeDir,
-            withIntermediateDirectories: true
-        )
+    private(set) var threshold: Float
+    private(set) var speechDetected = false
+    private(set) var kept: [Float] = []
 
-        let audioPath = rayeeDir.appendingPathComponent("audio_buffer.wav")
+    private var preRoll: [Float] = []
+    private var calibrationRMS: [Float] = []
 
-        // Create WAV file
-        guard let format = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: sampleRate,
-            channels: channels,
-            interleaved: false
-        ) else {
-            throw AudioRecorderError.failedToSaveFile("Failed to create audio format")
-        }
+    init(
+        fixedThreshold: Float = Config.silenceThreshold,
+        adaptive: Bool,
+        preRollSampleLimit: Int = Int(Config.audioSampleRate * Config.preRollDuration)
+    ) {
+        self.threshold = fixedThreshold
+        self.adaptive = adaptive
+        self.preRollSampleLimit = preRollSampleLimit
+    }
 
-        guard let audioFile = try? AVAudioFile(
-            forWriting: audioPath,
-            settings: format.settings,
-            commonFormat: .pcmFormatFloat32,
-            interleaved: false
-        ) else {
-            throw AudioRecorderError.failedToSaveFile("Failed to create audio file")
-        }
-
-        // Create buffer with our audio data
-        let frameCount = AVAudioFrameCount(audioBuffer.count)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
-            throw AudioRecorderError.failedToSaveFile("Failed to create audio buffer")
-        }
-
-        buffer.frameLength = frameCount
-
-        // Copy our samples to the buffer
-        if let channelData = buffer.floatChannelData?[0] {
-            audioBuffer.withUnsafeBufferPointer { src in
-                channelData.update(from: src.baseAddress!, count: src.count)
+    /// Feeds one chunk of 16kHz samples with its RMS level. Returns true if the chunk is speech.
+    mutating func feed(_ samples: [Float], rms: Float) -> Bool {
+        // Adaptive mode: the first chunks measure the room. Keep their audio in the
+        // pre-roll anyway, because the user may already be talking.
+        if adaptive && calibrationRMS.count < calibrationChunkTarget {
+            calibrationRMS.append(rms)
+            if calibrationRMS.count == calibrationChunkTarget {
+                threshold = Self.adaptedThreshold(from: calibrationRMS)
+                print("[SpeechGate] Adaptive VAD calibrated: threshold=\(threshold)")
             }
+            appendToPreRoll(samples)
+            return false
         }
 
-        // Write to file
-        do {
-            try audioFile.write(from: buffer)
-        } catch {
-            throw AudioRecorderError.failedToSaveFile(error.localizedDescription)
+        let isSpeech = rms > threshold
+        if isSpeech && !speechDetected {
+            speechDetected = true
+            kept.append(contentsOf: preRoll)
+            preRoll.removeAll()
+            print("[SpeechGate] Speech detected")
         }
 
-        let duration = Double(audioBuffer.count) / sampleRate
-        print("[AudioRecorder] Saved \(duration)s of audio to \(audioPath.path)")
+        if speechDetected {
+            kept.append(contentsOf: samples)
+        } else {
+            appendToPreRoll(samples)
+        }
+        return isSpeech
+    }
 
-        return audioPath
+    /// 1.5× the room's average level, kept between the minimum and maximum allowed thresholds.
+    static func adaptedThreshold(from rmsValues: [Float]) -> Float {
+        let average = rmsValues.reduce(0, +) / Float(max(rmsValues.count, 1))
+        return min(max(average * 1.5, Config.minSilenceThreshold), Config.maxAdaptiveSilenceThreshold)
+    }
+
+    private mutating func appendToPreRoll(_ samples: [Float]) {
+        preRoll.append(contentsOf: samples)
+        if preRoll.count > preRollSampleLimit {
+            preRoll.removeFirst(preRoll.count - preRollSampleLimit)
+        }
     }
 }

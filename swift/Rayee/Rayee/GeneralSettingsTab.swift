@@ -62,7 +62,7 @@ struct GeneralSettingsTab: View {
             Section {
                 Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
             } footer: {
-                Text("When enabled, recording stops after 60 seconds")
+                Text("When enabled, recording stops after 5 minutes")
             }
 
             // Silence Detection Section
@@ -81,13 +81,6 @@ struct GeneralSettingsTab: View {
                 )
             } footer: {
                 Text("After you stop speaking, recording ends after this many seconds of silence")
-            }
-
-            // Fast Transcription Mode
-            Section {
-                Toggle("Fast transcription mode", isOn: $settings.fastModeEnabled)
-            } footer: {
-                Text("Faster but slightly less accurate. Best for short dictation.")
             }
 
             // Adaptive Silence Detection

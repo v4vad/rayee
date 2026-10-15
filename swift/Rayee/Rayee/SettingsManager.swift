@@ -22,78 +22,11 @@ enum SettingsKey {
     static let silenceDuration = "silenceDuration"
     static let timeoutEnabled = "timeoutEnabled"
     static let transformationsEnabled = "transformationsEnabled"
-    static let keepTransformModelLoaded = "keepTransformModelLoaded"
     static let enabledTransformations = "enabledTransformations"
     static let hasCompletedSetup = "hasCompletedSetup"
-    static let fastModeEnabled = "fastModeEnabled"
     static let adaptiveVADEnabled = "adaptiveVADEnabled"
     static let selectedWhisperKitModel = "selectedWhisperKitModel"
     static let smartDictationEnabled = "smartDictationEnabled"
-}
-
-// MARK: - AI Model Options
-// rawValue must match Python's AVAILABLE_MODELS keys exactly
-enum TranscriptionModel: String, CaseIterable, Identifiable {
-    case tiny = "tiny"
-    case base = "base"
-    case small = "small"
-    case medium = "medium"
-    case large = "large-v3"  // Python uses "large-v3" not "large"
-    case largeTurbo = "large-v3-turbo"
-    case distilSmallEn = "distil-small.en"
-    case distilMediumEn = "distil-medium.en"
-    case distilLargeV3 = "distil-large-v3"
-
-    var id: String { rawValue }
-
-    var displayName: String {
-        switch self {
-        case .tiny: return "Tiny (Fastest)"
-        case .base: return "Base (Fast)"
-        case .small: return "Small (Balanced)"
-        case .medium: return "Medium (Better)"
-        case .large: return "Large (Best Quality)"
-        case .largeTurbo: return "Large Turbo (Fast + Accurate)"
-        case .distilSmallEn: return "Distil Small (English)"
-        case .distilMediumEn: return "Distil Medium (English)"
-        case .distilLargeV3: return "Distil Large (English)"
-        }
-    }
-
-    var description: String {
-        switch self {
-        case .tiny: return "~1GB RAM, fastest transcription"
-        case .base: return "~1GB RAM, fast with good accuracy"
-        case .small: return "~2GB RAM, good balance of speed and accuracy"
-        case .medium: return "~5GB RAM, better accuracy"
-        case .large: return "~10GB RAM, highest accuracy"
-        case .largeTurbo: return "~4GB RAM, near-best accuracy, much faster than large"
-        case .distilSmallEn: return "~1GB RAM, fast English-only"
-        case .distilMediumEn: return "~2GB RAM, balanced English-only"
-        case .distilLargeV3: return "~4GB RAM, best English-only"
-        }
-    }
-
-    var sizeMB: Int {
-        switch self {
-        case .tiny: return 75
-        case .base: return 145
-        case .small: return 488
-        case .medium: return 1500
-        case .large: return 3000
-        case .largeTurbo: return 1600
-        case .distilSmallEn: return 330
-        case .distilMediumEn: return 750
-        case .distilLargeV3: return 1400
-        }
-    }
-
-    var formattedSize: String {
-        if sizeMB >= 1000 {
-            return String(format: "%.1f GB", Double(sizeMB) / 1000.0)
-        }
-        return "\(sizeMB) MB"
-    }
 }
 
 // MARK: - Hotkey Configuration
@@ -193,11 +126,6 @@ class SettingsManager: ObservableObject {
         didSet { saveHotkeyConfig() }
     }
 
-    // Which AI model to use for transcription
-    @Published var selectedModel: TranscriptionModel {
-        didSet { UserDefaults.standard.set(selectedModel.rawValue, forKey: SettingsKey.selectedModel) }
-    }
-
     // Whether to automatically paste text after transcription
     @Published var autoPasteEnabled: Bool {
         didSet { UserDefaults.standard.set(autoPasteEnabled, forKey: SettingsKey.autoPasteEnabled) }
@@ -218,7 +146,7 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(silenceDuration, forKey: SettingsKey.silenceDuration) }
     }
 
-    // Whether to enforce a 60-second maximum recording time
+    // Whether to enforce the Config.maxRecordingDuration (5-minute) recording limit
     // When false, recording continues until you stop it or silence is detected
     @Published var timeoutEnabled: Bool {
         didSet { UserDefaults.standard.set(timeoutEnabled, forKey: SettingsKey.timeoutEnabled) }
@@ -229,11 +157,6 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(transformationsEnabled, forKey: SettingsKey.transformationsEnabled) }
     }
 
-    // Whether to keep the transform LLM loaded in memory (uses ~800MB RAM)
-    @Published var keepTransformModelLoaded: Bool {
-        didSet { UserDefaults.standard.set(keepTransformModelLoaded, forKey: SettingsKey.keepTransformModelLoaded) }
-    }
-
     // Which transformation types to show in the UI
     @Published var enabledTransformations: Set<String> {
         didSet { UserDefaults.standard.set(Array(enabledTransformations), forKey: SettingsKey.enabledTransformations) }
@@ -242,14 +165,6 @@ class SettingsManager: ObservableObject {
     // Whether the user has completed the first-launch setup
     @Published var hasCompletedSetup: Bool {
         didSet { UserDefaults.standard.set(hasCompletedSetup, forKey: SettingsKey.hasCompletedSetup) }
-    }
-
-    // Whether fast transcription mode is enabled (beam_size=1 instead of 5)
-    @Published var fastModeEnabled: Bool {
-        didSet {
-            UserDefaults.standard.set(fastModeEnabled, forKey: SettingsKey.fastModeEnabled)
-            syncFastModeToServer()
-        }
     }
 
     // Whether adaptive VAD is enabled (auto-calibrates silence threshold for 200ms at recording start)
@@ -303,14 +218,6 @@ class SettingsManager: ObservableObject {
             self.hotkeyConfig = .default
         }
 
-        // Load selected model (default: small)
-        if let modelString = UserDefaults.standard.string(forKey: SettingsKey.selectedModel),
-           let model = TranscriptionModel(rawValue: modelString) {
-            self.selectedModel = model
-        } else {
-            self.selectedModel = .small
-        }
-
         // Load auto-paste setting (default: enabled)
         if UserDefaults.standard.object(forKey: SettingsKey.autoPasteEnabled) != nil {
             self.autoPasteEnabled = UserDefaults.standard.bool(forKey: SettingsKey.autoPasteEnabled)
@@ -335,7 +242,7 @@ class SettingsManager: ObservableObject {
             self.silenceDuration = 30.0
         }
 
-        // Load timeout enabled setting (default: true - 60 second limit enabled)
+        // Load timeout enabled setting (default: true - Config.maxRecordingDuration limit of 5 minutes enabled)
         if UserDefaults.standard.object(forKey: SettingsKey.timeoutEnabled) != nil {
             self.timeoutEnabled = UserDefaults.standard.bool(forKey: SettingsKey.timeoutEnabled)
         } else {
@@ -349,13 +256,6 @@ class SettingsManager: ObservableObject {
             self.transformationsEnabled = true
         }
 
-        // Load keep transform model loaded (default: false)
-        if UserDefaults.standard.object(forKey: SettingsKey.keepTransformModelLoaded) != nil {
-            self.keepTransformModelLoaded = UserDefaults.standard.bool(forKey: SettingsKey.keepTransformModelLoaded)
-        } else {
-            self.keepTransformModelLoaded = false
-        }
-
         // Load enabled transformations (default: all manual types — smartDictation is not a button)
         let manualTypes = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         if let saved = UserDefaults.standard.stringArray(forKey: SettingsKey.enabledTransformations) {
@@ -366,9 +266,6 @@ class SettingsManager: ObservableObject {
 
         // Load setup completion flag (default: false)
         self.hasCompletedSetup = UserDefaults.standard.bool(forKey: SettingsKey.hasCompletedSetup)
-
-        // Load fast mode setting (default: false)
-        self.fastModeEnabled = UserDefaults.standard.bool(forKey: SettingsKey.fastModeEnabled)
 
         // Load adaptive VAD setting (default: false)
         self.adaptiveVADEnabled = UserDefaults.standard.bool(forKey: SettingsKey.adaptiveVADEnabled)
@@ -402,21 +299,14 @@ class SettingsManager: ObservableObject {
     // Reset all settings to defaults
     func resetToDefaults() {
         hotkeyConfig = .default
-        selectedModel = .small
         autoPasteEnabled = true
         vocabularyList = []
         soundsEnabled = true
         silenceDuration = 30.0
         timeoutEnabled = true
         transformationsEnabled = true
-        keepTransformModelLoaded = false
         enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
-        fastModeEnabled = false
         adaptiveVADEnabled = false
         smartDictationEnabled = false
-    }
-
-    func syncFastModeToServer() {
-        // No-op: WhisperKit reads fastModeEnabled directly from SettingsManager
     }
 }

@@ -28,6 +28,7 @@ struct RecordingPanelView: View {
     var onTransform: ((TransformationType) -> Void)?
     var onUseTransformed: ((String) -> Void)?
     var onUseOriginal: (() -> Void)?
+    var errorMessage: String? = nil
 
     // MARK: - Design tokens
 
@@ -98,7 +99,7 @@ struct RecordingPanelView: View {
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.white.opacity(0.45))
                 } else if !isTranscribing {
-                    Text("Option + Space to record")
+                    Text("\(SettingsManager.shared.hotkeyConfig.displayString) to record")
                         .font(.system(size: 12, weight: .regular))
                         .foregroundColor(.white.opacity(0.45))
                 }
@@ -111,7 +112,9 @@ struct RecordingPanelView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        if let tState = transformState, tState.isActive {
+        if let message = errorMessage {
+            errorContent(message)
+        } else if let tState = transformState, tState.isActive {
             TransformationPreviewView(
                 transformState: tState,
                 onUseTransformed: { text in onUseTransformed?(text) },
@@ -133,7 +136,10 @@ struct RecordingPanelView: View {
 
     @ViewBuilder
     private var footerView: some View {
-        if showResult {
+        if errorMessage != nil {
+            errorFooter
+                .frame(height: 46)
+        } else if showResult {
             resultActions
                 .frame(height: 46)
         } else if isRecording {
@@ -163,6 +169,38 @@ struct RecordingPanelView: View {
             }
             .buttonStyle(.plain)
             .padding(.trailing, 20)
+        }
+    }
+
+    // MARK: - Error state
+
+    private func errorContent(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(accentRed)
+            Text(message)
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(.white.opacity(0.82))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+    }
+
+    private var errorFooter: some View {
+        HStack {
+            Text("Something went wrong")
+                .font(.system(size: 13, weight: .regular))
+                .foregroundColor(accentRed)
+                .padding(.leading, 20)
+
+            Spacer()
+
+            Button("Dismiss", action: onDiscard)
+                .buttonStyle(GrayPillButtonStyle())
+                .padding(.trailing, 20)
         }
     }
 

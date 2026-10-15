@@ -4,7 +4,7 @@
 //
 //  Coordinates the entire transcription flow:
 //  1. Start recording (via AudioRecorder)
-//  2. Send audio to Python server for transcription
+//  2. Transcribe the audio on-device with WhisperKit
 //  3. Save to history and auto-paste if enabled
 //
 //  This keeps AppState simple - it just observes the coordinator's state.
@@ -18,6 +18,35 @@ enum TranscriptionResult {
     case success(text: String, didPaste: Bool)  // didPaste indicates if text was pasted
     case cancelled           // Recording stopped with no speech
     case error(message: String)
+}
+
+/// Turns internal errors into short, plain-language messages for the recording panel.
+enum UserFacingError {
+    static func message(for error: Error) -> String {
+        if let recorderError = error as? AudioRecorderError {
+            switch recorderError {
+            case .noMicrophonePermission:
+                return "Rayee can't use the microphone. Allow it in System Settings → Privacy & Security → Microphone, then try again."
+            case .engineStartFailed:
+                return "Couldn't start the microphone. Check that one is connected and not in use by another app."
+            case .noAudioRecorded:
+                return "Rayee didn't hear anything. Check your microphone and try again."
+            }
+        }
+        if let whisperError = error as? WhisperKitError, case .modelNotLoaded = whisperError {
+            return "The speech model is still loading. Try again in a few seconds."
+        }
+        return "Transcription failed: \(error.localizedDescription)"
+    }
+}
+
+/// Whether Smart Dictation will clean up a transcription automatically.
+/// TranscriptionCoordinator (to hold the history save) and AppState (to start the clean-up)
+/// both use it, so the two can never disagree.
+enum SmartDictationPolicy {
+    static func willRun(smartDictationEnabled: Bool, transformationsEnabled: Bool, text: String) -> Bool {
+        smartDictationEnabled && transformationsEnabled && !text.isEmpty
+    }
 }
 
 /// Coordinates the recording → transcription → paste flow
@@ -91,7 +120,7 @@ class TranscriptionCoordinator: ObservableObject {
             isRecording = false
             audioFeedback.playErrorSound()
         }
-        // Can't cancel transcription once audio is sent to server
+        // A transcription already in progress runs to completion
     }
 
     // MARK: - Private Methods
@@ -123,10 +152,6 @@ class TranscriptionCoordinator: ObservableObject {
         )
 
         // Set up callbacks
-        audioRecorder?.onSpeechDetected = {
-            print("[TranscriptionCoordinator] Speech detected")
-        }
-
         audioRecorder?.onRecordingComplete = { [weak self] result in
             self?.handleRecordingComplete(result)
         }
@@ -156,6 +181,12 @@ class TranscriptionCoordinator: ObservableObject {
 
         case .failure(let error):
             if case .noAudioRecorded = error {
+                // A denied microphone records pure silence. Say so instead of silently closing.
+                if !AudioRecorder.hasMicrophonePermission() {
+                    AppLogger.log("No speech heard and microphone permission is missing", category: "transcription")
+                    handleRecordingError(AudioRecorderError.noMicrophonePermission)
+                    return
+                }
                 AppLogger.log("Recording ended with no speech detected", category: "transcription")
                 audioFeedback.playStopSound()
                 onTranscriptionComplete?(.cancelled)
@@ -171,7 +202,7 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = false
         audioRecorder = nil
         audioFeedback.playErrorSound()
-        onTranscriptionComplete?(.error(message: error.localizedDescription))
+        onTranscriptionComplete?(.error(message: UserFacingError.message(for: error)))
     }
 
     /// Transcribe recording using WhisperKit (on-device)
@@ -199,8 +230,15 @@ class TranscriptionCoordinator: ObservableObject {
         AppLogger.log("Transcription succeeded: \(text.prefix(80))...", category: "transcription")
         audioFeedback.playStopSound()
 
-        // Save to history if we got text
-        if !text.isEmpty {
+        let smartDictationWillRun = SmartDictationPolicy.willRun(
+            smartDictationEnabled: settings.smartDictationEnabled,
+            transformationsEnabled: settings.transformationsEnabled,
+            text: text
+        )
+
+        // Save to history now, unless Smart Dictation is about to clean the text up.
+        // In that case AppState saves the final text when the clean-up ends.
+        if !text.isEmpty && !smartDictationWillRun {
             historyManager.saveTranscription(
                 text: text,
                 model: settings.selectedWhisperKitModel
@@ -212,7 +250,7 @@ class TranscriptionCoordinator: ObservableObject {
         pendingSmartDictationPaste = false
         if pendingAutoPaste && settings.autoPasteEnabled && !text.isEmpty {
             if PasteTargetDetector.hasValidPasteTarget() {
-                if settings.smartDictationEnabled && settings.transformationsEnabled {
+                if smartDictationWillRun {
                     // Defer paste — smart dictation will paste the transformed result
                     pendingSmartDictationPaste = true
                 } else {
@@ -232,6 +270,6 @@ class TranscriptionCoordinator: ObservableObject {
         isTranscribing = false
         AppLogger.log("Transcription failed: \(error.localizedDescription)", category: "transcription")
         audioFeedback.playErrorSound()
-        onTranscriptionComplete?(.error(message: error.localizedDescription))
+        onTranscriptionComplete?(.error(message: UserFacingError.message(for: error)))
     }
 }

@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		A1000001001 /* RayeeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RayeeApp.swift */; };
 		A1000002001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* AppState.swift */; };
-		A1000004001 /* StatusIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004000 /* StatusIndicator.swift */; };
 		A1000007001 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* SettingsManager.swift */; };
 		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
 		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
@@ -32,14 +31,10 @@
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 		A1000390001 /* TransformationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000390000 /* TransformationState.swift */; };
-		A10003A0001 /* TransformationButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003A0000 /* TransformationButton.swift */; };
-		A10003B0001 /* TransformationBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003B0000 /* TransformationBar.swift */; };
 		A10003C0001 /* TransformationPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003C0000 /* TransformationPreviewView.swift */; };
 		A10003D0001 /* TransformationsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003D0000 /* TransformationsSettingsTab.swift */; };
-		A10003E0001 /* TransformAPITypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003E0000 /* TransformAPITypes.swift */; };
 		A10003F0001 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003F0000 /* SetupGuideView.swift */; };
 		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
-		A1000410001 /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000410000 /* MenuBarController.swift */; };
 		A1000450001 /* WhisperKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000450000 /* WhisperKitManager.swift */; };
 		A1000460001 /* WhisperKitModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000460000 /* WhisperKitModelManager.swift */; };
 		A1000470001 /* MLXTransformManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000470000 /* MLXTransformManager.swift */; };
@@ -69,7 +64,6 @@
 		A1000000000 /* Rayee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Rayee.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000001000 /* RayeeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RayeeApp.swift; sourceTree = "<group>"; };
 		A1000002000 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
-		A1000004000 /* StatusIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusIndicator.swift; sourceTree = "<group>"; };
 		A1000006000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000007000 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
 		A1000008000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -94,14 +88,10 @@
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 		A1000390000 /* TransformationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationState.swift; sourceTree = "<group>"; };
-		A10003A0000 /* TransformationButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationButton.swift; sourceTree = "<group>"; };
-		A10003B0000 /* TransformationBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationBar.swift; sourceTree = "<group>"; };
 		A10003C0000 /* TransformationPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationPreviewView.swift; sourceTree = "<group>"; };
 		A10003D0000 /* TransformationsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationsSettingsTab.swift; sourceTree = "<group>"; };
-		A10003E0000 /* TransformAPITypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformAPITypes.swift; sourceTree = "<group>"; };
 		A10003F0000 /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
 		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
-		A1000410000 /* MenuBarController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuBarController.swift; sourceTree = "<group>"; };
 		A1000450000 /* WhisperKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitManager.swift; sourceTree = "<group>"; };
 		A1000460000 /* WhisperKitModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelManager.swift; sourceTree = "<group>"; };
 		A1000470000 /* MLXTransformManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLXTransformManager.swift; sourceTree = "<group>"; };
@@ -155,9 +145,7 @@
 			children = (
 				A1000001000 /* RayeeApp.swift */,
 				A1000002000 /* AppState.swift */,
-				A1000410000 /* MenuBarController.swift */,
 				D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */,
-				A1000004000 /* StatusIndicator.swift */,
 				A1000007000 /* SettingsManager.swift */,
 				A1000008000 /* SettingsView.swift */,
 				A1000009000 /* HotkeyManager.swift */,
@@ -182,12 +170,9 @@
 				A1000470000 /* MLXTransformManager.swift */,
 				A1000370000 /* ModelRow.swift */,
 				A1000390000 /* TransformationState.swift */,
-				A10003A0000 /* TransformationButton.swift */,
-				A10003B0000 /* TransformationBar.swift */,
 				A10003C0000 /* TransformationPreviewView.swift */,
 				A10003D0000 /* TransformationsSettingsTab.swift */,
 				A1000530000 /* VocabularySettingsTab.swift */,
-				A10003E0000 /* TransformAPITypes.swift */,
 				A10003F0000 /* SetupGuideView.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
 				A1000520000 /* UpdateManager.swift */,
@@ -334,9 +319,7 @@
 			files = (
 				A1000001001 /* RayeeApp.swift in Sources */,
 				A1000002001 /* AppState.swift in Sources */,
-				A1000410001 /* MenuBarController.swift in Sources */,
 				DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */,
-				A1000004001 /* StatusIndicator.swift in Sources */,
 				A1000007001 /* SettingsManager.swift in Sources */,
 				A1000008001 /* SettingsView.swift in Sources */,
 				A1000009001 /* HotkeyManager.swift in Sources */,
@@ -361,12 +344,9 @@
 				A1000470001 /* MLXTransformManager.swift in Sources */,
 				A1000370001 /* ModelRow.swift in Sources */,
 				A1000390001 /* TransformationState.swift in Sources */,
-				A10003A0001 /* TransformationButton.swift in Sources */,
-				A10003B0001 /* TransformationBar.swift in Sources */,
 				A10003C0001 /* TransformationPreviewView.swift in Sources */,
 				A10003D0001 /* TransformationsSettingsTab.swift in Sources */,
 				A1000530001 /* VocabularySettingsTab.swift in Sources */,
-				A10003E0001 /* TransformAPITypes.swift in Sources */,
 				A10003F0001 /* SetupGuideView.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
 				A1000520001 /* UpdateManager.swift in Sources */,
@@ -519,7 +499,7 @@
 				CODE_SIGN_ENTITLEMENTS = Rayee/Rayee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = VXYPQ995EU;
 				ENABLE_APP_SANDBOX = NO;
@@ -535,7 +515,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.1;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rayee.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -551,7 +531,7 @@
 				CODE_SIGN_ENTITLEMENTS = Rayee/Rayee.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = VXYPQ995EU;
 				ENABLE_APP_SANDBOX = NO;
@@ -567,7 +547,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.7.1;
+				MARKETING_VERSION = 0.8;
 				PRODUCT_BUNDLE_IDENTIFIER = com.rayee.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;

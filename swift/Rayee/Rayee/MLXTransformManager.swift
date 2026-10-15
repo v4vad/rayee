@@ -16,14 +16,11 @@ import Tokenizers
 
 enum MLXTransformError: LocalizedError {
     case modelNotLoaded
-    case streamingFailed(String)
 
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded:
-            return "MLX native model is not loaded. Please wait."
-        case .streamingFailed(let reason):
-            return "Streaming failed: \(reason)"
+            return "The writing model is not loaded."
         }
     }
 }
@@ -168,10 +165,13 @@ final class MLXTransformManager: ObservableObject {
         let stream = try await container.generate(input: lmInput, parameters: parameters)
 
         for await generation in stream {
+            try Task.checkCancellation()
             if case .chunk(let token) = generation {
                 onToken(token)
             }
         }
+        // The stream also ends early when the task is cancelled. Report that as a cancellation, not a result.
+        try Task.checkCancellation()
     }
 
     // MARK: - Private helpers
