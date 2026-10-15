@@ -33,7 +33,7 @@ the app only when a step says "Manual check".
 
 | Phase | Plan file | Branch | Ships as | Status |
 |---|---|---|---|---|
-| 1. Clean-up (dead code, wrong text, stale docs) | `2026-10-15-01-cleanup.md` | `release/v0.8` | part of v0.8 | Not started |
+| 1. Clean-up (dead code, wrong text, stale docs) | `2026-10-15-01-cleanup.md` | `release/v0.8` | part of v0.8 | Done (manual hotkey check pending) |
 | 2. Recording and feedback fixes | `2026-10-15-02-recording-fixes.md` | `release/v0.8` | v0.8 | Not started |
 | 3. AI model upgrades | write it at the start of Phase 3 (see below) | `release/v0.9` | v0.9 | Not planned yet |
 | 4. Live transcription | brainstorm, then plan (see below) | `feature/live-transcription` | v1.0 | Not planned yet |
@@ -155,3 +155,4 @@ installed `argmax-oss-swift` version's documentation for it first.
 ## Session log
 
 - **2026-10-15:** Reviewed the whole app and wrote this roadmap and the Phase 1 and Phase 2 plans. Nothing implemented yet. Next: Phase 1, Task 0. Tests can't run until the Metal Toolchain is installed (Task 0 covers it).
+- **2026-10-16:** Phase 1 Tasks 0-5 implemented on release/v0.8 via subagents with per-task review. Task 3 Step 2h (deleting ~/.rayee/audio_buffer.wav) skipped as it is outside the repo, left for the user. Task 4 manual hotkey check pending with the user. Next: final review of Phase 1, then Phase 2 Task 1.

@@ -1,6 +1,6 @@
 # Swift App — Rayee
 
-macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, and communicates with the Python server over a Unix socket.
+macOS menu bar app built with SwiftUI. Handles recording, on-device transcription (WhisperKit), on-device text transforms (MLX), UI, hotkeys and history. No server.
 
 ## File Map
 
@@ -15,8 +15,8 @@ macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, 
 ### Recording Pipeline
 | File | Purpose |
 |------|---------|
-| `AudioRecorder.swift` | AVAudioEngine recording, RMS-based VAD, adaptive calibration, saves WAV |
-| `TranscriptionCoordinator.swift` | Orchestrates: record → send to server → save history → auto-paste |
+| `AudioRecorder.swift` | AVAudioEngine recording, RMS-based VAD, adaptive calibration; hands [Float] samples to the coordinator |
+| `TranscriptionCoordinator.swift` | Orchestrates: record → WhisperKit transcribe → save history → auto-paste |
 | `AudioLevelMonitor.swift` | Circular buffer of RMS levels for waveform visualization |
 | `AudioFeedback.swift` | Start/stop/error sounds |
 
@@ -33,31 +33,27 @@ macOS menu bar app built with SwiftUI. Handles recording, UI, hotkeys, history, 
 | `RecordingPanelView.swift` | Floating panel content: recording/transcribing/result states |
 | `RecordingPanelController.swift` | NSWindow management for the floating panel |
 | `PanelButtonStyles.swift` | Pill-shaped button styles |
-| `StatusIndicator.swift` | Colored dot indicator |
 
 ### UI — Menu Bar
 | File | Purpose |
 |------|---------|
-| `MenuBarController.swift` | Menu bar icon and dropdown |
-| `SimpleMenuView.swift` | The dropdown menu content |
+| `SimpleMenuView.swift` | Menu bar dropdown (MenuBarExtra content) |
 
 ### UI — Settings
 | File | Purpose |
 |------|---------|
 | `SettingsView.swift` | Tab container for settings |
-| `GeneralSettingsTab.swift` | Hotkey, silence, fast mode, adaptive VAD toggle |
+| `GeneralSettingsTab.swift` | Hotkey, auto-paste, sounds, timeout, silence, adaptive VAD |
 | `ModelsSettingsTab.swift` | Whisper model picker with download/delete |
 | `TransformationsSettingsTab.swift` | Transform toggle, LLM model status, type picker |
 | `HotkeyPickerView.swift` | Hotkey recording UI |
+| `VocabularySettingsTab.swift` | Custom vocabulary list |
 
 ### UI — Transforms
 | File | Purpose |
 |------|---------|
 | `TransformationState.swift` | Published state for transform lifecycle + streaming text |
-| `TransformationBar.swift` | Row of transform buttons below transcribed text |
-| `TransformationButton.swift` | Individual transform button |
 | `TransformationPreviewView.swift` | Live streaming preview + before/after comparison |
-| `TransformAPITypes.swift` | Codable types for transform API requests/responses |
 
 ### UI — History
 | File | Purpose |

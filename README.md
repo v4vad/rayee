@@ -9,7 +9,7 @@ A local voice-to-text transcription app for macOS. Press a hotkey, speak, and te
 3. Launch Rayee — it lives in your menu bar
 4. Grant microphone and accessibility permissions when prompted
 
-**Requirements:** macOS 13+ (Ventura or later), Apple Silicon Mac (M1/M2/M3/M4)
+**Requirements:** macOS 14.6 or later, Apple Silicon Mac (M1 or newer)
 
 ## Features
 
@@ -38,30 +38,20 @@ Powered by Llama 3.2 1B (4-bit quantized via MLX). Runs entirely on Apple Silico
 
 ## How It Works
 
-Rayee uses a two-component architecture:
+Rayee is a single native Swift app — no Python, no server.
 
-- **Swift/SwiftUI frontend** — Native macOS menu bar app handling UI, hotkeys, and auto-paste
-- **Python backend** — AI transcription engine using [Faster-Whisper](https://github.com/SYSTRAN/faster-whisper), bundled inside the app
-
-The Swift app communicates with the Python server over a local Unix socket. Everything runs on your Mac.
+- **Speech to text:** [WhisperKit](https://github.com/argmaxinc/WhisperKit) runs OpenAI's Whisper models on-device with Core ML.
+- **Text transformations:** [mlx-swift-lm](https://github.com/ml-explore/mlx-swift-lm) runs a small language model on the Mac's GPU.
+- Models download on first use. Speech models are stored in `~/.rayee`; the writing model is stored in the Hugging Face cache (`~/.cache/huggingface`).
 
 ## Building from Source
 
 ### Prerequisites
-- macOS 13+, Apple Silicon
-- Xcode 15+
-- Python 3.10+
+- macOS 14.6+, Apple Silicon
+- Xcode 16+ with the Metal Toolchain (`xcodebuild -downloadComponent MetalToolchain`)
 
-### Setup
+### Build and run
 ```bash
-# Python backend
-cd python && python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-
-# Start the server (for development)
-python run_server.py
-
-# Swift app
 open swift/Rayee/Rayee.xcodeproj
-# Build and run from Xcode (Cmd+R)
+# Press Cmd+R in Xcode
 ```
