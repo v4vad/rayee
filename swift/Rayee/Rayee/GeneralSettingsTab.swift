@@ -83,13 +83,6 @@ struct GeneralSettingsTab: View {
                 Text("After you stop speaking, recording ends after this many seconds of silence")
             }
 
-            // Fast Transcription Mode
-            Section {
-                Toggle("Fast transcription mode", isOn: $settings.fastModeEnabled)
-            } footer: {
-                Text("Faster but slightly less accurate. Best for short dictation.")
-            }
-
             // Adaptive Silence Detection
             Section {
                 Toggle("Adaptive silence detection", isOn: $settings.adaptiveVADEnabled)

@@ -3,7 +3,7 @@
 //  Rayee
 //
 //  Centralized configuration values for the app.
-//  All "magic numbers" (timeouts, retry counts, URLs) live here.
+//  All "magic numbers" (timeouts, sizes, thresholds) live here.
 //  This makes it easy to find and change settings in one place.
 //
 
@@ -13,61 +13,17 @@ import Foundation
 /// Group related settings together for easy discovery
 enum Config {
 
-    // MARK: - Server Connection
-
-    /// The Python server runs on this URL (used for building request paths)
-    static let serverBaseURL = "http://127.0.0.1:8765"
-
-    /// Unix domain socket path for server communication.
-    /// Uses a socket file instead of TCP to avoid interfering with VPNs
-    /// (e.g. Cloudflare WARP) that intercept network traffic.
-    static let serverSocketPath: String = {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/.rayee/server.sock"
-    }()
+    // MARK: - Model Storage
 
     /// Local directory for WhisperKit model downloads.
     /// Kept under ~/.rayee (NOT ~/Documents/huggingface) so models never sync to
-    /// iCloud and waste the user's iCloud storage. Mirrors the MLX model location.
+    /// iCloud and waste the user's iCloud storage.
     static let whisperKitDownloadBase: URL = {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let base = home.appendingPathComponent(".rayee").appendingPathComponent("whisperkit_models")
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base
     }()
-
-    // MARK: - Timeouts
-
-    /// Timeout for regular API requests (health check, status)
-    static let regularTimeout: TimeInterval = 5.0
-
-    /// Timeout for transcription requests (recording + processing can take a while)
-    static let transcriptionTimeout: TimeInterval = 120.0
-
-    // MARK: - Health Check
-
-    /// How often to check if the server is running (seconds)
-    static let healthCheckInterval: TimeInterval = 10.0
-
-    /// After server starts running, we check less frequently (seconds)
-    static let healthCheckIntervalWhenRunning: TimeInterval = 30.0
-
-    /// Faster health checks while waiting for server to start (seconds)
-    static let healthCheckIntervalDuringStartup: TimeInterval = 2.0
-
-    // MARK: - Startup & Retry
-
-    /// How many times to retry connecting during startup
-    static let startupRetryAttempts = 15
-
-    /// Wait time between startup retry attempts (seconds)
-    static let startupRetryDelay: TimeInterval = 1.0
-
-    /// Maximum times to restart server after crash
-    static let maxServerRestartAttempts = 3
-
-    /// Delay before attempting server restart (seconds)
-    static let serverRestartDelay: TimeInterval = 1.0
 
     // MARK: - Audio Recording
 
@@ -132,23 +88,4 @@ enum Config {
 
     /// How often to poll for accessibility permission when not yet granted (seconds)
     static let hotkeyPermissionPollInterval: TimeInterval = 3.0
-
-    // MARK: - Text Transformations
-
-    /// Timeout for transformation requests (LLM inference can take a few seconds)
-    static let transformationTimeout: TimeInterval = 30.0
-
-    // MARK: - Settings Window
-
-    /// Width of the Settings window
-    static let settingsWindowWidth: CGFloat = 650
-
-    /// Minimum height of the Settings window
-    static let settingsWindowMinHeight: CGFloat = 500
-
-    // MARK: - Updates
-
-    /// URL of the appcast XML file that lists available versions
-    static let appcastURL = "https://raw.githubusercontent.com/v4vad/rayee/main/appcast.xml"
-
 }
