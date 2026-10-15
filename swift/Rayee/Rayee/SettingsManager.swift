@@ -242,7 +242,7 @@ class SettingsManager: ObservableObject {
             self.silenceDuration = 30.0
         }
 
-        // Load timeout enabled setting (default: true - 60 second limit enabled)
+        // Load timeout enabled setting (default: true - Config.maxRecordingDuration limit of 5 minutes enabled)
         if UserDefaults.standard.object(forKey: SettingsKey.timeoutEnabled) != nil {
             self.timeoutEnabled = UserDefaults.standard.bool(forKey: SettingsKey.timeoutEnabled)
         } else {

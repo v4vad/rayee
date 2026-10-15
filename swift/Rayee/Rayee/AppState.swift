@@ -80,6 +80,7 @@ class AppState: ObservableObject {
         guard status == .ready || status == .error else { return }
         errorMessage = nil
         cancelTransformation()
+        recordingPanelController.transformState.reset()
         transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
     }
 
@@ -148,6 +149,8 @@ class AppState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isRecording in
                 guard let self = self else { return }
+                // Ignore stale values: a start failure flips true then false in one turn, and a late "true" would wipe the error panel
+                guard isRecording == self.transcriptionCoordinator.isRecording else { return }
                 if isRecording {
                     self.status = .recording
                     // Show the floating panel

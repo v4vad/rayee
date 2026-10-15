@@ -82,7 +82,7 @@ enum Config {
     static let recordingPanelHeightWithTransform: CGFloat = 420
 
     /// Height — Error state (message + Dismiss)
-    static let recordingPanelHeightError: CGFloat = 170
+    static let recordingPanelHeightError: CGFloat = 190
 
     /// Number of waveform bars (matches Figma design)
     static let waveformBarCount = 27
@@ -95,7 +95,7 @@ enum Config {
 
     /// How long after pasting before the user's own clipboard is put back (seconds).
     /// Gives the target app time to read the pasted text first.
-    static let clipboardRestoreDelay: TimeInterval = 0.5
+    static let clipboardRestoreDelay: TimeInterval = 1.0
 
     /// Delay before backup hotkey start attempt from AppDelegate (seconds)
     static let hotkeyBackupStartDelay: TimeInterval = 2.0

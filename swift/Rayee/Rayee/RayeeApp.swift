@@ -43,11 +43,14 @@ struct RayeeApp: App {
 private struct MenuBarLabel: View {
     let icon: String
     @Environment(\.openWindow) private var openWindow
+    private static var didCheckFirstLaunch = false
 
     var body: some View {
         Image(systemName: icon)
             .renderingMode(.template)
             .onAppear {
+                guard !Self.didCheckFirstLaunch else { return }
+                Self.didCheckFirstLaunch = true
                 guard !SettingsManager.shared.hasCompletedSetup else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     openWindow(id: "setup-guide")
