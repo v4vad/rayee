@@ -2,72 +2,98 @@
 //  SettingsView.swift
 //  Rayee
 //
-//  Settings window — standard macOS toolbar-tab layout (Apple HIG).
+//  The Settings window: a sidebar of sections, like System Settings.
 //  Used as the body of the Settings scene in RayeeApp.
 //
 
 import SwiftUI
 
-struct SettingsView: View {
-    @EnvironmentObject var appState: AppState
-    @State private var isRecordingHotkey = false
-    @State private var showingAccessibilityAlert = false
-    @State private var selectedTab: Int = 0
+enum SettingsSection: String, CaseIterable, Identifiable {
+    case general
+    case recording
+    case smartDictation
+    case speechModel
+    case dictionary
+    case history
+    case about
 
-    var body: some View {
-        TabView(selection: $selectedTab) {
-            GeneralSettingsTab(
-                isRecordingHotkey: $isRecordingHotkey,
-                showingAccessibilityAlert: $showingAccessibilityAlert
-            )
-            .tabItem { Label("General", systemImage: "gear") }
-            .tag(0)
+    var id: String { rawValue }
 
-            ModelsSettingsTab()
-                .tabItem { Label("Models", systemImage: "cpu") }
-                .tag(1)
-
-            TransformationsSettingsTab()
-                .tabItem { Label("Transforms", systemImage: "wand.and.stars") }
-                .tag(2)
-
-            VocabularySettingsTab()
-                .tabItem { Label("Vocabulary", systemImage: "text.book.closed") }
-                .tag(3)
-
-            HistoryView()
-                .tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
-                .tag(4)
-        }
-        .frame(width: 540, height: 420)
-        .onAppear {
-            // Deep-link to a specific tab if requested (e.g. from the menu)
-            if let requestedTab = UserDefaults.standard.string(forKey: "settingsTab") {
-                switch requestedTab {
-                case "models":        selectedTab = 1
-                case "transformations": selectedTab = 2
-                case "vocabulary":    selectedTab = 3
-                case "history":       selectedTab = 4
-                default:              break
-                }
-                UserDefaults.standard.removeObject(forKey: "settingsTab")
-            }
-        }
-        .alert("Accessibility Permission Required", isPresented: $showingAccessibilityAlert) {
-            Button("Open System Settings") {
-                openAccessibilitySettings()
-            }
-            Button("Later", role: .cancel) {}
-        } message: {
-            Text("To use global hotkeys and auto-paste, Rayee needs Accessibility permission. Please enable it in System Settings > Privacy & Security > Accessibility.")
+    var title: String {
+        switch self {
+        case .general: return "General"
+        case .recording: return "Recording"
+        case .smartDictation: return "Smart Dictation"
+        case .speechModel: return "Speech Model"
+        case .dictionary: return "Dictionary"
+        case .history: return "History"
+        case .about: return "About"
         }
     }
 
-    // MARK: - Helper Methods
+    var icon: String {
+        switch self {
+        case .general: return "gearshape"
+        case .recording: return "waveform"
+        case .smartDictation: return "wand.and.sparkles"
+        case .speechModel: return "cpu"
+        case .dictionary: return "character.book.closed"
+        case .history: return "clock.arrow.circlepath"
+        case .about: return "info.circle"
+        }
+    }
 
-    private func openAccessibilitySettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-        NSWorkspace.shared.open(url)
+    /// Section names the app used to deep-link with, plus the new ones
+    init?(deepLink: String) {
+        switch deepLink {
+        case "models": self = .speechModel
+        case "transformations": self = .smartDictation
+        case "vocabulary": self = .dictionary
+        default: self.init(rawValue: deepLink)
+        }
+    }
+}
+
+struct SettingsView: View {
+    @EnvironmentObject var appState: AppState
+    @State private var selection: SettingsSection? = .general
+
+    var body: some View {
+        NavigationSplitView {
+            List(SettingsSection.allCases, selection: $selection) { section in
+                Label(section.title, systemImage: section.icon)
+                    .tag(section)
+            }
+            .navigationSplitViewColumnWidth(min: 170, ideal: 180, max: 220)
+        } detail: {
+            detail
+                .navigationTitle((selection ?? .general).title)
+        }
+        .frame(minWidth: 720, minHeight: 500)
+        .onAppear(perform: applyDeepLink)
+        .onReceive(NotificationCenter.default.publisher(for: .openSettingsSection)) { _ in
+            applyDeepLink()
+        }
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        switch selection ?? .general {
+        case .general: GeneralSettingsTab()
+        case .recording: RecordingSettingsTab()
+        case .smartDictation: SmartDictationSettingsTab()
+        case .speechModel: ModelsSettingsTab()
+        case .dictionary: VocabularySettingsTab()
+        case .history: HistoryView()
+        case .about: AboutSettingsTab()
+        }
+    }
+
+    /// The menu asks for a section by saving its name; read it once, then forget it.
+    private func applyDeepLink() {
+        guard let link = UserDefaults.standard.string(forKey: "settingsTab") else { return }
+        UserDefaults.standard.removeObject(forKey: "settingsTab")
+        if let section = SettingsSection(deepLink: link) { selection = section }
     }
 }
 
@@ -75,6 +101,7 @@ struct SettingsView: View {
 extension Notification.Name {
     static let hotkeyConfigChanged = Notification.Name("hotkeyConfigChanged")
     static let openSetupGuide = Notification.Name("openSetupGuide")
+    static let openSettingsSection = Notification.Name("openSettingsSection")
 }
 
 #Preview {

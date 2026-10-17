@@ -1,5 +1,5 @@
 //
-//  TransformationsSettingsTab.swift
+//  SmartDictationSettingsTab.swift
 //  Rayee
 //
 //  Settings tab for Smart Dictation and the text model it uses.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct TransformationsSettingsTab: View {
+struct SmartDictationSettingsTab: View {
     @ObservedObject var settings = SettingsManager.shared
     @ObservedObject private var transformManager = MLXTransformManager.shared
 
@@ -123,5 +123,5 @@ struct TransformationsSettingsTab: View {
 }
 
 #Preview {
-    TransformationsSettingsTab()
+    SmartDictationSettingsTab()
 }

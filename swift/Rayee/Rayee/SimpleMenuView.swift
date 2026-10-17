@@ -97,6 +97,7 @@ struct SimpleMenuView: View {
             UserDefaults.standard.set(tab, forKey: "settingsTab")
         }
         openSettings()
+        NotificationCenter.default.post(name: .openSettingsSection, object: nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
 }
