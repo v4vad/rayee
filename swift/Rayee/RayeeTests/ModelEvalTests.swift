@@ -1,3 +1,9 @@
+import FoundationModels
+import HuggingFace
+import MLXHuggingFace
+import MLXLLM
+import MLXLMCommon
+import Tokenizers
 import XCTest
 @testable import Rayee
 
@@ -15,6 +21,13 @@ private struct EvalResult {
 private struct EvalModelRun {
     let model: TransformModel
     let warmupSeconds: Double
+    let results: [EvalResult]
+}
+
+private struct CandidateRun {
+    let name: String
+    let note: String
+    let loadSeconds: Double
     let results: [EvalResult]
 }
 
@@ -84,6 +97,194 @@ final class ModelEvalTests: XCTestCase {
         try markdown.write(to: outputURL, atomically: true, encoding: .utf8)
 
         print("Model eval results written to: \(outputURL.path)")
+    }
+
+    // MARK: - Candidate models (eval only, not offered in Settings)
+
+    /// MLX models to score. The Qwen3 pair is re-run so every model is compared in the same session.
+    private static let mlxCandidates: [(name: String, id: String)] = [
+        ("Qwen3 1.7B", "mlx-community/Qwen3-1.7B-4bit"),
+        ("Qwen3 4B", "mlx-community/Qwen3-4B-4bit"),
+        ("Qwen3.5 2B", "mlx-community/Qwen3.5-2B-4bit"),
+        ("Qwen3.5 4B", "mlx-community/Qwen3.5-4B-4bit"),
+    ]
+
+    /// Opt-in: scores the candidate models without touching the user's settings or the shared manager.
+    @MainActor
+    func testRunCandidates() async throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["RAYEE_EVAL_CANDIDATES"] == "1", "Set TEST_RUNNER_RAYEE_EVAL_CANDIDATES=1 to run the candidate model eval")
+
+        var runs: [CandidateRun] = []
+
+        for candidate in Self.mlxCandidates {
+            let run = await runMLXCandidate(name: candidate.name, id: candidate.id)
+            runs.append(run)
+            print("Finished candidate: \(candidate.name)")
+        }
+
+        if #available(macOS 26, *) {
+            runs.append(await runAppleCandidate())
+        } else {
+            runs.append(CandidateRun(
+                name: "Apple on-device", note: "Needs macOS 26 or later", loadSeconds: 0,
+                results: Self.samples.map { _ in EvalResult(output: "UNAVAILABLE: macOS 26 required", seconds: 0) }))
+        }
+
+        let outputURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent() // RayeeTests
+            .deletingLastPathComponent() // Rayee
+            .deletingLastPathComponent() // swift
+            .deletingLastPathComponent() // repo root
+            .appendingPathComponent("docs/plans/2026-10-17-model-eval-candidates.md")
+        try FileManager.default.createDirectory(
+            at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Self.buildCandidateMarkdown(runs: runs).write(to: outputURL, atomically: true, encoding: .utf8)
+        print("Candidate eval results written to: \(outputURL.path)")
+    }
+
+    /// Loads one MLX model into its own container, scores every sample, then releases it.
+    @MainActor
+    private func runMLXCandidate(name: String, id: String) async -> CandidateRun {
+        let loadStart = Date()
+        var container: ModelContainer?
+        do {
+            container = try await LLMModelFactory.shared.loadContainer(
+                from: #hubDownloader(),
+                using: #huggingFaceTokenizerLoader(),
+                configuration: ModelConfiguration(id: id),
+                progressHandler: { _ in }
+            )
+        } catch {
+            let failure = EvalResult(output: "ERROR: load failed: \(error)", seconds: 0)
+            return CandidateRun(name: name, note: id, loadSeconds: Date().timeIntervalSince(loadStart),
+                                results: Self.samples.map { _ in failure })
+        }
+
+        // Warm-up: the first generation includes one-time setup, so load time = load + first run.
+        _ = await generate(Self.samples[0], with: container!)
+        let loadSeconds = Date().timeIntervalSince(loadStart)
+
+        var results: [EvalResult] = []
+        for sample in Self.samples {
+            results.append(await generate(sample, with: container!))
+        }
+        container = nil
+        return CandidateRun(name: name, note: id, loadSeconds: loadSeconds, results: results)
+    }
+
+    /// Same chat, parameters and post-processing as `MLXTransformManager.streamTransform`.
+    private func generate(_ text: String, with container: ModelContainer) async -> EvalResult {
+        let start = Date()
+        do {
+            let chat = MLXTransformManager.buildChat(text: text, type: .smartDictation)
+            let input = UserInput(chat: chat, additionalContext: ["enable_thinking": false])
+            let parameters = GenerateParameters(
+                maxTokens: MLXTransformManager.maxOutputTokens(for: text), temperature: 0.0)
+            let lmInput = try await container.prepare(input: input)
+            let stream = try await container.generate(input: lmInput, parameters: parameters)
+            var output = ""
+            for await generation in stream {
+                if case .chunk(let token) = generation { output += token }
+            }
+            return EvalResult(output: MLXTransformManager.cleanedOutput(output),
+                              seconds: Date().timeIntervalSince(start))
+        } catch {
+            return EvalResult(output: "ERROR: \(error)", seconds: Date().timeIntervalSince(start))
+        }
+    }
+
+    /// Apple's on-device model. Each sample gets a fresh session; the worked examples are passed as earlier transcript turns.
+    @available(macOS 26, *)
+    private func runAppleCandidate() async -> CandidateRun {
+        let name = "Apple on-device"
+        let model = SystemLanguageModel.default
+
+        // "modelNotReady" usually means the system is still downloading the model, so wait up to 5 minutes.
+        for _ in 0..<30 {
+            if case .unavailable(.modelNotReady) = model.availability {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+            } else {
+                break
+            }
+        }
+        guard case .available = model.availability else {
+            let reason = "UNAVAILABLE: \(model.availability)"
+            return CandidateRun(name: name, note: reason, loadSeconds: 0,
+                                results: Self.samples.map { _ in EvalResult(output: reason, seconds: 0) })
+        }
+
+        let note = "FoundationModels SystemLanguageModel.default; examples passed as earlier Transcript turns (instructions, then prompt/response pairs); greedy sampling"
+        var results: [EvalResult] = []
+        var loadSeconds = 0.0
+
+        // The first call is a warm-up and counts as the "load" time.
+        for (index, sample) in ([Self.samples[0]] + Self.samples).enumerated() {
+            let start = Date()
+            var output: String
+            do {
+                let chat = MLXTransformManager.buildChat(text: sample, type: .smartDictation)
+                var entries: [Transcript.Entry] = []
+                var finalPrompt = ""
+                for (position, message) in chat.enumerated() {
+                    let segments = [Transcript.Segment.text(.init(content: message.content))]
+                    switch message.role {
+                    case .system:
+                        entries.append(.instructions(.init(segments: segments, toolDefinitions: [])))
+                    case .assistant:
+                        entries.append(.response(.init(assetIDs: [], segments: segments)))
+                    default:
+                        if position == chat.count - 1 {
+                            finalPrompt = message.content
+                        } else {
+                            entries.append(.prompt(.init(segments: segments)))
+                        }
+                    }
+                }
+                let session = LanguageModelSession(model: model, transcript: Transcript(entries: entries))
+                let response = try await session.respond(
+                    to: finalPrompt, options: GenerationOptions(sampling: .greedy))
+                output = MLXTransformManager.cleanedOutput(response.content)
+            } catch {
+                output = "ERROR: \(error)"
+            }
+            let seconds = Date().timeIntervalSince(start)
+            if index == 0 {
+                loadSeconds = seconds
+            } else {
+                results.append(EvalResult(output: output, seconds: seconds))
+            }
+        }
+        return CandidateRun(name: name, note: note, loadSeconds: loadSeconds, results: results)
+    }
+
+    private static func buildCandidateMarkdown(runs: [CandidateRun]) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm 'IST'"
+        formatter.timeZone = TimeZone(identifier: "Asia/Kolkata")
+
+        var md = "# Candidate Text Model Eval Results\n\n"
+        md += "Run date: \(formatter.string(from: Date()))\n\n"
+        md += "| Model | Source / notes | Load + first run (s) | Average per sample (s) |\n"
+        md += "|---|---|---|---|\n"
+        for run in runs {
+            let total = run.results.reduce(0.0) { $0 + $1.seconds }
+            let average = run.results.isEmpty ? 0 : total / Double(run.results.count)
+            md += "| \(run.name) | \(run.note) | \(String(format: "%.1f", run.loadSeconds)) | \(String(format: "%.1f", average)) |\n"
+        }
+        md += "\n"
+
+        for (index, sample) in samples.enumerated() {
+            md += "## \(index + 1). \(sample)\n\n"
+            for run in runs {
+                let result = run.results[index]
+                let output = result.output.components(separatedBy: .newlines).joined(separator: " ⏎ ")
+                md += "- **\(run.name)** (\(String(format: "%.1f", result.seconds))s): \(output)\n"
+            }
+            md += "\n"
+        }
+
+        md += "## Scores\n"
+        return md
     }
 
     /// Runs one transform and measures how long it takes. Errors are recorded as output, not thrown.

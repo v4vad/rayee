@@ -3,6 +3,7 @@
 //  RayeeTests
 //
 
+import MLXLMCommon
 import XCTest
 @testable import Rayee
 
@@ -56,6 +57,14 @@ final class MLXTransformManagerTests: XCTestCase {
         let (_, user) = MLXTransformManager.buildPrompt(text: "um hello", type: .smartDictation)
         XCTAssertEqual(user, "<dictation>um hello</dictation>" + MLXTransformManager.smartDictationReminder)
         XCTAssertFalse(user.contains("Example"))
+    }
+
+    func testSmartDictationChatIsSystemThenExamplesThenUser() {
+        let examples = MLXTransformManager.fewShotExamples(for: .smartDictation)
+        let chat = MLXTransformManager.buildChat(text: "um hello", type: .smartDictation)
+        XCTAssertEqual(chat.count, 1 + 2 * examples.count + 1)
+        XCTAssertEqual(chat.first?.role, .system)
+        XCTAssertEqual(chat.last?.role, .user)
     }
 
     func testOtherTransformsHaveNoExamples() {

@@ -180,6 +180,20 @@ final class MLXTransformManager: ObservableObject {
         ]
     }
 
+    /// The full chat sent to the model: system prompt, then a user/assistant pair per worked example, then the user's text.
+    nonisolated static func buildChat(
+        text: String, type transformType: TransformationType
+    ) -> [Chat.Message] {
+        let (systemPrompt, userPrompt) = buildPrompt(text: text, type: transformType)
+        var chat: [Chat.Message] = [.system(systemPrompt)]
+        for example in fewShotExamples(for: transformType) {
+            chat.append(.user("<dictation>\(example.input)</dictation>" + smartDictationReminder))
+            chat.append(.assistant(example.output))
+        }
+        chat.append(.user(userPrompt))
+        return chat
+    }
+
     /// Removes the delimiter tags from dictated text so it can't close the tag early.
     nonisolated static func sanitized(_ text: String) -> String {
         text.replacingOccurrences(of: "<dictation>", with: "")
@@ -310,13 +324,7 @@ final class MLXTransformManager: ObservableObject {
 
         resetUnloadTimer()
 
-        let (systemPrompt, userPrompt) = Self.buildPrompt(text: text, type: transformType)
-        var chat: [Chat.Message] = [.system(systemPrompt)]
-        for example in Self.fewShotExamples(for: transformType) {
-            chat.append(.user("<dictation>\(example.input)</dictation>" + Self.smartDictationReminder))
-            chat.append(.assistant(example.output))
-        }
-        chat.append(.user(userPrompt))
+        let chat = Self.buildChat(text: text, type: transformType)
         let userInput = UserInput(chat: chat, additionalContext: loadedModel?.additionalContext)
         let cap = Self.maxOutputTokens(for: text)
         let parameters = GenerateParameters(maxTokens: cap, temperature: 0.0)
