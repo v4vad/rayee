@@ -28,11 +28,12 @@ struct RayeeApp: App {
                 .environmentObject(AppState.shared)
         }
 
-        // Setup guide window - shown on first launch or from menu
-        Window("System Status", id: "setup-guide") {
-            SetupGuideView()
+        // Onboarding - shown on first launch, and from Settings → About
+        Window("Welcome to Rayee", id: "setup-guide") {
+            OnboardingView()
                 .environmentObject(AppState.shared)
         }
+        .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultPosition(.center)
     }
@@ -68,8 +69,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Initialize logging first so we capture everything
         AppLogger.initialize()
 
-        // Request permissions immediately on first launch
-        requestPermissionsOnFirstLaunch()
+        // Onboarding asks for permissions at its own steps; after setup, make sure they're requested
+        if SettingsManager.shared.hasCompletedSetup {
+            requestPermissionsOnFirstLaunch()
+        }
 
         // Initialize the update manager so background update checks begin
         _ = UpdateManager.shared

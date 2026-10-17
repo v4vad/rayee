@@ -100,7 +100,6 @@ struct SettingsView: View {
 // MARK: - Notification Names
 extension Notification.Name {
     static let hotkeyConfigChanged = Notification.Name("hotkeyConfigChanged")
-    static let openSetupGuide = Notification.Name("openSetupGuide")
     static let openSettingsSection = Notification.Name("openSettingsSection")
 }
 
