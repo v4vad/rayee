@@ -259,7 +259,11 @@ class AppState: ObservableObject {
             guard let self = self else { return false }
             let command = RecorderRules.escape(in: self.recorder.phase)
             guard command != .none else { return false }
-            self.perform(command)
+            // This runs inside the event tap, so only the decision is made here;
+            // the actual work (stopping audio, pasting, hiding) runs right after.
+            DispatchQueue.main.async { [weak self] in
+                self?.perform(command)
+            }
             return true
         }
     }
