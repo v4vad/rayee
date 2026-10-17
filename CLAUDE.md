@@ -16,6 +16,8 @@ Use the `/publish-release` skill — it handles version bump, DMG build, EdDSA s
 - All user settings stored in UserDefaults via `SettingsManager`
 - History stored in SQLite at `~/.rayee/history.db` (WAL mode, FULLMUTEX)
 - Audio format everywhere: 16kHz, mono, Float32 PCM
+- Minimum macOS is 26.0 (design refresh, Oct 2026)
+- App source files are listed by hand in `project.pbxproj`: add/remove/rename them with `python3 -I scripts/xcodeproj_files.py add|remove|rename …` (test files in `RayeeTests/` need nothing)
 
 ## Text model eval
 
