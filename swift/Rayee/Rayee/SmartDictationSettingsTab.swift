@@ -2,7 +2,7 @@
 //  SmartDictationSettingsTab.swift
 //  Rayee
 //
-//  Settings tab for Smart Dictation and the text model it uses.
+//  Settings → Smart Dictation
 //
 
 import SwiftUI
@@ -14,11 +14,9 @@ struct SmartDictationSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                Toggle("Auto-clean after transcription", isOn: $settings.smartDictationEnabled)
-            } header: {
-                Text("Smart Dictation")
+                Toggle("Clean up my dictation", isOn: $settings.smartDictationEnabled)
             } footer: {
-                Text("After every recording, fixes grammar and punctuation and removes filler words like \"um\" — automatically.")
+                Text("After each recording, fixes punctuation and capitals and removes filler words like \"um\" — using an AI model on this Mac.")
             }
 
             Section {
@@ -38,7 +36,7 @@ struct SmartDictationSettingsTab: View {
                 selectionNote
                 modelStatusRow
             } header: {
-                Text("Model")
+                Text("Writing model")
             } footer: {
                 Text("Bigger models write better but load slower and use more memory. Qwen models download the first time you use them. Apple Intelligence is built into macOS.")
             }
@@ -69,7 +67,7 @@ struct SmartDictationSettingsTab: View {
 
     private var modelStatusRow: some View {
         HStack {
-            Text("Transform Model")
+            Text("Status")
             Spacer()
 
             if transformManager.appleChosenButUnavailable {

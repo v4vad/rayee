@@ -25,13 +25,6 @@ struct HistoryView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Search bar at top
-            searchBar
-                .padding()
-
-            // Divider between search and list
-            Divider()
-
             // Main content: list of transcriptions or empty state
             if historyManager.transcriptions.isEmpty && !historyManager.isLoadingMore {
                 emptyStateView
@@ -45,41 +38,15 @@ struct HistoryView: View {
                 footerView
             }
         }
-    }
-
-    // MARK: - Search Bar
-
-    private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.secondary)
-
-            TextField("Search transcriptions...", text: $searchText)
-                .textFieldStyle(.plain)
-                .onChange(of: searchText) { newValue in
-                    searchTask?.cancel()
-                    let task = DispatchWorkItem {
-                        historyManager.performSearch(query: newValue)
-                    }
-                    searchTask = task
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: task)
-                }
-
-            if !searchText.isEmpty {
-                Button(action: {
-                    searchTask?.cancel()
-                    searchText = ""
-                    historyManager.performSearch(query: "")
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                }
-                .buttonStyle(.plain)
+        .searchable(text: $searchText, placement: .toolbar, prompt: "Search history")
+        .onChange(of: searchText) { _, newValue in
+            searchTask?.cancel()
+            let task = DispatchWorkItem {
+                historyManager.performSearch(query: newValue)
             }
+            searchTask = task
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: task)
         }
-        .padding(8)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
     }
 
     // MARK: - Empty State
