@@ -9,12 +9,13 @@ A local voice-to-text transcription app for macOS. Press a hotkey, speak, and te
 3. Launch Rayee — it lives in your menu bar
 4. Grant microphone and accessibility permissions when prompted
 
-**Requirements:** macOS 14.6 or later, Apple Silicon Mac (M1 or newer)
+**Requirements:** macOS 26 or later, Apple Silicon Mac (M1 or newer)
 
 ## Features
 
 - **100% Local** - All processing happens on your Mac. No internet required, fully private.
 - **Global Hotkey** - Trigger from any app with a keyboard shortcut (Option+Space by default)
+- **Notch Recorder** - While you dictate, a small recorder grows out of the notch at the top of the screen (a floating capsule on screens without a notch)
 - **Auto-paste** - Transcribed text goes directly where your cursor is
 - **Multiple AI Models** - Choose between speed and accuracy (tiny, small, medium, large)
 - **Custom Vocabulary** - Teach it names, jargon, and technical terms
@@ -47,7 +48,7 @@ Rayee is a single native Swift app — no Python, no server.
 ## Building from Source
 
 ### Prerequisites
-- macOS 14.6+, Apple Silicon
+- macOS 26+, Apple Silicon
 - Xcode 16+ with the Metal Toolchain (`xcodebuild -downloadComponent MetalToolchain`)
 
 ### Build and run

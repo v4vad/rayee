@@ -37,6 +37,7 @@ the app only when a step says "Manual check".
 | 2. Recording and feedback fixes | `2026-10-15-02-recording-fixes.md` | `release/v0.8` | v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
 | 3. AI model upgrades | `2026-10-16-03-model-upgrades.md` | `release/v0.9` | v0.9 | Done, awaiting user testing (default text model still Llama) |
 | 4. Live transcription | brainstorm, then plan (see below) | `feature/live-transcription` | v1.0 | Not planned yet |
+| Design refresh | `docs/superpowers/plans/2026-10-17-design-refresh.md` | `feature/design-refresh` | v1.0 or v0.10 (user decides) | Done, awaiting user testing |
 
 Phases 1 and 2 share one branch and ship together as v0.8. Phase 1 changes nothing you can see in
 the app except some wording, so it isn't worth a release on its own.
@@ -90,7 +91,7 @@ the app except some wording, so it isn't worth a release on its own.
 ## Global constraints (apply to every phase)
 
 - Swift, SwiftUI, 4-space indent, no tabs. Match the surrounding comment style.
-- Minimum macOS is **14.6** (`MACOSX_DEPLOYMENT_TARGET = 14.6`). Don't use APIs newer than that without `#available`.
+- Minimum macOS is **26.0** (`MACOSX_DEPLOYMENT_TARGET = 26.0`). Don't use APIs newer than that without `#available`.
 - **App source files are listed by hand in `swift/Rayee/Rayee.xcodeproj/project.pbxproj`.** Prefer
   putting new code into existing files. Deleting an app source file means removing its lines from
   `project.pbxproj` (see Phase 1, Task 1).
@@ -165,3 +166,4 @@ installed `argmax-oss-swift` version's documentation for it first.
 - **2026-10-16:** Phase 2 Task 3 (F10, convert each mic buffer once): F10 confirmed. With the old repeat-input behaviour, `testAudioIsNeverRepeated` fails; with the fix it passes. The resampler holds back ~15 ms (about 236 frames at 16kHz, measured on 5 buffers and about 231 on 10), so the length test tolerance was widened to ±300 frames. Next: Phase 2 Task 4 (SpeechGate, pre-roll).
 - **2026-10-16:** Phase 2 Tasks 1-7 done via subagents (user chose one whole-branch review instead of per-task reviews). Final review: 0 critical, 2 important (start-failure error wiped by a stale isRecording update; transform UI stuck when a new recording starts mid-transform), both fixed with 4 minor fixes (error panel 190pt, clipboard restore 1.0s, setup-guide once-only guard, stale comment). Parked: two pastes within ~1s can lose the clipboard; large clipboard snapshot can stall; adaptive VAD cap can block auto-stop in noisy rooms. 32 tests pass. User skipped the hands-on check and released v0.8. Next: Phase 3.
 - **2026-10-16:** Phase 3 done on release/v0.9 (Tasks 1-3, plus 3b download progress after a user report). Whole-branch review: 0 critical, 2 important (turbo unsupported on M1; character-based output cap truncated non-Latin scripts), both fixed with 6 minors. 64 tests pass. Not yet released: waiting on the user's testing and the text-model scoring (eval set). Next: user testing, then /publish-release v0.9.
+- **2026-10-18:** Design refresh done on feature/design-refresh (plan: `docs/superpowers/plans/2026-10-17-design-refresh.md`). It covers the notch recorder, the Settings sidebar, the leaner menu, the 5-step setup guide, and the macOS 26 minimum. Tasks 1-10 are committed and each was reviewed. Test suite: all 120 tests pass. Next: a whole-branch review, then the hands-on check with the user (9 checks in Task 11, step 6). After that, the user decides whether this ships as v1.0 or v0.10. Surprise: the menu's status warning does not update while the menu is open; it refreshes the next time the menu opens.
