@@ -61,8 +61,17 @@ final class ModelEvalTests: XCTestCase {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["RAYEE_EVAL"] == "1", "Set TEST_RUNNER_RAYEE_EVAL=1 to run the model eval set")
 
         // Restore the user's real model choice no matter what happens below.
-        let originalModel = SettingsManager.shared.transformModel
-        defer { SettingsManager.shared.transformModel = originalModel }
+        // Saved and restored as the raw UserDefaults value, so Automatic (no value) stays unsaved.
+        let defaults = UserDefaults.standard
+        let originalRaw = defaults.object(forKey: SettingsKey.transformModel)
+        defer {
+            if let originalRaw {
+                defaults.set(originalRaw, forKey: SettingsKey.transformModel)
+            } else {
+                defaults.removeObject(forKey: SettingsKey.transformModel)
+            }
+            SettingsManager.shared.reloadTransformModelFromDefaults()
+        }
 
         var runs: [EvalModelRun] = []
 
@@ -186,7 +195,7 @@ final class ModelEvalTests: XCTestCase {
             for await generation in stream {
                 if case .chunk(let token) = generation { output += token }
             }
-            return EvalResult(output: MLXTransformManager.cleanedOutput(output),
+            return EvalResult(output: MLXTransformManager.cleanedOutput(output, input: text),
                               seconds: Date().timeIntervalSince(start))
         } catch {
             return EvalResult(output: "ERROR: \(error)", seconds: Date().timeIntervalSince(start))
@@ -230,7 +239,7 @@ final class ModelEvalTests: XCTestCase {
                     options: GenerationOptions(
                         sampling: .greedy,
                         maximumResponseTokens: MLXTransformManager.maxOutputTokens(for: sample)))
-                output = MLXTransformManager.cleanedOutput(response.content)
+                output = MLXTransformManager.cleanedOutput(response.content, input: sample)
             } catch {
                 output = "ERROR: \(error)"
             }
@@ -280,11 +289,11 @@ final class ModelEvalTests: XCTestCase {
         let box = EvalTokenBox()
         let start = Date()
         do {
-            try await MLXTransformManager.shared.streamTransform(text: text, type: .smartDictation) { token in
+            let finalText = try await MLXTransformManager.shared.streamTransform(text: text, type: .smartDictation) { token in
                 box.text += token
             }
             return EvalResult(
-                output: MLXTransformManager.cleanedOutput(box.text),
+                output: MLXTransformManager.cleanedOutput(finalText, input: text),
                 seconds: Date().timeIntervalSince(start)
             )
         } catch {

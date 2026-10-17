@@ -16,11 +16,18 @@ import Tokenizers
 
 enum MLXTransformError: LocalizedError {
     case modelNotLoaded
+    /// The user picked Apple's model, but Apple Intelligence can't be used right now.
+    case appleUnavailable
+
+    /// Shown in Settings next to the selection and used as the transform error message.
+    static let appleUnavailableMessage = "Apple Intelligence isn't ready. Turn it on in System Settings, or choose another model."
 
     var errorDescription: String? {
         switch self {
         case .modelNotLoaded:
             return "The writing model is not loaded."
+        case .appleUnavailable:
+            return Self.appleUnavailableMessage
         }
     }
 }
@@ -29,15 +36,14 @@ enum MLXTransformError: LocalizedError {
 
 /// The on-device text models the user can choose from (Settings → Transforms).
 /// Llama 3.2 1B was removed in v0.9.1: it still obeyed dictated instructions in the eval set.
-/// A saved "llama3_2_1B" no longer matches a case, so it falls back to `defaultModel`.
+/// A saved "llama3_2_1B" (or any other unknown value) no longer matches a case and counts as Automatic.
 enum TransformModel: String, CaseIterable, Identifiable {
     case qwen3_1_7B
     case qwen3_4B
     /// Apple's built-in model (FoundationModels). Nothing to download or load.
     case apple
 
-    /// Used for new installs and for any saved value this version doesn't recognise.
-    /// Not saved anywhere, so it is worked out again on every launch.
+    /// What Automatic picks right now. Worked out again on every use, never saved.
     static var defaultModel: TransformModel {
         defaultModel(
             physicalMemory: ProcessInfo.processInfo.physicalMemory,
@@ -57,13 +63,18 @@ enum TransformModel: String, CaseIterable, Identifiable {
         physicalMemory >= 16 * 1024 * 1024 * 1024 ? .qwen3_4B : .qwen3_1_7B
     }
 
-    /// The model that actually runs. A chosen Apple model that has become unavailable
-    /// (Apple Intelligence turned off) runs as the memory-rule Qwen model instead.
+    /// The model that runs for a selection. Automatic follows `defaultModel`.
+    /// A chosen Apple model that isn't available gives nil: it never falls back to a download.
     nonisolated static func effective(
-        selected: TransformModel, physicalMemory: UInt64, appleAvailable: Bool
-    ) -> TransformModel {
-        if selected == .apple, !appleAvailable { return qwenDefault(physicalMemory: physicalMemory) }
-        return selected
+        selection: TransformModelSelection, physicalMemory: UInt64, appleAvailable: Bool
+    ) -> TransformModel? {
+        switch selection {
+        case .automatic:
+            return defaultModel(physicalMemory: physicalMemory, appleAvailable: appleAvailable)
+        case .explicit(let model):
+            if model == .apple, !appleAvailable { return nil }
+            return model
+        }
     }
 
     var id: String { rawValue }
@@ -99,8 +110,35 @@ enum TransformModel: String, CaseIterable, Identifiable {
         self == .apple ? nil : ["enable_thinking": false]
     }
 
-    static func from(savedValue: String?) -> TransformModel {
-        savedValue.flatMap(TransformModel.init(rawValue:)) ?? defaultModel
+}
+
+/// The text-model choice in Settings: Automatic, or one specific model.
+/// Automatic is stored as no saved value; `tag` is what the Settings picker uses.
+enum TransformModelSelection: Equatable {
+    case automatic
+    case explicit(TransformModel)
+
+    /// Picker tag for Automatic. Not a `TransformModel` raw value and never saved.
+    nonisolated static let automaticTag = "automatic"
+
+    /// A missing or unknown saved value (for example "llama3_2_1B") is Automatic.
+    nonisolated init(savedValue: String?) {
+        if let model = savedValue.flatMap(TransformModel.init(rawValue:)) {
+            self = .explicit(model)
+        } else {
+            self = .automatic
+        }
+    }
+
+    nonisolated init(tag: String) {
+        self.init(savedValue: tag)
+    }
+
+    nonisolated var tag: String {
+        switch self {
+        case .automatic: return Self.automaticTag
+        case .explicit(let model): return model.rawValue
+        }
     }
 }
 
@@ -136,24 +174,38 @@ final class MLXTransformManager: ObservableObject {
 
     private init() {}
 
-    /// The model that will run now: the one chosen in Settings, or the Qwen fallback if Apple's is unavailable.
-    var effectiveModel: TransformModel {
-        let selected = TransformModel.from(savedValue: SettingsManager.shared.transformModel)
-        let effective = TransformModel.effective(
-            selected: selected,
+    /// What the last use resolved to, so the log only changes when the answer does.
+    private var lastLoggedModel: TransformModel?
+
+    /// The model that would run right now, or nil when Apple's model is chosen but not available.
+    /// Automatic is worked out on every read, so Apple coming online mid-session is picked up.
+    var effectiveModel: TransformModel? {
+        TransformModel.effective(
+            selection: TransformModelSelection(tag: SettingsManager.shared.transformModel),
             physicalMemory: ProcessInfo.processInfo.physicalMemory,
             appleAvailable: AppleIntelligence.isAvailable)
-        if effective != selected {
-            AppLogger.log(
-                "MLXTransformManager: Apple Intelligence unavailable, using \(effective.rawValue) instead",
-                category: "mlx")
-        }
-        return effective
     }
 
     /// True when transforms run on Apple's built-in model (nothing to download or load).
     var usesAppleModel: Bool {
         effectiveModel == .apple
+    }
+
+    /// True when Apple's model is chosen but can't be used, so a transform would fail.
+    var appleChosenButUnavailable: Bool {
+        effectiveModel == nil
+    }
+
+    /// Resolves the model for a load or transform and logs only when it changes.
+    private func resolveForUse() -> TransformModel? {
+        let resolved = effectiveModel
+        if resolved != lastLoggedModel {
+            lastLoggedModel = resolved
+            AppLogger.log(
+                "MLXTransformManager: using \(resolved?.rawValue ?? "none (Apple Intelligence unavailable)")",
+                category: "mlx")
+        }
+        return resolved
     }
 
     // MARK: - Prompt Construction (nonisolated — testable without actor hop)
@@ -251,9 +303,12 @@ final class MLXTransformManager: ObservableObject {
     }
 
     /// Removes prompt scaffolding a small model sometimes repeats: the <dictation> tags and a leading "Output:".
-    nonisolated static func cleanedOutput(_ text: String) -> String {
+    /// The label is kept when the dictated `input` itself started with "output".
+    nonisolated static func cleanedOutput(_ text: String, input: String) -> String {
         var result = sanitized(text).trimmingCharacters(in: .whitespacesAndNewlines)
-        if result.lowercased().hasPrefix("output:") {
+        let inputStartsWithOutput = input.trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased().hasPrefix("output")
+        if !inputStartsWithOutput, result.lowercased().hasPrefix("output:") {
             result = String(result.dropFirst("output:".count)).trimmingCharacters(in: .whitespacesAndNewlines)
         }
         return result
@@ -277,9 +332,10 @@ final class MLXTransformManager: ObservableObject {
     // MARK: - Model Loading
 
     /// Loads the text model chosen in Settings, if it isn't loaded already.
-    /// If a different model is loaded, unloads it first.
+    /// If a different model is loaded, unloads it first. Does nothing when Apple's model is
+    /// chosen but unavailable (`streamTransform` reports that).
     func loadModelIfNeeded() async {
-        let wanted = effectiveModel
+        guard let wanted = resolveForUse() else { return }
 
         // Apple's model needs no download or load. Free any MLX model and warm up Apple's instead.
         if wanted == .apple {
@@ -293,9 +349,11 @@ final class MLXTransformManager: ObservableObject {
             unloadModel()
         }
 
-        // A load is already running: wait for it rather than returning with no model.
+        // A load is already running: wait for it, then check again, because the model
+        // chosen in Settings may have changed while it ran.
         if let task = loadTask {
             await task.value
+            await recheckAfterLoad()
             return
         }
 
@@ -304,10 +362,21 @@ final class MLXTransformManager: ObservableObject {
             return
         }
 
-        let task = Task { await self.performLoad(wanted) }
+        // The task clears `loadTask` itself when the load ends, so no waiter has to.
+        let task = Task { @MainActor in
+            defer { self.loadTask = nil }
+            await self.performLoad(wanted)
+        }
         loadTask = task
         await task.value
-        loadTask = nil
+        await recheckAfterLoad()
+    }
+
+    /// Runs the checks again after a load, so a model change during the load unloads and reloads.
+    /// A failed load leaves no model, so it stops here instead of looping.
+    private func recheckAfterLoad() async {
+        guard modelContainer != nil, loadedModel != resolveForUse() else { return }
+        await loadModelIfNeeded()
     }
 
     /// Downloads (if needed) and loads the given model into memory.
@@ -365,15 +434,24 @@ final class MLXTransformManager: ObservableObject {
     ///   - type: The transformation to apply.
     ///   - onToken: Called on the main actor for each streamed text chunk.
     ///
-    /// - Throws: `MLXTransformError.modelNotLoaded` if the model could not be loaded.
+    /// - Returns: The full transformed text (not yet passed through `cleanedOutput`).
+    ///   Use it instead of the streamed pieces: it is the authoritative result.
+    ///
+    /// - Throws: `MLXTransformError.appleUnavailable` if Apple's model is chosen but not available,
+    ///   `MLXTransformError.modelNotLoaded` if the model could not be loaded.
     func streamTransform(
         text: String,
         type transformType: TransformationType,
         onToken: @escaping (String) -> Void
-    ) async throws {
-        if effectiveModel == .apple, #available(macOS 26, *) {
-            try await AppleTransformEngine.stream(text: text, type: transformType, onToken: onToken)
-            return
+    ) async throws -> String {
+        guard let resolved = resolveForUse() else {
+            throw MLXTransformError.appleUnavailable
+        }
+        if resolved == .apple {
+            if #available(macOS 26, *) {
+                return try await AppleTransformEngine.stream(text: text, type: transformType, onToken: onToken)
+            }
+            throw MLXTransformError.appleUnavailable
         }
 
         await loadModelIfNeeded()
@@ -394,10 +472,12 @@ final class MLXTransformManager: ObservableObject {
         let stream = try await container.generate(input: lmInput, parameters: parameters)
 
         var chunkCount = 0
+        var fullText = ""
         for await generation in stream {
             try Task.checkCancellation()
             if case .chunk(let token) = generation {
                 chunkCount += 1
+                fullText += token
                 onToken(token)
             }
         }
@@ -408,6 +488,7 @@ final class MLXTransformManager: ObservableObject {
         resetUnloadTimer()
         // The stream also ends early when the task is cancelled. Report that as a cancellation, not a result.
         try Task.checkCancellation()
+        return fullText
     }
 
     // MARK: - Private helpers

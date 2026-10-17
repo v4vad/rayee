@@ -178,9 +178,29 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(smartDictationEnabled, forKey: SettingsKey.smartDictationEnabled) }
     }
 
-    // Which on-device text model runs transformations (TransformModel raw value)
+    // Which on-device text model runs transformations: a TransformModel raw value, or
+    // TransformModelSelection.automaticTag. Automatic is saved as no value at all.
     @Published var transformModel: String {
-        didSet { UserDefaults.standard.set(transformModel, forKey: SettingsKey.transformModel) }
+        didSet {
+            guard !isReloadingTransformModel else { return }
+            if transformModel == TransformModelSelection.automaticTag {
+                UserDefaults.standard.removeObject(forKey: SettingsKey.transformModel)
+            } else {
+                UserDefaults.standard.set(transformModel, forKey: SettingsKey.transformModel)
+            }
+        }
+    }
+
+    // True while `reloadTransformModelFromDefaults` updates the value, so it isn't written back
+    private var isReloadingTransformModel = false
+
+    // Re-reads the saved text model choice into memory without writing anything back
+    func reloadTransformModelFromDefaults() {
+        isReloadingTransformModel = true
+        defer { isReloadingTransformModel = false }
+        transformModel = TransformModelSelection(
+            savedValue: UserDefaults.standard.string(forKey: SettingsKey.transformModel)
+        ).tag
     }
 
     private static let fwToWhisperKitNames: [String: String] = [
@@ -304,10 +324,10 @@ class SettingsManager: ObservableObject {
             self.smartDictationEnabled = false
         }
 
-        // Load text model choice (unknown or missing → default)
-        self.transformModel = TransformModel.from(
+        // Load text model choice (unknown or missing → Automatic)
+        self.transformModel = TransformModelSelection(
             savedValue: UserDefaults.standard.string(forKey: SettingsKey.transformModel)
-        ).rawValue
+        ).tag
     }
 
     // Save hotkey configuration to UserDefaults
@@ -340,8 +360,7 @@ class SettingsManager: ObservableObject {
         enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         adaptiveVADEnabled = false
         smartDictationEnabled = false
-        transformModel = TransformModel.defaultModel.rawValue
-        // The default isn't saved, so it is worked out again on every launch.
-        UserDefaults.standard.removeObject(forKey: SettingsKey.transformModel)
+        // Automatic is saved as no value; setting it removes the saved key
+        transformModel = TransformModelSelection.automaticTag
     }
 }

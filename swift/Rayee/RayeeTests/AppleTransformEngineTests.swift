@@ -15,6 +15,23 @@ final class AppleTransformEngineTests: XCTestCase {
         guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         XCTAssertEqual(AppleTransformEngine.delta(previous: "Hello", current: "Help"), "")
         XCTAssertEqual(AppleTransformEngine.delta(previous: "Hello", current: "He"), "")
+        // A rewritten snapshot (not an extension) gives nothing; the final text is what gets used.
+        XCTAssertEqual(AppleTransformEngine.delta(previous: "so um hello", current: "So hello there"), "")
+    }
+
+    func testDeltaHandlesSnapshotsThatSplitACharacter() throws {
+        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
+        // Devanagari: "नमस" then "नमस्" (the virama joins the last letter)
+        XCTAssertEqual(AppleTransformEngine.delta(previous: "नमस", current: "नमस्"), "\u{094D}")
+        XCTAssertEqual(AppleTransformEngine.delta(previous: "नमस्", current: "नमस्ते"), "ते")
+        // Emoji skin-tone modifier arrives after the base emoji
+        XCTAssertEqual(AppleTransformEngine.delta(previous: "\u{1F44B}", current: "\u{1F44B}\u{1F3FD}"), "\u{1F3FD}")
+        // Rebuilding from split snapshots gives the full text
+        var emitted = ""
+        for snapshot in ["नमस", "नमस्", "नमस्ते", "नमस्ते \u{1F44B}", "नमस्ते \u{1F44B}\u{1F3FD}"] {
+            emitted += AppleTransformEngine.delta(previous: emitted, current: snapshot)
+        }
+        XCTAssertEqual(emitted, "नमस्ते \u{1F44B}\u{1F3FD}")
     }
 
     func testDeltasRebuildTheFinalText() throws {

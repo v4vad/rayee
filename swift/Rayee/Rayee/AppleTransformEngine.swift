@@ -65,9 +65,13 @@ enum AppleTransformEngine {
 
     /// Part of `current` that goes beyond `previous`. Streamed snapshots are the whole text so far.
     /// A snapshot that doesn't start with the previous one gives nothing for that step.
+    /// Compared by unicode scalars, not characters: a snapshot can end in the middle of a
+    /// character (an emoji skin tone, a Devanagari conjunct), which `hasPrefix` would reject.
     nonisolated static func delta(previous: String, current: String) -> String {
-        guard current.hasPrefix(previous) else { return "" }
-        return String(current.dropFirst(previous.count))
+        let old = previous.unicodeScalars
+        let new = current.unicodeScalars
+        guard new.starts(with: old) else { return "" }
+        return String(String.UnicodeScalarView(new.dropFirst(old.count)))
     }
 
     /// Loads Apple's model ahead of the first transform so it answers sooner.
@@ -78,13 +82,14 @@ enum AppleTransformEngine {
     }
 
     /// Streams the transformed text to `onToken` as new pieces. Uses a fresh session per call.
+    /// Returns the final full text, which is authoritative: the streamed pieces can miss part of it.
     /// Throws what FoundationModels throws (for example a guardrail refusal) and `CancellationError`.
     @MainActor
     static func stream(
         text: String,
         type transformType: TransformationType,
         onToken: @escaping (String) -> Void
-    ) async throws {
+    ) async throws -> String {
         let (transcript, prompt) = makeTranscript(text: text, type: transformType)
         let session = LanguageModelSession(model: .default, transcript: transcript)
         let options = GenerationOptions(
@@ -106,5 +111,6 @@ enum AppleTransformEngine {
             AppLogger.log("AppleTransformEngine: final text differs from streamed text", category: "mlx")
         }
         try Task.checkCancellation()
+        return latest
     }
 }

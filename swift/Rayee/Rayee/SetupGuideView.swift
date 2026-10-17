@@ -136,6 +136,7 @@ struct SetupGuideView: View {
     }
 
     private var transformModelDetail: String {
+        if transformManager.appleChosenButUnavailable { return "Apple Intelligence isn't ready" }
         if transformManager.usesAppleModel { return "Built into macOS" }
         if transformManager.isModelLoading {
             return MLXTransformManager.preparingText(

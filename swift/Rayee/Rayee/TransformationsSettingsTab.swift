@@ -31,6 +31,8 @@ struct TransformationsSettingsTab: View {
 
                 Section {
                     Picker("Text model", selection: $settings.transformModel) {
+                        Text("Automatic (recommended)")
+                            .tag(TransformModelSelection.automaticTag)
                         ForEach(TransformModel.allCases) { model in
                             Text(pickerLabel(for: model))
                                 .tag(model.rawValue)
@@ -41,6 +43,7 @@ struct TransformationsSettingsTab: View {
                         // Free the old model now; the new one loads on next use
                         transformManager.unloadModel()
                     }
+                    selectionNote
                     modelStatusRow
                 } header: {
                     Text("Model")
@@ -69,6 +72,24 @@ struct TransformationsSettingsTab: View {
         .toggleStyle(.switch)
     }
 
+    // MARK: - Selection Note
+
+    /// Under Automatic: which model it picks right now. Under Apple when it can't be used: why transforms will fail.
+    @ViewBuilder
+    private var selectionNote: some View {
+        if let model = transformManager.effectiveModel {
+            if TransformModelSelection(tag: settings.transformModel) == .automatic {
+                Text("Currently: \(model.displayName)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        } else {
+            Text(MLXTransformError.appleUnavailableMessage)
+                .font(.caption)
+                .foregroundColor(.red)
+        }
+    }
+
     // MARK: - Model Status Row
 
     private var modelStatusRow: some View {
@@ -76,7 +97,13 @@ struct TransformationsSettingsTab: View {
             Text("Transform Model")
             Spacer()
 
-            if transformManager.usesAppleModel {
+            if transformManager.appleChosenButUnavailable {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundColor(.red)
+                Text("Apple Intelligence isn't ready")
+                    .font(.caption)
+                    .foregroundColor(.red)
+            } else if transformManager.usesAppleModel {
                 Image(systemName: "checkmark.circle.fill")
                     .foregroundColor(.green)
                 Text("Built in, ready")
