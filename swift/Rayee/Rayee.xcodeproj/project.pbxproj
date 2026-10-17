@@ -50,6 +50,8 @@
 		DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */; };
 		A1000530001 /* VocabularySettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000530000 /* VocabularySettingsTab.swift */; };
 		A1000540001 /* NotchGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000540000 /* NotchGeometry.swift */; };
+		A1000550001 /* RecorderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000550000 /* RecorderState.swift */; };
+		A1000560001 /* SystemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000560000 /* SystemStatus.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +105,8 @@
 		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
 		A1000530000 /* VocabularySettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySettingsTab.swift; sourceTree = "<group>"; };
 		A1000540000 /* NotchGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchGeometry.swift; sourceTree = "<group>"; };
+		A1000550000 /* RecorderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderState.swift; sourceTree = "<group>"; };
+		A1000560000 /* SystemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemStatus.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -181,6 +185,8 @@
 				A10003F0000 /* SetupGuideView.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
 				A1000520000 /* UpdateManager.swift */,
+				A1000560000 /* SystemStatus.swift */,
+				A1000550000 /* RecorderState.swift */,
 				A1000540000 /* NotchGeometry.swift */,
 				A10001E0000 /* Assets.xcassets */,
 				A1000006000 /* Info.plist */,
@@ -357,6 +363,8 @@
 				A10003F0001 /* SetupGuideView.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
 				A1000520001 /* UpdateManager.swift in Sources */,
+				A1000560001 /* SystemStatus.swift in Sources */,
+				A1000550001 /* RecorderState.swift in Sources */,
 				A1000540001 /* NotchGeometry.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

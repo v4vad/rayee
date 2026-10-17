@@ -38,6 +38,14 @@ enum UserFacingError {
         }
         return "Transcription failed: \(error.localizedDescription)"
     }
+
+    /// The button the recorder offers with this error, if any.
+    static func action(for error: Error) -> RecorderErrorAction? {
+        if let recorderError = error as? AudioRecorderError, case .noMicrophonePermission = recorderError {
+            return .openMicrophoneSettings
+        }
+        return nil
+    }
 }
 
 /// Whether Smart Dictation will clean up a transcription automatically.
