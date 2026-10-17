@@ -34,7 +34,15 @@ enum TransformModel: String, CaseIterable, Identifiable {
     case qwen3_4B
 
     /// Used for new installs and for any saved value this version doesn't recognise.
-    static let defaultModel: TransformModel = .llama3_2_1B
+    /// Qwen3 4B scored far best in the eval set (docs/plans/2026-10-17-model-eval-results.md)
+    /// but needs ~2.5 GB while loaded, so Macs with less than 16 GB get Qwen3 1.7B.
+    static var defaultModel: TransformModel {
+        defaultModel(physicalMemory: ProcessInfo.processInfo.physicalMemory)
+    }
+
+    nonisolated static func defaultModel(physicalMemory: UInt64) -> TransformModel {
+        physicalMemory >= 16 * 1024 * 1024 * 1024 ? .qwen3_4B : .qwen3_1_7B
+    }
 
     var id: String { rawValue }
 
@@ -99,6 +107,9 @@ final class MLXTransformManager: ObservableObject {
 
     /// Which model `modelContainer` holds, so a change in Settings triggers a reload.
     private var loadedModel: TransformModel?
+
+    /// The load in progress, so a second caller waits for it instead of returning with no model.
+    private var loadTask: Task<Void, Never>?
 
     /// Idle timer — unloads the model after a period of inactivity (see unloadDelay).
     private var unloadTimer: Timer?
@@ -198,11 +209,25 @@ final class MLXTransformManager: ObservableObject {
             unloadModel()
         }
 
-        guard modelContainer == nil, !isModelLoading else {
+        // A load is already running: wait for it rather than returning with no model.
+        if let task = loadTask {
+            await task.value
+            return
+        }
+
+        guard modelContainer == nil else {
             resetUnloadTimer()
             return
         }
 
+        let task = Task { await self.performLoad(wanted) }
+        loadTask = task
+        await task.value
+        loadTask = nil
+    }
+
+    /// Downloads (if needed) and loads the given model into memory.
+    private func performLoad(_ wanted: TransformModel) async {
         isModelLoading = true
         loadError = nil
         downloadProgress = nil

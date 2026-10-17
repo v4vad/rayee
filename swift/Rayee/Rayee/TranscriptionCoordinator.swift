@@ -144,6 +144,12 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = true
         audioFeedback.playStartSound()
 
+        // Smart Dictation needs the text model as soon as the transcript is ready.
+        // Load it while the user is still speaking so they don't wait for it afterwards.
+        if settings.smartDictationEnabled {
+            Task { await MLXTransformManager.shared.loadModelIfNeeded() }
+        }
+
         // Create recorder with user's settings
         audioRecorder = AudioRecorder(
             silenceDuration: settings.silenceDuration,

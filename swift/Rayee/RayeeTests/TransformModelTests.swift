@@ -4,9 +4,11 @@ import MLXLMCommon
 
 final class TransformModelTests: XCTestCase {
 
-    func testDefaultIsStillLlama() {
-        // The default changes only after the user scores the candidates (see the eval set doc).
-        XCTAssertEqual(TransformModel.defaultModel, .llama3_2_1B)
+    func testDefaultModelFollowsMemory() {
+        let gb: UInt64 = 1024 * 1024 * 1024
+        XCTAssertEqual(TransformModel.defaultModel(physicalMemory: 8 * gb), .qwen3_1_7B)
+        XCTAssertEqual(TransformModel.defaultModel(physicalMemory: 16 * gb), .qwen3_4B)
+        XCTAssertEqual(TransformModel.defaultModel(physicalMemory: 48 * gb), .qwen3_4B)
     }
 
     func testThreeChoices() {
@@ -36,8 +38,8 @@ final class TransformModelTests: XCTestCase {
     }
 
     func testUnknownSavedValueFallsBackToDefault() {
-        XCTAssertEqual(TransformModel.from(savedValue: "some-future-model"), .llama3_2_1B)
-        XCTAssertEqual(TransformModel.from(savedValue: nil), .llama3_2_1B)
+        XCTAssertEqual(TransformModel.from(savedValue: "some-future-model"), TransformModel.defaultModel)
+        XCTAssertEqual(TransformModel.from(savedValue: nil), TransformModel.defaultModel)
         XCTAssertEqual(TransformModel.from(savedValue: "qwen3_4B"), .qwen3_4B)
     }
 }
