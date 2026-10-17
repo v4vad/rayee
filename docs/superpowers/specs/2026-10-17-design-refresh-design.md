@@ -72,9 +72,9 @@ All body heights below are measured below the band, at a width of 300 pt (or the
 | **Listening** | 44 | Left: a pulsing red dot. Centre: a live waveform (9 bars from `AudioLevelMonitor`). Right: a timer (`0:07`), shown after 3 s. | Click the shape to stop. The hotkey also stops. Esc cancels (existing global Esc handling). |
 | **Transcribing** | 44 | The waveform settles into a slow flat shimmer line. Label: "Transcribing". | Esc does nothing (a transcription in progress finishes, as today). |
 | **Cleaning up** | 44 | ✦ glyph plus "Cleaning up", with shimmer text. If the model is downloading: "Downloading model 45%". | Esc or a click: skip the cleanup and paste the raw text. |
-| **Pasted** | 44 | A checkmark that draws as a stroke over 0.25 s, plus "Pasted". | Retracts into the notch after 0.8 s. |
-| **Result** (nowhere to paste) | 64–140 | Up to 4 lines of the text (scrollable beyond that). A row with **Copy ↩** and **✕**. | Return = Copy and close. Esc or ✕ = close. Auto-closes after 20 s; hovering pauses the countdown. The text stays in History either way. |
-| **Error** | 64–100 | An amber glyph, one plain sentence (from `UserFacingError`), and at most one action button (for example "Open Settings" for a blocked microphone). | Esc or ✕ closes. Auto-closes after 8 s unless hovered. |
+| **Pasted** | 44 | A checkmark that draws as a stroke over 0.25 s, plus "Pasted". Shown only when the paste really happened: Rayee had Accessibility permission and an app to paste into. | Retracts into the notch after 0.8 s. Esc passes through to your app. |
+| **Result** (nowhere to paste) | 86–140 | Up to 4 lines of the text (scrollable beyond that). A row with **Copy ↩** and **✕**. | Return = Copy and close. Esc or ✕ = close. Auto-closes after 20 s; hovering pauses the countdown. The text stays in History either way. |
+| **Error** | 50–140 | An amber glyph, one plain sentence (from `UserFacingError`), and at most one action button (for example "Open Settings" for a blocked microphone). | Esc or ✕ closes. Auto-closes after 8 s unless hovered. |
 
 When nothing needs reading, there is **no** "RAYEE" header, no "Ready" footer and no gear button.
 
@@ -83,7 +83,7 @@ When nothing needs reading, there is **no** "RAYEE" header, no "Ready" footer an
 - **Open:** `.spring(response: 0.42, dampingFraction: 0.80)` on height and radii. Content fades in 0.09 s after the shape starts growing.
 - **Between states:** height springs with the same curve, and content cross-fades over 0.15 s. Text never reflows during the animation: each state's content is laid out at its final size.
 - **Close:** `.spring(response: 0.45, dampingFraction: 1.0)`, a slightly faster ease with no bounce, retracting up into the notch (or fading up on the capsule).
-- **Reduce Motion:** opacity fades only, with no springs or shimmer.
+- **Reduce Motion:** no springs, shimmer or pulsing. Size changes use a short 0.15 s ease instead.
 - **Haptics:** a light `NSHapticFeedbackManager` tick on Pasted and Error, for trackpad users.
 - Existing start, stop and error sounds are unchanged.
 
@@ -143,8 +143,8 @@ Removed: Vocabulary… and System Status…. The menu-bar icon states are unchan
 |---|---|---|
 | 1. Welcome | App icon, "Talk, and Rayee types.", "Everything stays on this Mac." **The speech model starts downloading in the background now.** | Get Started |
 | 2. Microphone | One-line reason and an [Allow Microphone] button. Once allowed, a live level meter labelled "Say something" appears. | Permission granted. Continue is enabled. |
-| 3. Accessibility | "So Rayee can paste into your apps and hear your hotkey." [Open System Settings]. Rayee polls every 1 s. If permission is granted but the hotkey tap still fails, it shows a "Quit and reopen Rayee" hint. | Granted (moves on by itself), or **Skip**: Rayee will copy instead of paste. |
-| 4. Speech Model | Model name, size, and a progress bar. Usually already done. | Download finished and model loaded |
+| 3. Accessibility | "So Rayee can paste into your apps and hear your shortcut from anywhere." [Open System Settings]. Rayee checks every 1.5 s. No restart hint is needed, because `HotkeyManager` already retries every 3 s. | Granted (moves on by itself), or **Skip**. Step 5 then warns that the shortcut won't work until Accessibility is allowed. |
+| 4. Speech Model | Model size and a spinner while it downloads and prepares (WhisperKit reports no download percentage). Usually already done. A Download button retries if it failed. | Model loaded |
 | 5. Try It | The hotkey shown (changeable through the existing `HotkeyPickerView`), a practice text field focused, and "Press ⌥Space and say 'Hello Rayee'". The real recorder runs. When text lands in the field, a checkmark appears. Smart Dictation on/off switch. | Finish sets `hasCompletedSetup = true` |
 
 ---
@@ -182,12 +182,14 @@ Removed: Vocabulary… and System Status…. The menu-bar icon states are unchan
 - `PillButtonStyle` and any other button styles left unused.
 - Most of the `Config.recordingPanel*` size constants.
 
-**Project:** `MACOSX_DEPLOYMENT_TARGET` goes from 14.6 to 26.0 in all 4 build configurations, and `#available` checks for 26 are removed.
+**Also:** onboarding asks for microphone access at its own step. The app no longer asks at launch before setup is finished.
+
+**Project:** the oldest macOS Rayee runs on goes from 14.6 to 26.0. In the project file this is the setting `MACOSX_DEPLOYMENT_TARGET`, which appears 4 times: Debug and Release for the project, and Debug and Release for the tests. The app target inherits it from the project. The code's "only on macOS 26 or later" checks (`#available`) are deleted, because they become always true.
 
 **Behaviour that must not change:**
 
 - Paste and clipboard restore.
-- Smart Dictation's paste-after-cleanup and cancel-means-no-paste rules.
+- Smart Dictation's paste-after-cleanup rule, and the rule that a stopped clean-up never pastes later. Skipping with Esc pastes the raw text exactly once; a new recording during clean-up pastes nothing and keeps the raw text in History.
 - History saving of the cleaned text.
 - Esc cancelling a recording.
 - The start, stop and error sounds.
@@ -196,7 +198,7 @@ Removed: Vocabulary… and System Status…. The menu-bar icon states are unchan
 
 - **Unit tests**, new, in `RayeeTests/`:
   - `NotchGeometryTests`: notch math with fake screen rectangles, the no-notch fallback, and the screen-choice fallback chain.
-  - `RecorderStateTests`: every transition, including cancel during cleanup leading to no paste, and the auto-dismiss timers being paused by hover.
+  - `RecorderStateTests`: heights, auto-dismiss delays, which states hover pauses, Esc and click behaviour per state, what shows after transcription and after clean-up, and the paste decision (including no Accessibility leading to the Copy card).
   - The settings migration (`transformationsEnabled = false` leads to `smartDictationEnabled = false`).
 - **Existing tests** are updated wherever they reference removed transform types or settings. All tests must pass.
 - **Manual checks (by the user):**
