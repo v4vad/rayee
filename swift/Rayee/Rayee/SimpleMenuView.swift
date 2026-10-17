@@ -2,74 +2,66 @@
 //  SimpleMenuView.swift
 //  Rayee
 //
-//  A simple dropdown menu for the menu bar.
-//  Contains basic actions: Record, Vocabulary, History, Settings, Quit.
+//  The menu-bar menu: a warning only when something is wrong, then Record, History,
+//  Settings, updates and Quit.
 //
 
 import SwiftUI
 
 struct SimpleMenuView: View {
     @EnvironmentObject var appState: AppState
-    @Environment(\.openWindow) private var openWindow
+    @ObservedObject private var status = SystemStatusMonitor.shared
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
-        // Record button with hotkey hint
-        Button(action: {
-            if appState.status == .recording {
-                appState.stopRecording()
-            } else {
-                appState.startTranscription(autoPaste: true)
+        Group {
+            if let problem = status.problems.first(where: \.isBlocking) {
+                Button("⚠︎ \(problem.title) — Fix…") {
+                    openSettingsWindow(section: .general)
+                }
+                Divider()
             }
-        }) {
-            HStack {
-                Text(recordButtonText)
-                Spacer()
-                Text(SettingsManager.shared.hotkeyConfig.displayString)
-                    .foregroundColor(.secondary)
+
+            Button(action: {
+                if appState.status == .recording {
+                    appState.stopRecording()
+                } else {
+                    appState.startTranscription(autoPaste: true)
+                }
+            }) {
+                HStack {
+                    Text(recordButtonText)
+                    Spacer()
+                    Text(SettingsManager.shared.hotkeyConfig.displayString)
+                        .foregroundColor(.secondary)
+                }
             }
+            .disabled(!canRecord)
+
+            Divider()
+
+            Button("History…") {
+                openSettingsWindow(section: .history)
+            }
+
+            Button("Settings…") {
+                openSettingsWindow(section: nil)
+            }
+            .keyboardShortcut(",", modifiers: .command)
+
+            Button("Check for Updates…") {
+                UpdateManager.shared.checkForUpdates()
+            }
+            .disabled(!UpdateManager.shared.canCheckForUpdates)
+
+            Divider()
+
+            Button("Quit Rayee") {
+                NSApplication.shared.terminate(nil)
+            }
+            .keyboardShortcut("q", modifiers: .command)
         }
-        .disabled(!canRecord)
-
-        Divider()
-
-        // Vocabulary - opens Settings to Vocabulary tab
-        Button("Vocabulary...") {
-            openSettingsWindow(tab: "vocabulary")
-        }
-
-        // History - opens Settings to History tab
-        Button("History...") {
-            openSettingsWindow(tab: "history")
-        }
-
-        Divider()
-
-        // System Status (setup guide)
-        Button("System Status...") {
-            openWindow(id: "setup-guide")
-            NSApplication.shared.activate(ignoringOtherApps: true)
-        }
-
-        // Settings
-        Button("Settings...") {
-            openSettingsWindow(tab: nil)
-        }
-        .keyboardShortcut(",", modifiers: .command)
-
-        // Check for Updates
-        Button("Check for Updates...") {
-            UpdateManager.shared.checkForUpdates()
-        }
-        .disabled(!UpdateManager.shared.canCheckForUpdates)
-
-        Divider()
-
-        // Quit
-        Button("Quit Rayee") {
-            NSApplication.shared.terminate(nil)
-        }
-        .keyboardShortcut("q", modifiers: .command)
+        .onAppear { status.refresh() }
     }
 
     // MARK: - Computed Properties
@@ -92,12 +84,12 @@ struct SimpleMenuView: View {
 
     // MARK: - Helper Methods
 
-    private func openSettingsWindow(tab: String?) {
-        if let tab = tab {
-            UserDefaults.standard.set(tab, forKey: "settingsTab")
+    private func openSettingsWindow(section: SettingsSection?) {
+        if let section {
+            UserDefaults.standard.set(section.rawValue, forKey: "settingsTab")
+            NotificationCenter.default.post(name: .openSettingsSection, object: nil)
         }
         openSettings()
-        NotificationCenter.default.post(name: .openSettingsSection, object: nil)
-        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 }
