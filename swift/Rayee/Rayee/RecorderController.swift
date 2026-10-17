@@ -72,8 +72,12 @@ final class RecorderController: ObservableObject {
 
         withAnimation(RecorderMotion.change) { phase = newPhase }
 
-        panel?.allowsKeyFocus = newPhase.takesKeyboardFocus
-        if newPhase.takesKeyboardFocus { panel?.makeKey() }
+        if newPhase.takesKeyboardFocus {
+            panel?.allowsKeyFocus = true
+            panel?.makeKey()
+        } else {
+            releaseKeyFocus()
+        }
         switch newPhase {
         case .pasted, .error:
             NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
@@ -88,7 +92,7 @@ final class RecorderController: ObservableObject {
         guard phase != .hidden else { return }
         dismissWork?.cancel()
         stopTimer()
-        panel?.allowsKeyFocus = false
+        releaseKeyFocus()
         withAnimation(RecorderMotion.close) { phase = .hidden }
         updateMouseHandling()
 
@@ -103,6 +107,16 @@ final class RecorderController: ObservableObject {
     }
 
     // MARK: - Window
+
+    /// Stops the panel being the key window right away, while keeping it on screen.
+    /// Turning off allowsKeyFocus alone doesn't make a window that is already key let go.
+    private func releaseKeyFocus() {
+        panel?.allowsKeyFocus = false
+        guard let panel, panel.isKeyWindow else { return }
+        // Ordering out drops key status; ordering front regardless shows it again without making it key
+        panel.orderOut(nil)
+        panel.orderFrontRegardless()
+    }
 
     private func placeOnCurrentScreen() {
         guard let screen = NotchGeometry.currentScreen() else { return }

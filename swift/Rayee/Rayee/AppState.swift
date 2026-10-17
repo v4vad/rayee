@@ -210,7 +210,7 @@ class AppState: ObservableObject {
                 text: text
             )
             // Onboarding's practice box counts as a paste target
-            if let practiceHandler, !smartDictationWillRun, !text.isEmpty {
+            if let practiceHandler, !didPaste, !smartDictationWillRun, !text.isEmpty {
                 practiceHandler(text)
                 didPaste = true
             }
