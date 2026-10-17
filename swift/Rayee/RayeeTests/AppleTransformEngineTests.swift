@@ -5,14 +5,12 @@ import XCTest
 final class AppleTransformEngineTests: XCTestCase {
 
     func testDeltaOfGrowingSnapshots() throws {
-        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         XCTAssertEqual(AppleTransformEngine.delta(previous: "", current: "Hel"), "Hel")
         XCTAssertEqual(AppleTransformEngine.delta(previous: "Hel", current: "Hello"), "lo")
         XCTAssertEqual(AppleTransformEngine.delta(previous: "Hello", current: "Hello"), "")
     }
 
     func testDeltaIgnoresSnapshotThatDoesNotExtendPrevious() throws {
-        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         XCTAssertEqual(AppleTransformEngine.delta(previous: "Hello", current: "Help"), "")
         XCTAssertEqual(AppleTransformEngine.delta(previous: "Hello", current: "He"), "")
         // A rewritten snapshot (not an extension) gives nothing; the final text is what gets used.
@@ -20,7 +18,6 @@ final class AppleTransformEngineTests: XCTestCase {
     }
 
     func testDeltaHandlesSnapshotsThatSplitACharacter() throws {
-        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         // Devanagari: "नमस" then "नमस्" (the virama joins the last letter)
         XCTAssertEqual(AppleTransformEngine.delta(previous: "नमस", current: "नमस्"), "\u{094D}")
         XCTAssertEqual(AppleTransformEngine.delta(previous: "नमस्", current: "नमस्ते"), "ते")
@@ -35,7 +32,6 @@ final class AppleTransformEngineTests: XCTestCase {
     }
 
     func testDeltasRebuildTheFinalText() throws {
-        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         var emitted = ""
         for snapshot in ["So", "So where", "So where did we?"] {
             emitted += AppleTransformEngine.delta(previous: emitted, current: snapshot)
@@ -44,7 +40,6 @@ final class AppleTransformEngineTests: XCTestCase {
     }
 
     func testTranscriptHasInstructionsThenPairsPerExample() throws {
-        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         let examples = MLXTransformManager.fewShotExamples(for: .smartDictation)
         let (transcript, prompt) = AppleTransformEngine.makeTranscript(text: "um hello there", type: .smartDictation)
         let entries = Array(transcript)
@@ -57,7 +52,6 @@ final class AppleTransformEngineTests: XCTestCase {
     }
 
     func testTranscriptWithoutExamplesIsInstructionsOnly() throws {
-        guard #available(macOS 26, *) else { throw XCTSkip("Needs macOS 26") }
         let (transcript, prompt) = AppleTransformEngine.makeTranscript(text: "hi", type: .grammar)
         XCTAssertEqual(Array(transcript).count, 1)
         XCTAssertTrue(prompt.contains("grammar"))

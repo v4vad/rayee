@@ -341,7 +341,7 @@ final class MLXTransformManager: ObservableObject {
         if wanted == .apple {
             if let task = loadTask { await task.value }
             if modelContainer != nil { unloadModel() }
-            if #available(macOS 26, *) { AppleTransformEngine.prewarm() }
+            AppleTransformEngine.prewarm()
             return
         }
 
@@ -448,10 +448,7 @@ final class MLXTransformManager: ObservableObject {
             throw MLXTransformError.appleUnavailable
         }
         if resolved == .apple {
-            if #available(macOS 26, *) {
-                return try await AppleTransformEngine.stream(text: text, type: transformType, onToken: onToken)
-            }
-            throw MLXTransformError.appleUnavailable
+            return try await AppleTransformEngine.stream(text: text, type: transformType, onToken: onToken)
         }
 
         await loadModelIfNeeded()
