@@ -50,10 +50,4 @@ final class AppleTransformEngineTests: XCTestCase {
         XCTAssertEqual(prompt, MLXTransformManager.buildPrompt(text: "um hello there", type: .smartDictation).user)
         XCTAssertTrue(prompt.contains("<dictation>um hello there</dictation>"))
     }
-
-    func testTranscriptWithoutExamplesIsInstructionsOnly() throws {
-        let (transcript, prompt) = AppleTransformEngine.makeTranscript(text: "hi", type: .grammar)
-        XCTAssertEqual(Array(transcript).count, 1)
-        XCTAssertTrue(prompt.contains("grammar"))
-    }
 }

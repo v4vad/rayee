@@ -58,13 +58,6 @@ struct GeneralSettingsTab: View {
                 Text("Play audio feedback when recording starts and stops")
             }
 
-            // Recording Timeout Section
-            Section {
-                Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
-            } footer: {
-                Text("When enabled, recording stops after 5 minutes")
-            }
-
             // Silence Detection Section
             Section {
                 HStack {

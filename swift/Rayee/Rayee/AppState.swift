@@ -206,7 +206,6 @@ class AppState: ObservableObject {
             let settings = SettingsManager.shared
             let smartDictationWillRun = SmartDictationPolicy.willRun(
                 smartDictationEnabled: settings.smartDictationEnabled,
-                transformationsEnabled: settings.transformationsEnabled,
                 text: text
             )
             // Onboarding's practice box counts as a paste target

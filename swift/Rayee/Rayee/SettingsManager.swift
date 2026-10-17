@@ -20,6 +20,7 @@ enum SettingsKey {
     static let vocabularyList = "vocabularyList"
     static let soundsEnabled = "soundsEnabled"
     static let silenceDuration = "silenceDuration"
+    // Removed in the design refresh; only migrateRemovedSettings reads them
     static let timeoutEnabled = "timeoutEnabled"
     static let transformationsEnabled = "transformationsEnabled"
     static let enabledTransformations = "enabledTransformations"
@@ -148,22 +149,6 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(silenceDuration, forKey: SettingsKey.silenceDuration) }
     }
 
-    // Whether to enforce the Config.maxRecordingDuration (5-minute) recording limit
-    // When false, recording continues until you stop it or silence is detected
-    @Published var timeoutEnabled: Bool {
-        didSet { UserDefaults.standard.set(timeoutEnabled, forKey: SettingsKey.timeoutEnabled) }
-    }
-
-    // Whether text transformations are enabled
-    @Published var transformationsEnabled: Bool {
-        didSet { UserDefaults.standard.set(transformationsEnabled, forKey: SettingsKey.transformationsEnabled) }
-    }
-
-    // Which transformation types to show in the UI
-    @Published var enabledTransformations: Set<String> {
-        didSet { UserDefaults.standard.set(Array(enabledTransformations), forKey: SettingsKey.enabledTransformations) }
-    }
-
     // Whether the user has completed the first-launch setup
     @Published var hasCompletedSetup: Bool {
         didSet { UserDefaults.standard.set(hasCompletedSetup, forKey: SettingsKey.hasCompletedSetup) }
@@ -238,6 +223,8 @@ class SettingsManager: ObservableObject {
     }
 
     private init() {
+        Self.migrateRemovedSettings(in: UserDefaults.standard)
+
         // Load saved settings or use defaults
 
         // Load hotkey configuration
@@ -272,28 +259,6 @@ class SettingsManager: ObservableObject {
             self.silenceDuration = savedDuration
         } else {
             self.silenceDuration = 30.0
-        }
-
-        // Load timeout enabled setting (default: true - Config.maxRecordingDuration limit of 5 minutes enabled)
-        if UserDefaults.standard.object(forKey: SettingsKey.timeoutEnabled) != nil {
-            self.timeoutEnabled = UserDefaults.standard.bool(forKey: SettingsKey.timeoutEnabled)
-        } else {
-            self.timeoutEnabled = true
-        }
-
-        // Load transformations enabled (default: true)
-        if UserDefaults.standard.object(forKey: SettingsKey.transformationsEnabled) != nil {
-            self.transformationsEnabled = UserDefaults.standard.bool(forKey: SettingsKey.transformationsEnabled)
-        } else {
-            self.transformationsEnabled = true
-        }
-
-        // Load enabled transformations (default: all manual types — smartDictation is not a button)
-        let manualTypes = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
-        if let saved = UserDefaults.standard.stringArray(forKey: SettingsKey.enabledTransformations) {
-            self.enabledTransformations = Set(saved)
-        } else {
-            self.enabledTransformations = manualTypes
         }
 
         // Load setup completion flag (default: false)
@@ -365,13 +330,22 @@ class SettingsManager: ObservableObject {
         vocabularyList = []
         soundsEnabled = true
         silenceDuration = 30.0
-        timeoutEnabled = true
-        transformationsEnabled = true
-        enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         adaptiveVADEnabled = false
         smartDictationEnabled = false
         recorderStyle = .automatic
         // Automatic is saved as no value; setting it removes the saved key
         transformModel = TransformModelSelection.automaticTag
+    }
+
+    /// The design refresh removed three settings. Carry over what they meant, then delete them:
+    /// with "Enable text transformations" off, Smart Dictation never ran, so it stays off.
+    static func migrateRemovedSettings(in defaults: UserDefaults) {
+        if defaults.object(forKey: SettingsKey.transformationsEnabled) != nil,
+           !defaults.bool(forKey: SettingsKey.transformationsEnabled) {
+            defaults.set(false, forKey: SettingsKey.smartDictationEnabled)
+        }
+        defaults.removeObject(forKey: SettingsKey.transformationsEnabled)
+        defaults.removeObject(forKey: SettingsKey.enabledTransformations)
+        defaults.removeObject(forKey: SettingsKey.timeoutEnabled)
     }
 }

@@ -52,15 +52,8 @@ enum UserFacingError {
 /// TranscriptionCoordinator (to hold the history save) and AppState (to start the clean-up)
 /// both use it, so the two can never disagree.
 enum SmartDictationPolicy {
-    static func willRun(smartDictationEnabled: Bool, transformationsEnabled: Bool, text: String) -> Bool {
-        isActive(smartDictationEnabled: smartDictationEnabled, transformationsEnabled: transformationsEnabled)
-            && !text.isEmpty
-    }
-
-    /// Both switches are on. Before the transcript exists this is all that can be checked,
-    /// so the model preload uses it.
-    static func isActive(smartDictationEnabled: Bool, transformationsEnabled: Bool) -> Bool {
-        smartDictationEnabled && transformationsEnabled
+    static func willRun(smartDictationEnabled: Bool, text: String) -> Bool {
+        smartDictationEnabled && !text.isEmpty
     }
 }
 
@@ -161,17 +154,13 @@ class TranscriptionCoordinator: ObservableObject {
 
         // Smart Dictation needs the text model as soon as the transcript is ready.
         // Load it while the user is still speaking so they don't wait for it afterwards.
-        if SmartDictationPolicy.isActive(
-            smartDictationEnabled: settings.smartDictationEnabled,
-            transformationsEnabled: settings.transformationsEnabled
-        ) {
+        if settings.smartDictationEnabled {
             Task { await MLXTransformManager.shared.loadModelIfNeeded() }
         }
 
         // Create recorder with user's settings
         audioRecorder = AudioRecorder(
             silenceDuration: settings.silenceDuration,
-            timeoutEnabled: settings.timeoutEnabled,
             adaptiveVADEnabled: settings.adaptiveVADEnabled
         )
 
@@ -257,7 +246,6 @@ class TranscriptionCoordinator: ObservableObject {
 
         let smartDictationWillRun = SmartDictationPolicy.willRun(
             smartDictationEnabled: settings.smartDictationEnabled,
-            transformationsEnabled: settings.transformationsEnabled,
             text: text
         )
 
