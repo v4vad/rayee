@@ -28,8 +28,9 @@ enum MLXTransformError: LocalizedError {
 // MARK: - Model Choice
 
 /// The on-device text models the user can choose from (Settings → Transforms).
+/// Llama 3.2 1B was removed in v0.9.1: it still obeyed dictated instructions in the eval set.
+/// A saved "llama3_2_1B" no longer matches a case, so it falls back to `defaultModel`.
 enum TransformModel: String, CaseIterable, Identifiable {
-    case llama3_2_1B
     case qwen3_1_7B
     case qwen3_4B
 
@@ -48,15 +49,13 @@ enum TransformModel: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .llama3_2_1B: return "Llama 3.2 1B (fastest)"
-        case .qwen3_1_7B: return "Qwen3 1.7B (better writing)"
+        case .qwen3_1_7B: return "Qwen3 1.7B (lighter)"
         case .qwen3_4B: return "Qwen3 4B (best, needs more memory)"
         }
     }
 
     var approximateDownload: String {
         switch self {
-        case .llama3_2_1B: return "about 0.7 GB"
         case .qwen3_1_7B: return "about 1 GB"
         case .qwen3_4B: return "about 2.3 GB"
         }
@@ -64,7 +63,6 @@ enum TransformModel: String, CaseIterable, Identifiable {
 
     var configuration: ModelConfiguration {
         switch self {
-        case .llama3_2_1B: return LLMRegistry.llama3_2_1B_4bit
         case .qwen3_1_7B: return LLMRegistry.qwen3_1_7b_4bit
         case .qwen3_4B: return LLMRegistry.qwen3_4b_4bit
         }
@@ -73,10 +71,7 @@ enum TransformModel: String, CaseIterable, Identifiable {
     /// Extra values for the model's chat template. Qwen3 writes out its "thinking"
     /// before answering unless the template is told not to.
     var additionalContext: [String: any Sendable]? {
-        switch self {
-        case .llama3_2_1B: return nil
-        case .qwen3_1_7B, .qwen3_4B: return ["enable_thinking": false]
-        }
+        ["enable_thinking": false]
     }
 
     static func from(savedValue: String?) -> TransformModel {
