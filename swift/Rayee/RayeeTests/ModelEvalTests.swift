@@ -96,7 +96,7 @@ final class ModelEvalTests: XCTestCase {
                 box.text += token
             }
             return EvalResult(
-                output: box.text.trimmingCharacters(in: .whitespacesAndNewlines),
+                output: MLXTransformManager.cleanedOutput(box.text),
                 seconds: Date().timeIntervalSince(start)
             )
         } catch {

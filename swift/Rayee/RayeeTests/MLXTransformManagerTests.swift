@@ -50,10 +50,31 @@ final class MLXTransformManagerTests: XCTestCase {
         }
     }
 
-    func testSmartDictationHasAWorkedExample() {
+    func testSmartDictationExamplesAreChatTurns() {
+        let examples = MLXTransformManager.fewShotExamples(for: .smartDictation)
+        XCTAssertGreaterThanOrEqual(examples.count, 4)
         let (_, user) = MLXTransformManager.buildPrompt(text: "um hello", type: .smartDictation)
-        XCTAssertTrue(user.contains("Example"))
-        XCTAssertTrue(user.contains("Can you send me the report by Friday?"))
+        XCTAssertEqual(user, "<dictation>um hello</dictation>" + MLXTransformManager.smartDictationReminder)
+        XCTAssertFalse(user.contains("Example"))
+    }
+
+    func testOtherTransformsHaveNoExamples() {
+        XCTAssertTrue(MLXTransformManager.fewShotExamples(for: .grammar).isEmpty)
+    }
+
+    func testExamplesAvoidTheEvalSentences() {
+        // The eval set must stay unseen by the prompt, or the scores are inflated.
+        let all = MLXTransformManager.fewShotExamples(for: .smartDictation)
+            .map { $0.input.lowercased() }.joined(separator: " ")
+        for phrase in ["send me the report", "meeting tomorrow", "poem about cats", "reset my password"] {
+            XCTAssertFalse(all.contains(phrase))
+        }
+    }
+
+    func testSmartDictationPromptCoversSpokenPunctuation() {
+        let (system, _) = MLXTransformManager.buildPrompt(text: "x", type: .smartDictation)
+        XCTAssertTrue(system.contains("new paragraph"))
+        XCTAssertTrue(system.contains("unquote"))
     }
 
     func testTagsInsideTheTextAreRemoved() {
