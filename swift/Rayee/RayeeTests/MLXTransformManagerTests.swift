@@ -3,6 +3,7 @@
 //  RayeeTests
 //
 
+import MLXLMCommon
 import XCTest
 @testable import Rayee
 
@@ -50,10 +51,39 @@ final class MLXTransformManagerTests: XCTestCase {
         }
     }
 
-    func testSmartDictationHasAWorkedExample() {
+    func testSmartDictationExamplesAreChatTurns() {
+        let examples = MLXTransformManager.fewShotExamples(for: .smartDictation)
+        XCTAssertGreaterThanOrEqual(examples.count, 4)
         let (_, user) = MLXTransformManager.buildPrompt(text: "um hello", type: .smartDictation)
-        XCTAssertTrue(user.contains("Example"))
-        XCTAssertTrue(user.contains("Can you send me the report by Friday?"))
+        XCTAssertEqual(user, "<dictation>um hello</dictation>" + MLXTransformManager.smartDictationReminder)
+        XCTAssertFalse(user.contains("Example"))
+    }
+
+    func testSmartDictationChatIsSystemThenExamplesThenUser() {
+        let examples = MLXTransformManager.fewShotExamples(for: .smartDictation)
+        let chat = MLXTransformManager.buildChat(text: "um hello", type: .smartDictation)
+        XCTAssertEqual(chat.count, 1 + 2 * examples.count + 1)
+        XCTAssertEqual(chat.first?.role, .system)
+        XCTAssertEqual(chat.last?.role, .user)
+    }
+
+    func testOtherTransformsHaveNoExamples() {
+        XCTAssertTrue(MLXTransformManager.fewShotExamples(for: .grammar).isEmpty)
+    }
+
+    func testExamplesAvoidTheEvalSentences() {
+        // The eval set must stay unseen by the prompt, or the scores are inflated.
+        let all = MLXTransformManager.fewShotExamples(for: .smartDictation)
+            .map { $0.input.lowercased() }.joined(separator: " ")
+        for phrase in ["send me the report", "meeting tomorrow", "poem about cats", "reset my password"] {
+            XCTAssertFalse(all.contains(phrase))
+        }
+    }
+
+    func testSmartDictationPromptCoversSpokenPunctuation() {
+        let (system, _) = MLXTransformManager.buildPrompt(text: "x", type: .smartDictation)
+        XCTAssertTrue(system.contains("new paragraph"))
+        XCTAssertTrue(system.contains("unquote"))
     }
 
     func testTagsInsideTheTextAreRemoved() {
@@ -78,15 +108,24 @@ final class MLXTransformManagerTests: XCTestCase {
     }
 
     func testCleanedOutputRemovesTags() {
-        XCTAssertEqual(MLXTransformManager.cleanedOutput("<dictation>Hello there.</dictation>"), "Hello there.")
+        XCTAssertEqual(MLXTransformManager.cleanedOutput("<dictation>Hello there.</dictation>", input: "hello there"), "Hello there.")
     }
 
     func testCleanedOutputRemovesLeadingOutputLabel() {
-        XCTAssertEqual(MLXTransformManager.cleanedOutput("Output: Can you send it?"), "Can you send it?")
+        XCTAssertEqual(MLXTransformManager.cleanedOutput("Output: Can you send it?", input: "can you send it"), "Can you send it?")
     }
 
     func testCleanedOutputKeepsNormalText() {
-        XCTAssertEqual(MLXTransformManager.cleanedOutput("Output is ready."), "Output is ready.")
+        XCTAssertEqual(MLXTransformManager.cleanedOutput("Output is ready.", input: "output is ready"), "Output is ready.")
+    }
+
+    func testCleanedOutputKeepsLabelWhenDictationStartsWithOutput() {
+        XCTAssertEqual(
+            MLXTransformManager.cleanedOutput("Output: the report is due.", input: "output colon the report is due"),
+            "Output: the report is due.")
+        XCTAssertEqual(
+            MLXTransformManager.cleanedOutput("Output: ready.", input: "  OUTPUT colon ready"),
+            "Output: ready.")
     }
 
     // MARK: - Unload timer

@@ -310,7 +310,8 @@ class AppState: ObservableObject {
         transformTask = Task { @MainActor in
             var cleanedText: String?
             do {
-                try await MLXTransformManager.shared.streamTransform(
+                // The returned text is the final result; the streamed pieces only drive the live preview.
+                let finalText = try await MLXTransformManager.shared.streamTransform(
                     text: rawText,
                     type: type,
                     onToken: { [weak self] token in
@@ -318,7 +319,7 @@ class AppState: ObservableObject {
                         self?.recordingPanelController.updateWindowSizeForTransform()
                     }
                 )
-                let result = MLXTransformManager.cleanedOutput(transformState.streamingText)
+                let result = MLXTransformManager.cleanedOutput(finalText, input: rawText)
                 if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     // LLM produced nothing — treat as failure and keep raw text
                     transformState.failTransformation(message: "No output produced")
@@ -332,6 +333,8 @@ class AppState: ObservableObject {
                 }
             } catch is CancellationError {
                 // The panel was dismissed mid-way: it's already reset, and nothing should be pasted.
+            } catch where Task.isCancelled {
+                // Cancelled, but reported as another error type (FoundationModels has its own): paste nothing.
             } catch {
                 transformState.failTransformation(message: error.localizedDescription)
                 recordingPanelController.updateWindowSizeForTransform()

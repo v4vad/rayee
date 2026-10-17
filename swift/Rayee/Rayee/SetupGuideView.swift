@@ -107,7 +107,7 @@ struct SetupGuideView: View {
             // Transform Model (optional)
             ChecklistRow(
                 title: "Transform Model",
-                status: transformManager.isModelLoaded ? .ready : .optional,
+                status: (transformManager.isModelLoaded || transformManager.usesAppleModel) ? .ready : .optional,
                 detail: transformModelDetail,
                 actionLabel: nil,
                 action: {},
@@ -136,6 +136,8 @@ struct SetupGuideView: View {
     }
 
     private var transformModelDetail: String {
+        if transformManager.appleChosenButUnavailable { return "Apple Intelligence isn't ready" }
+        if transformManager.usesAppleModel { return "Built into macOS" }
         if transformManager.isModelLoading {
             return MLXTransformManager.preparingText(
                 isLoading: true, downloadFraction: transformManager.downloadProgress) ?? "Loading..."

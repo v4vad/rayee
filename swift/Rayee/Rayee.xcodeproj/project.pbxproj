@@ -10,6 +10,7 @@
 		A1000001001 /* RayeeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000001000 /* RayeeApp.swift */; };
 		A1000002001 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002000 /* AppState.swift */; };
 		A1000007001 /* SettingsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* SettingsManager.swift */; };
+		AE5100000002 /* AppleTransformEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE5100000001 /* AppleTransformEngine.swift */; };
 		A1000008001 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* SettingsView.swift */; };
 		A1000009001 /* HotkeyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000009000 /* HotkeyManager.swift */; };
 		A100000A001 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A000 /* PasteManager.swift */; };
@@ -66,6 +67,7 @@
 		A1000002000 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		A1000006000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000007000 /* SettingsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsManager.swift; sourceTree = "<group>"; };
+		AE5100000001 /* AppleTransformEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTransformEngine.swift; sourceTree = "<group>"; };
 		A1000008000 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A1000009000 /* HotkeyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyManager.swift; sourceTree = "<group>"; };
 		A100000A000 /* PasteManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteManager.swift; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 				A1000002000 /* AppState.swift */,
 				D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */,
 				A1000007000 /* SettingsManager.swift */,
+				AE5100000001 /* AppleTransformEngine.swift */,
 				A1000008000 /* SettingsView.swift */,
 				A1000009000 /* HotkeyManager.swift */,
 				A100000A000 /* PasteManager.swift */,
@@ -321,6 +324,7 @@
 				A1000002001 /* AppState.swift in Sources */,
 				DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */,
 				A1000007001 /* SettingsManager.swift in Sources */,
+				AE5100000002 /* AppleTransformEngine.swift in Sources */,
 				A1000008001 /* SettingsView.swift in Sources */,
 				A1000009001 /* HotkeyManager.swift in Sources */,
 				A100000A001 /* PasteManager.swift in Sources */,

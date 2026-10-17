@@ -22,4 +22,10 @@ final class SmartDictationPolicyTests: XCTestCase {
         XCTAssertFalse(SmartDictationPolicy.willRun(
             smartDictationEnabled: true, transformationsEnabled: true, text: ""))
     }
+
+    func testPreloadNeedsBothSwitches() {
+        XCTAssertTrue(SmartDictationPolicy.isActive(smartDictationEnabled: true, transformationsEnabled: true))
+        XCTAssertFalse(SmartDictationPolicy.isActive(smartDictationEnabled: true, transformationsEnabled: false))
+        XCTAssertFalse(SmartDictationPolicy.isActive(smartDictationEnabled: false, transformationsEnabled: true))
+    }
 }

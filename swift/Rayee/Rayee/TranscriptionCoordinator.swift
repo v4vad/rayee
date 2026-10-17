@@ -45,7 +45,14 @@ enum UserFacingError {
 /// both use it, so the two can never disagree.
 enum SmartDictationPolicy {
     static func willRun(smartDictationEnabled: Bool, transformationsEnabled: Bool, text: String) -> Bool {
-        smartDictationEnabled && transformationsEnabled && !text.isEmpty
+        isActive(smartDictationEnabled: smartDictationEnabled, transformationsEnabled: transformationsEnabled)
+            && !text.isEmpty
+    }
+
+    /// Both switches are on. Before the transcript exists this is all that can be checked,
+    /// so the model preload uses it.
+    static func isActive(smartDictationEnabled: Bool, transformationsEnabled: Bool) -> Bool {
+        smartDictationEnabled && transformationsEnabled
     }
 }
 
@@ -143,6 +150,15 @@ class TranscriptionCoordinator: ObservableObject {
     private func beginRecordingSession() {
         isRecording = true
         audioFeedback.playStartSound()
+
+        // Smart Dictation needs the text model as soon as the transcript is ready.
+        // Load it while the user is still speaking so they don't wait for it afterwards.
+        if SmartDictationPolicy.isActive(
+            smartDictationEnabled: settings.smartDictationEnabled,
+            transformationsEnabled: settings.transformationsEnabled
+        ) {
+            Task { await MLXTransformManager.shared.loadModelIfNeeded() }
+        }
 
         // Create recorder with user's settings
         audioRecorder = AudioRecorder(
