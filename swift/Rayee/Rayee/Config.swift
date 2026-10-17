@@ -55,37 +55,10 @@ enum Config {
     /// Maximum silence duration for the settings slider (seconds)
     static let maxSilenceDuration: TimeInterval = 60.0
 
-    // MARK: - Recording Panel
+    // MARK: - Recorder
 
-    /// Corner radius for the floating panel
-    static let panelCornerRadius: CGFloat = 12
-
-    /// Width of the floating recording panel
-    static let recordingPanelWidth: CGFloat = 400
-
-    /// Height — Idle state
-    static let recordingPanelHeight: CGFloat = 100
-
-    /// Height — Recording state (waveform visible)
-    static let recordingPanelHeightRecording: CGFloat = 164
-
-    /// Height — Transcribing state
-    static let recordingPanelHeightTranscribing: CGFloat = 108
-
-    /// Height — Result state, format options collapsed
-    static let recordingPanelHeightWithResult: CGFloat = 193
-
-    /// Height — Result state, format options expanded
-    static let recordingPanelHeightResultExpanded: CGFloat = 366
-
-    /// Height of the panel when showing transformation preview (TransformationPreviewView)
-    static let recordingPanelHeightWithTransform: CGFloat = 420
-
-    /// Height — Error state (message + Dismiss)
-    static let recordingPanelHeightError: CGFloat = 190
-
-    /// Number of waveform bars (matches Figma design)
-    static let waveformBarCount = 27
+    /// Number of bars in the recorder's level meter
+    static let waveformBarCount = 9
 
     // MARK: - UI Delays
 

@@ -9,6 +9,7 @@
 
 import Foundation
 import SwiftUI
+import AppKit
 import Combine
 
 // What the app is currently doing
@@ -50,14 +51,19 @@ class AppState: ObservableObject {
     /// Manages global hotkey listening
     let hotkeyManager = HotkeyManager.shared
 
-    /// Controls the floating recording panel
-    private let recordingPanelController = RecordingPanelController()
+    /// Shows the recorder that grows out of the notch
+    private let recorder = RecorderController()
 
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
-    /// The transformation currently streaming, so it can be stopped if the panel is dismissed
-    private var transformTask: Task<Void, Never>?
+    /// The Smart Dictation clean-up in progress, and what it needs if the user skips it
+    private var cleanupTask: Task<Void, Never>?
+    private var cleanupRaw = ""
+    private var cleanupCanPaste = false
+
+    /// When set (onboarding's "Try it" step), finished text goes here instead of being pasted
+    var practiceHandler: ((String) -> Void)?
 
     // MARK: - Initialization
 
@@ -79,8 +85,7 @@ class AppState: ObservableObject {
     func startTranscription(autoPaste: Bool = false) {
         guard status == .ready || status == .error else { return }
         errorMessage = nil
-        cancelTransformation()
-        recordingPanelController.transformState.reset()
+        abandonCleanup()
         transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
     }
 
@@ -149,15 +154,11 @@ class AppState: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isRecording in
                 guard let self = self else { return }
-                // Ignore stale values: a start failure flips true then false in one turn, and a late "true" would wipe the error panel
+                // Ignore stale values: a start failure flips true then false in one turn, and a late "true" would wipe the error
                 guard isRecording == self.transcriptionCoordinator.isRecording else { return }
                 if isRecording {
                     self.status = .recording
-                    // Show the floating panel
-                    self.recordingPanelController.setRecording(true)
-                    self.recordingPanelController.showPanel()
-                } else {
-                    self.recordingPanelController.setRecording(false)
+                    self.recorder.show(.listening)
                 }
             }
             .store(in: &cancellables)
@@ -166,13 +167,9 @@ class AppState: ObservableObject {
         transcriptionCoordinator.$isTranscribing
             .receive(on: DispatchQueue.main)
             .sink { [weak self] isTranscribing in
-                guard let self = self else { return }
-                if isTranscribing {
-                    self.status = .transcribing
-                    self.recordingPanelController.setTranscribing(true)
-                } else {
-                    self.recordingPanelController.setTranscribing(false)
-                }
+                guard let self = self, isTranscribing else { return }
+                self.status = .transcribing
+                self.recorder.show(.transcribing)
             }
             .store(in: &cancellables)
 
@@ -181,83 +178,60 @@ class AppState: ObservableObject {
             self?.handleTranscriptionResult(result)
         }
 
-        // Forward audio levels to the panel's waveform
+        // Forward audio levels to the recorder's bars
         transcriptionCoordinator.onAudioLevelUpdate = { [weak self] level in
-            self?.recordingPanelController.audioLevelMonitor.addLevel(level)
+            self?.recorder.audioLevelMonitor.addLevel(level)
         }
 
-        // Set up panel button callbacks
-        recordingPanelController.onStop = { [weak self] in
-            self?.stopRecording()
+        // Recorder clicks and buttons
+        recorder.onCommand = { [weak self] command in
+            self?.perform(command)
         }
-        recordingPanelController.onCancel = { [weak self] in
-            self?.cancelRecording()
+        recorder.onCopy = { [weak self] text in
+            self?.copyToClipboard(text)
         }
-        // Note: onSettings is handled in RecordingPanelHostView with @Environment
-        recordingPanelController.onCopy = { [weak self] in
-            self?.copyFromPanel()
+        recorder.onErrorAction = { [weak self] action in
+            SystemSettingsLink.open(action.settingsURL)
+            self?.recorder.hide()
         }
-
-        // Transformation callbacks
-        recordingPanelController.onTransform = { [weak self] type in
-            self?.handleTransformation(type: type)
-        }
-        recordingPanelController.onUseTransformed = { [weak self] text in
-            self?.handleUseTransformed(text: text)
-        }
-        recordingPanelController.onUseOriginal = { [weak self] in
-            self?.handleUseOriginal()
-        }
-        recordingPanelController.onDone = { [weak self] in
-            self?.cancelTransformation()
-            self?.recordingPanelController.hidePanel()
-        }
-        recordingPanelController.onDiscard = { [weak self] in
-            self?.cancelTransformation()
-            self?.recordingPanelController.hidePanel()
-        }
-
     }
 
     /// Handle transcription completion results
     private func handleTranscriptionResult(_ result: TranscriptionResult) {
         switch result {
-        case .success(let text, let didPaste):
+        case .success(let text, var didPaste):
             transcribedText = text
             status = .ready
 
-            // If paste was attempted but there was no valid target,
-            // or auto-paste is disabled, show result in panel
-            if !didPaste && !text.isEmpty {
-                // Show result mode in the floating panel
-                recordingPanelController.showResultMode(text: text)
+            let settings = SettingsManager.shared
+            let smartDictationWillRun = SmartDictationPolicy.willRun(
+                smartDictationEnabled: settings.smartDictationEnabled,
+                transformationsEnabled: settings.transformationsEnabled,
+                text: text
+            )
+            // Onboarding's practice box counts as a paste target
+            if let practiceHandler, !smartDictationWillRun, !text.isEmpty {
+                practiceHandler(text)
+                didPaste = true
+            }
 
-                let settings = SettingsManager.shared
-                if SmartDictationPolicy.willRun(
-                    smartDictationEnabled: settings.smartDictationEnabled,
-                    transformationsEnabled: settings.transformationsEnabled,
-                    text: text
-                ) {
-                    handleTransformation(
-                        type: .smartDictation,
-                        thenPaste: transcriptionCoordinator.pendingSmartDictationPaste
-                    )
-                }
-            } else {
-                // Paste happened successfully, hide the panel
-                recordingPanelController.hidePanel()
+            recorder.show(RecorderRules.afterTranscription(
+                text: text, didPaste: didPaste, smartDictationWillRun: smartDictationWillRun))
+            if smartDictationWillRun {
+                runSmartDictation(
+                    raw: text,
+                    canPaste: transcriptionCoordinator.pendingSmartDictationPaste || practiceHandler != nil)
             }
 
         case .cancelled:
             status = .ready
-            // Hide the panel when cancelled
-            recordingPanelController.hidePanel()
+            recorder.hide()
 
-        case .error(let message):
+        case .error(let message, let action):
             errorMessage = message
             status = .error
-            // Keep the panel open and explain what went wrong; Dismiss closes it
-            recordingPanelController.showErrorMode(message: message)
+            // Explain what went wrong; Esc, ✕ or the timer closes it
+            recorder.show(.error(message: message, action: action))
         }
     }
 
@@ -280,77 +254,110 @@ class AppState: ObservableObject {
             }
         }
 
-        // Handle Escape key to cancel recording
-        // Returns true to consume the key (prevent it from reaching other apps)
-        // Returns false to let Escape work normally when not recording
+        // Esc cancels a recording, skips a clean-up, or closes a result or error.
+        // Returns true to consume the key; false lets it reach the user's app.
         hotkeyManager.onEscapePressed = { [weak self] in
             guard let self = self else { return false }
-
-            if self.status == .recording {
-                self.cancelRecording()
-                return true  // Consume the Escape key
-            }
-            return false  // Let Escape pass through to other apps
+            let command = RecorderRules.escape(in: self.recorder.phase)
+            guard command != .none else { return false }
+            self.perform(command)
+            return true
         }
     }
 
-    // MARK: - Transformation Handling
+    // MARK: - Recorder Commands
 
-    /// Handle a transformation request from the recording panel.
-    /// When thenPaste is true, automatically pastes the result and hides the panel on completion.
-    private func handleTransformation(type: TransformationType, thenPaste: Bool = false) {
-        let rawText = recordingPanelController.transcribedText
-        guard !rawText.isEmpty else { return }
+    private func perform(_ command: RecorderCommand) {
+        switch command {
+        case .none: break
+        case .stopRecording: stopRecording()
+        case .cancelRecording: cancelRecording()
+        case .skipCleanup: skipCleanup()
+        case .dismiss: recorder.hide()
+        }
+    }
 
-        let transformState = recordingPanelController.transformState
-        transformState.startTransformation(text: rawText, type: type)
-        recordingPanelController.updateWindowSizeForTransform()
+    /// Cancel recording without transcribing (called when user presses Escape)
+    func cancelRecording() {
+        abandonCleanup()
+        transcriptionCoordinator.cancel()
+        recorder.hide()
+        status = .ready
+    }
 
-        cancelTransformation()
-        transformTask = Task { @MainActor in
-            var cleanedText: String?
+    private func copyToClipboard(_ text: String) {
+        guard !text.isEmpty else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        transcribedText = text
+        recorder.hide()
+    }
+
+    // MARK: - Smart Dictation
+
+    /// Cleans up the transcript, then pastes it (or shows it, when there's nowhere to paste).
+    private func runSmartDictation(raw: String, canPaste: Bool) {
+        abandonCleanup()
+        cleanupRaw = raw
+        cleanupCanPaste = canPaste
+        cleanupTask = Task { @MainActor in
+            var cleaned: String?
             do {
-                // The returned text is the final result; the streamed pieces only drive the live preview.
+                // The returned text is the final result; the streamed pieces aren't shown any more.
                 let finalText = try await MLXTransformManager.shared.streamTransform(
-                    text: rawText,
-                    type: type,
-                    onToken: { [weak self] token in
-                        transformState.appendStreamingToken(token)
-                        self?.recordingPanelController.updateWindowSizeForTransform()
-                    }
-                )
-                let result = MLXTransformManager.cleanedOutput(finalText, input: rawText)
-                if result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    // LLM produced nothing — treat as failure and keep raw text
-                    transformState.failTransformation(message: "No output produced")
-                    recordingPanelController.updateWindowSizeForTransform()
-                    if thenPaste { pasteAndHidePanel(rawText) }
-                } else {
-                    cleanedText = result
-                    transformState.completeTransformation(transformedText: result)
-                    recordingPanelController.updateWindowSizeForTransform()
-                    if thenPaste { pasteAndHidePanel(result) }
+                    text: raw, type: .smartDictation, onToken: { _ in })
+                let result = MLXTransformManager.cleanedOutput(finalText, input: raw)
+                if !result.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    cleaned = result
                 }
             } catch is CancellationError {
-                // The panel was dismissed mid-way: it's already reset, and nothing should be pasted.
+                return
             } catch where Task.isCancelled {
-                // Cancelled, but reported as another error type (FoundationModels has its own): paste nothing.
+                // Cancelled, but reported as another error type (FoundationModels has its own)
+                return
             } catch {
-                transformState.failTransformation(message: error.localizedDescription)
-                recordingPanelController.updateWindowSizeForTransform()
-                if thenPaste { pasteAndHidePanel(rawText) }
+                AppLogger.log("Smart Dictation failed: \(error.localizedDescription)", category: "mlx")
             }
-
-            if type == .smartDictation {
-                saveSmartDictationHistory(raw: rawText, cleaned: cleanedText)
-            }
+            // Skipped while the model was finishing: the skip already pasted the raw text
+            guard !Task.isCancelled else { return }
+            self.finishCleanup(raw: raw, cleaned: cleaned, canPaste: canPaste)
         }
     }
 
-    /// Stops any transformation still streaming (for example, the panel was dismissed)
-    private func cancelTransformation() {
-        transformTask?.cancel()
-        transformTask = nil
+    private func finishCleanup(raw: String, cleaned: String?, canPaste: Bool) {
+        cleanupTask = nil
+        saveSmartDictationHistory(raw: raw, cleaned: cleaned)
+        let outcome = RecorderRules.afterCleanup(raw: raw, cleaned: cleaned, canPaste: canPaste)
+        if let text = outcome.pasteText { deliver(text) }
+        transcribedText = cleaned ?? raw
+        recorder.show(outcome.phase)
+    }
+
+    /// Esc or a click during "Cleaning up": use the raw text now.
+    private func skipCleanup() {
+        guard let task = cleanupTask else { return }
+        task.cancel()
+        finishCleanup(raw: cleanupRaw, cleaned: nil, canPaste: cleanupCanPaste)
+    }
+
+    /// A new recording started mid clean-up: keep the raw text in History, paste nothing.
+    private func abandonCleanup() {
+        guard let task = cleanupTask else { return }
+        task.cancel()
+        cleanupTask = nil
+        saveSmartDictationHistory(raw: cleanupRaw, cleaned: nil)
+    }
+
+    /// Pastes the text into the user's app, or hands it to onboarding's practice box.
+    private func deliver(_ text: String) {
+        if let practiceHandler {
+            practiceHandler(text)
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
+            PasteManager.shared.pasteText(text)
+        }
     }
 
     /// Smart Dictation holds back the history save until the clean-up ends.
@@ -367,56 +374,5 @@ class AppState: ObservableObject {
         } else {
             HistoryManager.shared.saveTranscription(text: raw, model: model)
         }
-    }
-
-    private func pasteAndHidePanel(_ text: String) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-            PasteManager.shared.pasteText(text)
-        }
-        recordingPanelController.hidePanel()
-    }
-
-    /// Handle user accepting the transformed text
-    private func handleUseTransformed(text: String) {
-        recordingPanelController.transcribedText = text
-        transcribedText = text
-        recordingPanelController.transformState.reset()
-        recordingPanelController.updateWindowSizeForTransform()
-    }
-
-    /// Handle user reverting to original text
-    private func handleUseOriginal() {
-        let originalText = recordingPanelController.transformState.previewOriginal
-        if !originalText.isEmpty {
-            recordingPanelController.transcribedText = originalText
-            transcribedText = originalText
-        }
-        recordingPanelController.transformState.reset()
-        recordingPanelController.updateWindowSizeForTransform()
-    }
-
-    /// Cancel recording without transcribing (called when user presses Escape)
-    func cancelRecording() {
-        cancelTransformation()
-        transcriptionCoordinator.cancel()
-        recordingPanelController.hidePanel()
-        status = .ready
-    }
-
-    /// Copy text from the result panel and dismiss it
-    private func copyFromPanel() {
-        let text = recordingPanelController.transcribedText
-        guard !text.isEmpty else { return }
-
-        // Copy to clipboard
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-
-        // Also update the main transcribed text
-        transcribedText = text
-
-        // Hide the panel after copying
-        recordingPanelController.hidePanel()
     }
 }

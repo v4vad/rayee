@@ -27,6 +27,7 @@ enum SettingsKey {
     static let adaptiveVADEnabled = "adaptiveVADEnabled"
     static let selectedWhisperKitModel = "selectedWhisperKitModel"
     static let smartDictationEnabled = "smartDictationEnabled"
+    static let recorderStyle = "recorderStyle"
     static let transformModel = "transformModel"
 }
 
@@ -178,6 +179,11 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(smartDictationEnabled, forKey: SettingsKey.smartDictationEnabled) }
     }
 
+    // Where the recorder appears: out of the notch when there is one, or always floating under the menu bar
+    @Published var recorderStyle: RecorderStyle {
+        didSet { UserDefaults.standard.set(recorderStyle.rawValue, forKey: SettingsKey.recorderStyle) }
+    }
+
     // Which on-device text model runs transformations: a TransformModel raw value, or
     // TransformModelSelection.automaticTag. Automatic is saved as no value at all.
     @Published var transformModel: String {
@@ -317,6 +323,10 @@ class SettingsManager: ObservableObject {
         // Load adaptive VAD setting (default: false)
         self.adaptiveVADEnabled = UserDefaults.standard.bool(forKey: SettingsKey.adaptiveVADEnabled)
 
+        // Load recorder style (default: automatic)
+        self.recorderStyle = RecorderStyle(
+            rawValue: UserDefaults.standard.string(forKey: SettingsKey.recorderStyle) ?? "") ?? .automatic
+
         // Load smart dictation setting (default: false — opt-in)
         if UserDefaults.standard.object(forKey: SettingsKey.smartDictationEnabled) != nil {
             self.smartDictationEnabled = UserDefaults.standard.bool(forKey: SettingsKey.smartDictationEnabled)
@@ -360,6 +370,7 @@ class SettingsManager: ObservableObject {
         enabledTransformations = Set(TransformationType.allCases.filter { $0 != .smartDictation }.map(\.rawValue))
         adaptiveVADEnabled = false
         smartDictationEnabled = false
+        recorderStyle = .automatic
         // Automatic is saved as no value; setting it removes the saved key
         transformModel = TransformModelSelection.automaticTag
     }
