@@ -222,27 +222,14 @@ final class ModelEvalTests: XCTestCase {
             let start = Date()
             var output: String
             do {
-                let chat = MLXTransformManager.buildChat(text: sample, type: .smartDictation)
-                var entries: [Transcript.Entry] = []
-                var finalPrompt = ""
-                for (position, message) in chat.enumerated() {
-                    let segments = [Transcript.Segment.text(.init(content: message.content))]
-                    switch message.role {
-                    case .system:
-                        entries.append(.instructions(.init(segments: segments, toolDefinitions: [])))
-                    case .assistant:
-                        entries.append(.response(.init(assetIDs: [], segments: segments)))
-                    default:
-                        if position == chat.count - 1 {
-                            finalPrompt = message.content
-                        } else {
-                            entries.append(.prompt(.init(segments: segments)))
-                        }
-                    }
-                }
-                let session = LanguageModelSession(model: model, transcript: Transcript(entries: entries))
+                let (transcript, finalPrompt) = AppleTransformEngine.makeTranscript(
+                    text: sample, type: .smartDictation)
+                let session = LanguageModelSession(model: model, transcript: transcript)
                 let response = try await session.respond(
-                    to: finalPrompt, options: GenerationOptions(sampling: .greedy))
+                    to: finalPrompt,
+                    options: GenerationOptions(
+                        sampling: .greedy,
+                        maximumResponseTokens: MLXTransformManager.maxOutputTokens(for: sample)))
                 output = MLXTransformManager.cleanedOutput(response.content)
             } catch {
                 output = "ERROR: \(error)"

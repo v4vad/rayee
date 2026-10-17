@@ -341,5 +341,7 @@ class SettingsManager: ObservableObject {
         adaptiveVADEnabled = false
         smartDictationEnabled = false
         transformModel = TransformModel.defaultModel.rawValue
+        // The default isn't saved, so it is worked out again on every launch.
+        UserDefaults.standard.removeObject(forKey: SettingsKey.transformModel)
     }
 }

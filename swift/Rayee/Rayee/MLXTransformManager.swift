@@ -33,16 +33,37 @@ enum MLXTransformError: LocalizedError {
 enum TransformModel: String, CaseIterable, Identifiable {
     case qwen3_1_7B
     case qwen3_4B
+    /// Apple's built-in model (FoundationModels). Nothing to download or load.
+    case apple
 
     /// Used for new installs and for any saved value this version doesn't recognise.
-    /// Qwen3 4B scored far best in the eval set (docs/plans/2026-10-17-model-eval-results.md)
-    /// but needs ~2.5 GB while loaded, so Macs with less than 16 GB get Qwen3 1.7B.
+    /// Not saved anywhere, so it is worked out again on every launch.
     static var defaultModel: TransformModel {
-        defaultModel(physicalMemory: ProcessInfo.processInfo.physicalMemory)
+        defaultModel(
+            physicalMemory: ProcessInfo.processInfo.physicalMemory,
+            appleAvailable: AppleIntelligence.isAvailable)
     }
 
-    nonisolated static func defaultModel(physicalMemory: UInt64) -> TransformModel {
+    /// Apple's built-in model when it is available (it tied the best score in the eval set
+    /// and needs no download). Otherwise Qwen3 4B, which needs ~2.5 GB while loaded,
+    /// so Macs with less than 16 GB get Qwen3 1.7B.
+    nonisolated static func defaultModel(physicalMemory: UInt64, appleAvailable: Bool) -> TransformModel {
+        if appleAvailable { return .apple }
+        return qwenDefault(physicalMemory: physicalMemory)
+    }
+
+    /// The memory rule alone, for when Apple's model can't be used.
+    nonisolated static func qwenDefault(physicalMemory: UInt64) -> TransformModel {
         physicalMemory >= 16 * 1024 * 1024 * 1024 ? .qwen3_4B : .qwen3_1_7B
+    }
+
+    /// The model that actually runs. A chosen Apple model that has become unavailable
+    /// (Apple Intelligence turned off) runs as the memory-rule Qwen model instead.
+    nonisolated static func effective(
+        selected: TransformModel, physicalMemory: UInt64, appleAvailable: Bool
+    ) -> TransformModel {
+        if selected == .apple, !appleAvailable { return qwenDefault(physicalMemory: physicalMemory) }
+        return selected
     }
 
     var id: String { rawValue }
@@ -51,6 +72,7 @@ enum TransformModel: String, CaseIterable, Identifiable {
         switch self {
         case .qwen3_1_7B: return "Qwen3 1.7B (lighter)"
         case .qwen3_4B: return "Qwen3 4B (best, needs more memory)"
+        case .apple: return "Apple Intelligence (built-in)"
         }
     }
 
@@ -58,20 +80,23 @@ enum TransformModel: String, CaseIterable, Identifiable {
         switch self {
         case .qwen3_1_7B: return "about 1 GB"
         case .qwen3_4B: return "about 2.3 GB"
+        case .apple: return "built into macOS"
         }
     }
 
-    var configuration: ModelConfiguration {
+    /// The MLX model to download and load. Nil for Apple's built-in model.
+    var configuration: ModelConfiguration? {
         switch self {
         case .qwen3_1_7B: return LLMRegistry.qwen3_1_7b_4bit
         case .qwen3_4B: return LLMRegistry.qwen3_4b_4bit
+        case .apple: return nil
         }
     }
 
     /// Extra values for the model's chat template. Qwen3 writes out its "thinking"
-    /// before answering unless the template is told not to.
+    /// before answering unless the template is told not to. Nil for Apple.
     var additionalContext: [String: any Sendable]? {
-        ["enable_thinking": false]
+        self == .apple ? nil : ["enable_thinking": false]
     }
 
     static func from(savedValue: String?) -> TransformModel {
@@ -110,6 +135,26 @@ final class MLXTransformManager: ObservableObject {
     private var unloadTimer: Timer?
 
     private init() {}
+
+    /// The model that will run now: the one chosen in Settings, or the Qwen fallback if Apple's is unavailable.
+    var effectiveModel: TransformModel {
+        let selected = TransformModel.from(savedValue: SettingsManager.shared.transformModel)
+        let effective = TransformModel.effective(
+            selected: selected,
+            physicalMemory: ProcessInfo.processInfo.physicalMemory,
+            appleAvailable: AppleIntelligence.isAvailable)
+        if effective != selected {
+            AppLogger.log(
+                "MLXTransformManager: Apple Intelligence unavailable, using \(effective.rawValue) instead",
+                category: "mlx")
+        }
+        return effective
+    }
+
+    /// True when transforms run on Apple's built-in model (nothing to download or load).
+    var usesAppleModel: Bool {
+        effectiveModel == .apple
+    }
 
     // MARK: - Prompt Construction (nonisolated — testable without actor hop)
 
@@ -234,7 +279,16 @@ final class MLXTransformManager: ObservableObject {
     /// Loads the text model chosen in Settings, if it isn't loaded already.
     /// If a different model is loaded, unloads it first.
     func loadModelIfNeeded() async {
-        let wanted = TransformModel.from(savedValue: SettingsManager.shared.transformModel)
+        let wanted = effectiveModel
+
+        // Apple's model needs no download or load. Free any MLX model and warm up Apple's instead.
+        if wanted == .apple {
+            if let task = loadTask { await task.value }
+            if modelContainer != nil { unloadModel() }
+            if #available(macOS 26, *) { AppleTransformEngine.prewarm() }
+            return
+        }
+
         if modelContainer != nil, loadedModel != wanted, !isModelLoading {
             unloadModel()
         }
@@ -258,6 +312,7 @@ final class MLXTransformManager: ObservableObject {
 
     /// Downloads (if needed) and loads the given model into memory.
     private func performLoad(_ wanted: TransformModel) async {
+        guard let configuration = wanted.configuration else { return }
         isModelLoading = true
         loadError = nil
         downloadProgress = nil
@@ -268,7 +323,7 @@ final class MLXTransformManager: ObservableObject {
             modelContainer = try await LLMModelFactory.shared.loadContainer(
                 from: #hubDownloader(),
                 using: #huggingFaceTokenizerLoader(),
-                configuration: wanted.configuration,
+                configuration: configuration,
                 progressHandler: { [weak self] progress in
                     let fraction = progress.fractionCompleted
                     Task { @MainActor in self?.downloadProgress = fraction }
@@ -316,6 +371,11 @@ final class MLXTransformManager: ObservableObject {
         type transformType: TransformationType,
         onToken: @escaping (String) -> Void
     ) async throws {
+        if effectiveModel == .apple, #available(macOS 26, *) {
+            try await AppleTransformEngine.stream(text: text, type: transformType, onToken: onToken)
+            return
+        }
+
         await loadModelIfNeeded()
 
         guard let container = modelContainer else {
