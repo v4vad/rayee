@@ -18,6 +18,10 @@ Use the `/publish-release` skill — it handles version bump, DMG build, EdDSA s
 - Audio format everywhere: 16kHz, mono, Float32 PCM
 - Minimum macOS is 26.0 (design refresh, Oct 2026)
 - App source files are listed by hand in `project.pbxproj`: add/remove/rename them with `python3 -I scripts/xcodeproj_files.py add|remove|rename …` (test files in `RayeeTests/` need nothing)
+- Test logs interleave lines, so grep counts of "passed" can be off by one — diff test names between runs instead
+- This Xcode's test log has no "Executed N tests" line — `** TEST SUCCEEDED **` is the pass signal
+- `.claude/` is git-ignored, so edits to `.claude/skills/publish-release/SKILL.md` live only on this Mac
+- If tests hang at launch ("test runner hung"), look for piled-up `xcodebuild -runFirstLaunch` processes; a Mac restart cleared it
 
 ## Text model eval
 
