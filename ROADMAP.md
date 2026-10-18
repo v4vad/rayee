@@ -1,5 +1,15 @@
 # Rayee Roadmap
 
+## Completed: design refresh
+
+- The recorder grows out of the notch at the top of the screen (a floating capsule on screens without a notch)
+- Settings has a sidebar: General, Recording, Smart Dictation and About
+- The menu-bar menu is leaner and shows a warning when something stops Rayee from working
+- Setup is a 5-step guide, replacing the System Status window
+- Minimum macOS is now 26
+
+---
+
 ## Completed: v0.8 reliability release
 
 - Errors (like a blocked microphone) now show in the panel instead of it silently closing

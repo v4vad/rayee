@@ -2,144 +2,101 @@
 //  GeneralSettingsTab.swift
 //  Rayee
 //
-//  The "General" tab in Settings, extracted from SettingsView
-//  to keep file sizes under 300 lines.
+//  Settings → General: what's wrong (if anything), the hotkey, and the everyday switches.
 //
 
 import SwiftUI
-import Carbon.HIToolbox
+import ServiceManagement
 
 struct GeneralSettingsTab: View {
-    @EnvironmentObject var appState: AppState
     @ObservedObject var settings = SettingsManager.shared
-    @Binding var isRecordingHotkey: Bool
-    @Binding var showingAccessibilityAlert: Bool
+    @ObservedObject private var status = SystemStatusMonitor.shared
+    @State private var launchAtLogin = LaunchAtLogin.isEnabled
 
     var body: some View {
         Form {
-            // Model Status Section
-            Section("Transcription") {
-                HStack {
-                    Circle()
-                        .fill(appState.isWhisperLoading ? Color.blue : (appState.isWhisperReady ? Color.green : Color.red))
-                        .frame(width: 10, height: 10)
-                    Text("AI Model")
-                    Spacer()
-                    Text(appState.isWhisperLoading ? "Loading..." : (appState.isWhisperReady ? "Ready" : "Not Loaded"))
-                        .foregroundColor(appState.isWhisperLoading ? .blue : (appState.isWhisperReady ? .green : .red))
-                }
+            Section {
+                statusCard
             }
 
-            // Hotkey Section
             Section("Hotkey") {
                 HotkeyPickerView()
             }
 
-            // Auto-Paste Section
             Section {
-                Toggle("Auto-paste after transcription", isOn: $settings.autoPasteEnabled)
-                    .onChange(of: settings.autoPasteEnabled) { newValue in
-                        if newValue {
-                            checkAccessibilityPermission()
-                        }
-                    }
-
-                if settings.autoPasteEnabled {
-                    accessibilityStatusView
-                }
-            } footer: {
-                Text("Automatically paste transcribed text where your cursor is")
-            }
-
-            // Sound Feedback Section
-            Section {
+                Toggle("Paste into the app you're using", isOn: $settings.autoPasteEnabled)
                 Toggle("Play sounds", isOn: $settings.soundsEnabled)
-            } footer: {
-                Text("Play audio feedback when recording starts and stops")
-            }
-
-            // Recording Timeout Section
-            Section {
-                Toggle("Recording timeout", isOn: $settings.timeoutEnabled)
-            } footer: {
-                Text("When enabled, recording stops after 5 minutes")
-            }
-
-            // Silence Detection Section
-            Section {
-                HStack {
-                    Text("Silence detection")
-                    Spacer()
-                    Text(String(format: "%.0fs", settings.silenceDuration))
-                        .foregroundColor(.secondary)
-                }
-
-                Slider(
-                    value: $settings.silenceDuration,
-                    in: Config.minSilenceDuration...Config.maxSilenceDuration,
-                    step: 5
-                )
-            } footer: {
-                Text("After you stop speaking, recording ends after this many seconds of silence")
-            }
-
-            // Adaptive Silence Detection
-            Section {
-                Toggle("Adaptive silence detection", isOn: $settings.adaptiveVADEnabled)
-            } footer: {
-                Text("Auto-calibrates to ambient noise for 200ms when recording starts. Useful in varying noise environments.")
-            }
-
-            // Reset Button
-            Section {
-                HStack {
-                    Spacer()
-                    Button("Reset to Defaults") {
-                        settings.resetToDefaults()
+                Picker("Recorder", selection: $settings.recorderStyle) {
+                    ForEach(RecorderStyle.allCases) { style in
+                        Text(style.label).tag(style)
                     }
-                    .foregroundColor(.secondary)
                 }
+                Toggle("Open Rayee at login", isOn: Binding(
+                    get: { launchAtLogin },
+                    set: { launchAtLogin = LaunchAtLogin.set($0) }))
+            } footer: {
+                Text("When there's nowhere to paste, Rayee shows your text with a Copy button instead.")
             }
         }
         .formStyle(.grouped)
         .toggleStyle(.switch)
+        .onAppear {
+            status.refresh()
+            status.startPolling()
+            launchAtLogin = LaunchAtLogin.isEnabled
+        }
+        .onDisappear { status.stopPolling() }
     }
 
-    // MARK: - Accessibility Status View
-    private var accessibilityStatusView: some View {
-        HStack {
-            if PasteManager.shared.hasAccessibilityPermission() {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text("Accessibility permission granted")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            } else {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-                Text("Accessibility permission needed")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                Spacer()
-                Button("Grant Access") {
-                    openAccessibilitySettings()
+    // MARK: - Status Card
+
+    @ViewBuilder
+    private var statusCard: some View {
+        if status.problems.isEmpty {
+            Label("Ready to dictate", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        } else {
+            ForEach(status.problems) { problem in
+                HStack(alignment: .firstTextBaseline) {
+                    Image(systemName: problem.isBlocking ? "exclamationmark.triangle.fill" : "arrow.down.circle")
+                        .foregroundStyle(problem.isBlocking ? .orange : .secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(problem.title)
+                        if let detail = problem.detail {
+                            Text(detail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Spacer()
+                    if let label = problem.fixLabel {
+                        Button(label) { status.fix(problem) }
+                    } else {
+                        ProgressView().controlSize(.small)
+                    }
                 }
-                .font(.caption)
             }
         }
-        .padding(.top, 4)
     }
+}
 
-    // MARK: - Helper Methods
+// MARK: - Launch at Login
 
-    private func checkAccessibilityPermission() {
-        if !PasteManager.shared.hasAccessibilityPermission() {
-            showingAccessibilityAlert = true
+/// Opening Rayee at login. macOS stores this itself, so there's no UserDefaults key.
+enum LaunchAtLogin {
+    static var isEnabled: Bool { SMAppService.mainApp.status == .enabled }
+
+    /// Turns it on or off and returns the result (unchanged if macOS refused).
+    static func set(_ enabled: Bool) -> Bool {
+        do {
+            if enabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+        } catch {
+            AppLogger.log("Launch at login change failed: \(error.localizedDescription)", category: "app")
         }
-    }
-
-    private func openAccessibilitySettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-        NSWorkspace.shared.open(url)
+        return isEnabled
     }
 }

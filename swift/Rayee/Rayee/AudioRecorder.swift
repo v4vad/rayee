@@ -40,8 +40,7 @@ class AudioRecorder {
 
     // Silence detection settings
     private var silenceDuration: TimeInterval   // How long silence triggers stop
-    private let maxDuration: TimeInterval = Config.maxRecordingDuration
-    private let timeoutEnabled: Bool            // Whether to enforce maxDuration
+    private let maxDuration: TimeInterval = Config.maxRecordingDuration  // Always enforced
 
     // Speech detection and which samples to keep (see SpeechGate)
     private let adaptiveVADEnabled: Bool
@@ -61,10 +60,8 @@ class AudioRecorder {
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
 
     init(silenceDuration: TimeInterval = Config.defaultSilenceDuration,
-         timeoutEnabled: Bool = true,
          adaptiveVADEnabled: Bool = false) {
         self.silenceDuration = silenceDuration
-        self.timeoutEnabled = timeoutEnabled
         self.adaptiveVADEnabled = adaptiveVADEnabled
         self.gate = SpeechGate(adaptive: adaptiveVADEnabled)
     }
@@ -275,7 +272,7 @@ class AudioRecorder {
         let elapsed = now.timeIntervalSince(recordingStartTime ?? now)
 
         // Stop if max duration reached (only if timeout is enabled)
-        if timeoutEnabled && elapsed >= maxDuration {
+        if elapsed >= maxDuration {
             print("[AudioRecorder] Max duration reached")
             DispatchQueue.main.async { [weak self] in
                 self?.stopRecording()

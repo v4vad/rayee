@@ -21,7 +21,7 @@ class HotkeyManager: ObservableObject {
     // The callback to execute when hotkey is pressed
     var onHotkeyPressed: (() -> Void)?
 
-    // The callback to execute when Escape is pressed (returns true to consume the key)
+    // The callback to execute when Escape is pressed (returns true to consume the key; runs inside the event tap, so it must return fast)
     var onEscapePressed: (() -> Bool)?
 
     // Internal state for the event tap
@@ -213,21 +213,11 @@ class HotkeyManager: ObservableObject {
 
         // Check for Escape key (keyCode 53) with no modifiers
         // This allows cancelling recording while letting normal Escape usage pass through
-        // Note: We dispatch async and always consume the key when recording to avoid deadlocks
+        // The tap runs on the main run loop, so the handler is called directly (blocking on
+        // the main queue from here would always time out). The handler must return quickly:
+        // it only decides, and defers any real work, or macOS disables the tap.
         if keyCode == 53 && modifiers == 0 {
-            // Check if we should handle Escape (callback returns true if recording)
-            // We use a semaphore with timeout to safely check from the event tap
-            let semaphore = DispatchSemaphore(value: 0)
-            var shouldConsume = false
-
-            DispatchQueue.main.async { [weak self] in
-                shouldConsume = self?.onEscapePressed?() ?? false
-                semaphore.signal()
-            }
-
-            // Wait briefly for the result (10ms max to avoid blocking)
-            let result = semaphore.wait(timeout: .now() + 0.01)
-            if result == .success && shouldConsume {
+            if onEscapePressed?() == true {
                 return nil  // Consume the event (don't pass to other apps)
             }
         }

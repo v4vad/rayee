@@ -13,15 +13,11 @@ import FoundationModels
 /// Whether Apple's built-in model can be used right now. The one place that checks.
 enum AppleIntelligence {
     static var isAvailable: Bool {
-        if #available(macOS 26, *) {
-            return SystemLanguageModel.default.availability == .available
-        }
-        return false
+        SystemLanguageModel.default.availability == .available
     }
 
     /// Short advice for the Settings picker when the model can't be used, or nil when it can.
     static var unavailableNote: String? {
-        guard #available(macOS 26, *) else { return "Needs macOS 26 or later" }
         switch SystemLanguageModel.default.availability {
         case .available:
             return nil
@@ -39,7 +35,6 @@ enum AppleIntelligence {
 
 // MARK: - Engine
 
-@available(macOS 26, *)
 enum AppleTransformEngine {
 
     /// The session's earlier turns plus the prompt to send last: the system prompt as instructions,

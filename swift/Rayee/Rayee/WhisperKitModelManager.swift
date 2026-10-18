@@ -47,6 +47,14 @@ enum WhisperModelCatalog {
     /// The default before v0.9. Existing installs that never picked a model keep it.
     static let legacyDefault = "openai_whisper-small"
 
+    /// The models Settings shows first: the recommended one, a smaller and a smallest choice,
+    /// and whichever is in use. The rest sit behind "Show all models".
+    static func featured(recommended: String, selected: String, available: [String]) -> [String] {
+        var seen = Set<String>()
+        return [recommended, legacyDefault, "openai_whisper-base", selected]
+            .filter { available.contains($0) && seen.insert($0).inserted }
+    }
+
     /// Saves a speech model choice once, for installs that don't have one yet.
     /// Rayee used to save the choice only when the user picked a model, so an existing user
     /// with nothing saved would otherwise be moved to the new default and a large download.

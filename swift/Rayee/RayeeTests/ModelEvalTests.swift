@@ -131,13 +131,7 @@ final class ModelEvalTests: XCTestCase {
             print("Finished candidate: \(candidate.name)")
         }
 
-        if #available(macOS 26, *) {
-            runs.append(await runAppleCandidate())
-        } else {
-            runs.append(CandidateRun(
-                name: "Apple on-device", note: "Needs macOS 26 or later", loadSeconds: 0,
-                results: Self.samples.map { _ in EvalResult(output: "UNAVAILABLE: macOS 26 required", seconds: 0) }))
-        }
+        runs.append(await runAppleCandidate())
 
         let outputURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // RayeeTests
@@ -203,7 +197,6 @@ final class ModelEvalTests: XCTestCase {
     }
 
     /// Apple's on-device model. Each sample gets a fresh session; the worked examples are passed as earlier transcript turns.
-    @available(macOS 26, *)
     private func runAppleCandidate() async -> CandidateRun {
         let name = "Apple on-device"
         let model = SystemLanguageModel.default

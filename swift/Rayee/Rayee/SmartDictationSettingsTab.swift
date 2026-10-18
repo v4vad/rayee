@@ -1,71 +1,44 @@
 //
-//  TransformationsSettingsTab.swift
+//  SmartDictationSettingsTab.swift
 //  Rayee
 //
-//  Settings tab for configuring text transformations.
-//  Toggle transformations on/off, choose which types to show.
+//  Settings → Smart Dictation
 //
 
 import SwiftUI
 
-struct TransformationsSettingsTab: View {
+struct SmartDictationSettingsTab: View {
     @ObservedObject var settings = SettingsManager.shared
     @ObservedObject private var transformManager = MLXTransformManager.shared
 
     var body: some View {
         Form {
             Section {
-                Toggle("Enable text transformations", isOn: $settings.transformationsEnabled)
+                Toggle("Clean up my dictation", isOn: $settings.smartDictationEnabled)
             } footer: {
-                Text("Transform transcribed text using a local AI model. Choose the model below.")
+                Text("After each recording, fixes punctuation and capitals and removes filler words like \"um\" — using an AI model on this Mac.")
             }
 
-            if settings.transformationsEnabled {
-                Section {
-                    Toggle("Auto-clean after transcription", isOn: $settings.smartDictationEnabled)
-                } header: {
-                    Text("Smart Dictation")
-                } footer: {
-                    Text("After every recording, fixes grammar and punctuation and removes filler words like \"um\" — automatically.")
-                }
-
-                Section {
-                    Picker("Text model", selection: $settings.transformModel) {
-                        Text("Automatic (recommended)")
-                            .tag(TransformModelSelection.automaticTag)
-                        ForEach(TransformModel.allCases) { model in
-                            Text(pickerLabel(for: model))
-                                .tag(model.rawValue)
-                                .disabled(model == .apple && !AppleIntelligence.isAvailable)
-                        }
-                    }
-                    .onChange(of: settings.transformModel) { _ in
-                        // Free the old model now; the new one loads on next use
-                        transformManager.unloadModel()
-                    }
-                    selectionNote
-                    modelStatusRow
-                } header: {
-                    Text("Model")
-                } footer: {
-                    Text("Bigger models write better but load slower and use more memory. Qwen models download the first time you use them. Apple Intelligence is built into macOS.")
-                }
-
-                Section("Visible Transformations") {
-                    ForEach(TransformationType.allCases.filter { $0 != .smartDictation }) { type in
-                        Toggle(isOn: transformationBinding(for: type)) {
-                            HStack(spacing: 8) {
-                                Image(systemName: type.icon)
-                                    .frame(width: 20)
-                                Text(type.label)
-                                Spacer()
-                                Text("\u{2318}\(type.shortcutNumber)")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+            Section {
+                Picker("Text model", selection: $settings.transformModel) {
+                    Text("Automatic (recommended)")
+                        .tag(TransformModelSelection.automaticTag)
+                    ForEach(TransformModel.allCases) { model in
+                        Text(pickerLabel(for: model))
+                            .tag(model.rawValue)
+                            .disabled(model == .apple && !AppleIntelligence.isAvailable)
                     }
                 }
+                .onChange(of: settings.transformModel) { _ in
+                    // Free the old model now; the new one loads on next use
+                    transformManager.unloadModel()
+                }
+                selectionNote
+                modelStatusRow
+            } header: {
+                Text("Writing model")
+            } footer: {
+                Text("Bigger models write better but load slower and use more memory. Qwen models download the first time you use them. Apple Intelligence is built into macOS.")
             }
         }
         .formStyle(.grouped)
@@ -94,7 +67,7 @@ struct TransformationsSettingsTab: View {
 
     private var modelStatusRow: some View {
         HStack {
-            Text("Transform Model")
+            Text("Status")
             Spacer()
 
             if transformManager.appleChosenButUnavailable {
@@ -145,23 +118,8 @@ struct TransformationsSettingsTab: View {
         }
         return "\(model.displayName) — \(model.approximateDownload)"
     }
-
-    private func transformationBinding(for type: TransformationType) -> Binding<Bool> {
-        Binding(
-            get: { settings.enabledTransformations.contains(type.rawValue) },
-            set: { enabled in
-                if enabled {
-                    settings.enabledTransformations.insert(type.rawValue)
-                } else {
-                    if settings.enabledTransformations.count > 1 {
-                        settings.enabledTransformations.remove(type.rawValue)
-                    }
-                }
-            }
-        )
-    }
 }
 
 #Preview {
-    TransformationsSettingsTab()
+    SmartDictationSettingsTab()
 }

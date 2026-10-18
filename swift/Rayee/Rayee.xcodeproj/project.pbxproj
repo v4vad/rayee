@@ -22,9 +22,6 @@
 		A1000130001 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000130000 /* Config.swift */; };
 		A1000150001 /* TranscriptionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000150000 /* TranscriptionCoordinator.swift */; };
 		A1000170001 /* AudioLevelMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000170000 /* AudioLevelMonitor.swift */; };
-		A1000180001 /* RecordingPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000180000 /* RecordingPanelView.swift */; };
-		A1000190001 /* RecordingPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000190000 /* RecordingPanelController.swift */; };
-		A10001B0001 /* PanelButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001B0000 /* PanelButtonStyles.swift */; };
 		A10001C0001 /* PasteTargetDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001C0000 /* PasteTargetDetector.swift */; };
 		A10001D0001 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001D0000 /* AppLogger.swift */; };
 		A10001E0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10001E0000 /* Assets.xcassets */; };
@@ -32,9 +29,7 @@
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
 		A1000390001 /* TransformationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000390000 /* TransformationState.swift */; };
-		A10003C0001 /* TransformationPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003C0000 /* TransformationPreviewView.swift */; };
-		A10003D0001 /* TransformationsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003D0000 /* TransformationsSettingsTab.swift */; };
-		A10003F0001 /* SetupGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003F0000 /* SetupGuideView.swift */; };
+		A10003D0001 /* SmartDictationSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10003D0000 /* SmartDictationSettingsTab.swift */; };
 		A1000400001 /* HotkeyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000400000 /* HotkeyPickerView.swift */; };
 		A1000450001 /* WhisperKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000450000 /* WhisperKitManager.swift */; };
 		A1000460001 /* WhisperKitModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000460000 /* WhisperKitModelManager.swift */; };
@@ -49,6 +44,15 @@
 		TR0001000001 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = TR0001000000 /* Tokenizers */; };
 		DA3BE0040FBB7F8E703AA814 /* SimpleMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */; };
 		A1000530001 /* VocabularySettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000530000 /* VocabularySettingsTab.swift */; };
+		A1000540001 /* NotchGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000540000 /* NotchGeometry.swift */; };
+		A1000550001 /* RecorderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000550000 /* RecorderState.swift */; };
+		A1000560001 /* SystemStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000560000 /* SystemStatus.swift */; };
+		A1000570001 /* NotchShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000570000 /* NotchShape.swift */; };
+		A1000580001 /* RecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000580000 /* RecorderView.swift */; };
+		A1000590001 /* RecorderController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000590000 /* RecorderController.swift */; };
+		A10005A0001 /* RecordingSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005A0000 /* RecordingSettingsTab.swift */; };
+		A10005B0001 /* AboutSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005B0000 /* AboutSettingsTab.swift */; };
+		A10005C0001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005C0000 /* OnboardingView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,9 +84,6 @@
 		A1000130000 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A1000150000 /* TranscriptionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionCoordinator.swift; sourceTree = "<group>"; };
 		A1000170000 /* AudioLevelMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioLevelMonitor.swift; sourceTree = "<group>"; };
-		A1000180000 /* RecordingPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelView.swift; sourceTree = "<group>"; };
-		A1000190000 /* RecordingPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingPanelController.swift; sourceTree = "<group>"; };
-		A10001B0000 /* PanelButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelButtonStyles.swift; sourceTree = "<group>"; };
 		A10001C0000 /* PasteTargetDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTargetDetector.swift; sourceTree = "<group>"; };
 		A10001D0000 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		A10001E0000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -90,9 +91,7 @@
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
 		A1000390000 /* TransformationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationState.swift; sourceTree = "<group>"; };
-		A10003C0000 /* TransformationPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationPreviewView.swift; sourceTree = "<group>"; };
-		A10003D0000 /* TransformationsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransformationsSettingsTab.swift; sourceTree = "<group>"; };
-		A10003F0000 /* SetupGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupGuideView.swift; sourceTree = "<group>"; };
+		A10003D0000 /* SmartDictationSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartDictationSettingsTab.swift; sourceTree = "<group>"; };
 		A1000400000 /* HotkeyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyPickerView.swift; sourceTree = "<group>"; };
 		A1000450000 /* WhisperKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitManager.swift; sourceTree = "<group>"; };
 		A1000460000 /* WhisperKitModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperKitModelManager.swift; sourceTree = "<group>"; };
@@ -101,6 +100,15 @@
 		AD16A4DF2FA769C800901CBD /* RayeeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RayeeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D96FCEC7D02000F9F4E90621 /* SimpleMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMenuView.swift; sourceTree = "<group>"; };
 		A1000530000 /* VocabularySettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySettingsTab.swift; sourceTree = "<group>"; };
+		A1000540000 /* NotchGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchGeometry.swift; sourceTree = "<group>"; };
+		A1000550000 /* RecorderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderState.swift; sourceTree = "<group>"; };
+		A1000560000 /* SystemStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemStatus.swift; sourceTree = "<group>"; };
+		A1000570000 /* NotchShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotchShape.swift; sourceTree = "<group>"; };
+		A1000580000 /* RecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderView.swift; sourceTree = "<group>"; };
+		A1000590000 /* RecorderController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecorderController.swift; sourceTree = "<group>"; };
+		A10005A0000 /* RecordingSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSettingsTab.swift; sourceTree = "<group>"; };
+		A10005B0000 /* AboutSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSettingsTab.swift; sourceTree = "<group>"; };
+		A10005C0000 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -161,9 +169,6 @@
 				A1000130000 /* Config.swift */,
 				A1000150000 /* TranscriptionCoordinator.swift */,
 				A1000170000 /* AudioLevelMonitor.swift */,
-				A1000180000 /* RecordingPanelView.swift */,
-				A1000190000 /* RecordingPanelController.swift */,
-				A10001B0000 /* PanelButtonStyles.swift */,
 				A10001C0000 /* PasteTargetDetector.swift */,
 				A10001D0000 /* AppLogger.swift */,
 				A10002F0000 /* GeneralSettingsTab.swift */,
@@ -173,12 +178,19 @@
 				A1000470000 /* MLXTransformManager.swift */,
 				A1000370000 /* ModelRow.swift */,
 				A1000390000 /* TransformationState.swift */,
-				A10003C0000 /* TransformationPreviewView.swift */,
-				A10003D0000 /* TransformationsSettingsTab.swift */,
+				A10003D0000 /* SmartDictationSettingsTab.swift */,
 				A1000530000 /* VocabularySettingsTab.swift */,
-				A10003F0000 /* SetupGuideView.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
 				A1000520000 /* UpdateManager.swift */,
+				A10005C0000 /* OnboardingView.swift */,
+				A10005B0000 /* AboutSettingsTab.swift */,
+				A10005A0000 /* RecordingSettingsTab.swift */,
+				A1000590000 /* RecorderController.swift */,
+				A1000580000 /* RecorderView.swift */,
+				A1000570000 /* NotchShape.swift */,
+				A1000560000 /* SystemStatus.swift */,
+				A1000550000 /* RecorderState.swift */,
+				A1000540000 /* NotchGeometry.swift */,
 				A10001E0000 /* Assets.xcassets */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
@@ -336,9 +348,6 @@
 				A1000130001 /* Config.swift in Sources */,
 				A1000150001 /* TranscriptionCoordinator.swift in Sources */,
 				A1000170001 /* AudioLevelMonitor.swift in Sources */,
-				A1000180001 /* RecordingPanelView.swift in Sources */,
-				A1000190001 /* RecordingPanelController.swift in Sources */,
-				A10001B0001 /* PanelButtonStyles.swift in Sources */,
 				A10001C0001 /* PasteTargetDetector.swift in Sources */,
 				A10001D0001 /* AppLogger.swift in Sources */,
 				A10002F0001 /* GeneralSettingsTab.swift in Sources */,
@@ -348,12 +357,19 @@
 				A1000470001 /* MLXTransformManager.swift in Sources */,
 				A1000370001 /* ModelRow.swift in Sources */,
 				A1000390001 /* TransformationState.swift in Sources */,
-				A10003C0001 /* TransformationPreviewView.swift in Sources */,
-				A10003D0001 /* TransformationsSettingsTab.swift in Sources */,
+				A10003D0001 /* SmartDictationSettingsTab.swift in Sources */,
 				A1000530001 /* VocabularySettingsTab.swift in Sources */,
-				A10003F0001 /* SetupGuideView.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
 				A1000520001 /* UpdateManager.swift in Sources */,
+				A10005C0001 /* OnboardingView.swift in Sources */,
+				A10005B0001 /* AboutSettingsTab.swift in Sources */,
+				A10005A0001 /* RecordingSettingsTab.swift in Sources */,
+				A1000590001 /* RecorderController.swift in Sources */,
+				A1000580001 /* RecorderView.swift in Sources */,
+				A1000570001 /* NotchShape.swift in Sources */,
+				A1000560001 /* SystemStatus.swift in Sources */,
+				A1000550001 /* RecorderState.swift in Sources */,
+				A1000540001 /* NotchGeometry.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -428,7 +444,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -486,7 +502,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -568,7 +584,7 @@
 				DEVELOPMENT_TEAM = VXYPQ995EU;
 				GENERATE_INFOPLIST_FILE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Karthik-Vadlapatla.RayeeTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -590,7 +606,7 @@
 				DEVELOPMENT_TEAM = VXYPQ995EU;
 				GENERATE_INFOPLIST_FILE = YES;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Karthik-Vadlapatla.RayeeTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";

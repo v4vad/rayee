@@ -2,8 +2,7 @@
 //  ModelsSettingsTab.swift
 //  Rayee
 //
-//  "Models" settings tab showing WhisperKit transcription models
-//  as a card-based list.
+//  Settings → Speech Model
 //
 
 import SwiftUI
@@ -11,27 +10,15 @@ import SwiftUI
 struct ModelsSettingsTab: View {
     @ObservedObject private var modelManager = WhisperKitModelManager.shared
 
+    @State private var showAll = false
+
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            header
-                .padding()
-
-            Divider()
-
-            // Model list or loading/error state
+        Group {
             if modelManager.isLoading {
                 loadingView
             } else {
                 modelListView
             }
-
-            Spacer(minLength: 0)
-
-            // Error banner
-            errorBannerView
-                .padding(.horizontal)
-                .padding(.bottom, 8)
         }
         .task {
             if modelManager.models.isEmpty {
@@ -40,111 +27,57 @@ struct ModelsSettingsTab: View {
         }
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "cpu")
-                    .foregroundColor(.blue)
-                Text("Transcription Models")
-                    .font(.headline)
-            }
-
-            HStack {
-                Text("Active:")
-                    .foregroundColor(.secondary)
-                Text(activeModelName)
-                    .fontWeight(.medium)
-                    .foregroundColor(.green)
-            }
-            .font(.subheadline)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Name of the currently active model
-    private var activeModelName: String {
-        if let info = modelManager.models.first(where: { $0.id == modelManager.selectedModelName }) {
-            return info.displayName
-        }
-        return modelManager.selectedModelName
-    }
-
     // MARK: - Model List
 
-    private var standardModels: [WKModelInfo] {
-        modelManager.models.filter { !$0.id.contains("distil") }
+    private var featuredModels: [WKModelInfo] {
+        let names = WhisperModelCatalog.featured(
+            recommended: WhisperModelCatalog.recommended,
+            selected: modelManager.selectedModelName,
+            available: modelManager.models.map(\.id))
+        return names.compactMap { name in modelManager.models.first { $0.id == name } }
     }
 
-    private var distilModels: [WKModelInfo] {
-        modelManager.models.filter { $0.id.contains("distil") }
+    private var otherModels: [WKModelInfo] {
+        let featured = Set(featuredModels.map(\.id))
+        return modelManager.models.filter { !featured.contains($0.id) }
     }
 
     private var modelListView: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                standardModelsSection
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Turns your voice into text, on this Mac. Bigger models are more accurate but take more space.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 4)
 
-                if !distilModels.isEmpty {
-                    distilModelsSection
+                ForEach(featuredModels) { row(for: $0) }
+
+                if !otherModels.isEmpty {
+                    DisclosureGroup("Show all models", isExpanded: $showAll) {
+                        VStack(spacing: 8) {
+                            ForEach(otherModels) { row(for: $0) }
+                        }
+                        .padding(.top, 8)
+                    }
+                    .padding(.top, 8)
                 }
+
+                errorBannerView
             }
-            .padding()
+            .padding(20)
         }
     }
 
-    // MARK: - Standard Models Section
-
-    private var standardModelsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader(title: "Standard Models", subtitle: "Work on all Macs")
-
-            ForEach(standardModels) { model in
-                ModelRow(
-                    name: model.displayName,
-                    description: modelDescription(model),
-                    sizeText: model.formattedSize,
-                    isActive: modelManager.selectedModelName == model.id,
-                    status: rowStatus(model),
-                    onUse: { handleUse(model) },
-                    onDelete: canDelete(model) ? { handleDelete(model) } : nil
-                )
-            }
-        }
-    }
-
-    // MARK: - Distil Models Section
-
-    private var distilModelsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            sectionHeader(title: "Distil Models (English Only)", subtitle: "Faster, English transcription only")
-
-            ForEach(distilModels) { model in
-                ModelRow(
-                    name: model.displayName,
-                    description: modelDescription(model),
-                    sizeText: model.formattedSize,
-                    isActive: modelManager.selectedModelName == model.id,
-                    status: rowStatus(model),
-                    onUse: { handleUse(model) },
-                    onDelete: canDelete(model) ? { handleDelete(model) } : nil
-                )
-            }
-        }
-    }
-
-    // MARK: - Section Header
-
-    private func sectionHeader(title: String, subtitle: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            Text(subtitle)
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
+    private func row(for model: WKModelInfo) -> some View {
+        ModelRow(
+            name: model.displayName,
+            description: modelDescription(model),
+            sizeText: model.formattedSize,
+            isActive: modelManager.selectedModelName == model.id,
+            status: rowStatus(model),
+            onUse: { handleUse(model) },
+            onDelete: canDelete(model) ? { handleDelete(model) } : nil
+        )
     }
 
     // MARK: - Loading View

@@ -2,8 +2,7 @@
 //  VocabularySettingsTab.swift
 //  Rayee
 //
-//  Settings tab for managing custom vocabulary words.
-//  Extracted from SettingsView to follow the same pattern as GeneralSettingsTab.
+//  Settings → Dictionary
 //
 
 import SwiftUI
@@ -13,75 +12,49 @@ struct VocabularySettingsTab: View {
     @State private var newVocabularyWord = ""
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Header explanation
-            Text("Add words that Rayee might mishear (names, technical terms, etc.)")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal)
-                .padding(.top)
-
-            // Add word input
-            HStack {
-                TextField("Add a word...", text: $newVocabularyWord)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit {
-                        addWord()
-                    }
-
-                Button(action: addWord) {
-                    Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.blue)
+        Form {
+            Section {
+                HStack {
+                    TextField("Add a word or name", text: $newVocabularyWord)
+                        .onSubmit(addWord)
+                    Button("Add", action: addWord)
+                        .disabled(trimmedWord.isEmpty)
                 }
-                .buttonStyle(.plain)
-                .disabled(newVocabularyWord.trimmingCharacters(in: .whitespaces).isEmpty)
+            } footer: {
+                Text("Words Rayee often gets wrong, like names or technical terms.")
             }
-            .padding(.horizontal)
 
-            // Word list
-            if settings.vocabularyList.isEmpty {
-                Spacer()
-                VStack(spacing: 8) {
-                    Image(systemName: "text.badge.plus")
-                        .font(.largeTitle)
-                        .foregroundColor(.secondary)
-                    Text("No custom words yet")
-                        .foregroundColor(.secondary)
-                    Text("Add words above to improve transcription accuracy")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-            } else {
-                List {
+            Section {
+                if settings.vocabularyList.isEmpty {
+                    Text("No words yet")
+                        .foregroundStyle(.secondary)
+                } else {
                     ForEach(settings.vocabularyList, id: \.self) { word in
                         HStack {
                             Text(word)
                             Spacer()
-                            Button(action: {
+                            Button {
                                 settings.removeVocabularyWord(word)
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
+                            } label: {
+                                Image(systemName: "minus.circle.fill")
                             }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        indexSet.forEach { index in
-                            let word = settings.vocabularyList[index]
-                            settings.removeVocabularyWord(word)
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.secondary)
+                            .help("Remove")
                         }
                     }
                 }
             }
         }
+        .formStyle(.grouped)
     }
 
-    // MARK: - Helper Methods
+    private var trimmedWord: String {
+        newVocabularyWord.trimmingCharacters(in: .whitespaces)
+    }
 
     private func addWord() {
+        guard !trimmedWord.isEmpty else { return }
         settings.addVocabularyWord(newVocabularyWord)
         newVocabularyWord = ""
     }

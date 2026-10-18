@@ -17,7 +17,7 @@ import Combine
 enum TranscriptionResult {
     case success(text: String, didPaste: Bool)  // didPaste indicates if text was pasted
     case cancelled           // Recording stopped with no speech
-    case error(message: String)
+    case error(message: String, action: RecorderErrorAction?)
 }
 
 /// Turns internal errors into short, plain-language messages for the recording panel.
@@ -38,21 +38,22 @@ enum UserFacingError {
         }
         return "Transcription failed: \(error.localizedDescription)"
     }
+
+    /// The button the recorder offers with this error, if any.
+    static func action(for error: Error) -> RecorderErrorAction? {
+        if let recorderError = error as? AudioRecorderError, case .noMicrophonePermission = recorderError {
+            return .openMicrophoneSettings
+        }
+        return nil
+    }
 }
 
 /// Whether Smart Dictation will clean up a transcription automatically.
 /// TranscriptionCoordinator (to hold the history save) and AppState (to start the clean-up)
 /// both use it, so the two can never disagree.
 enum SmartDictationPolicy {
-    static func willRun(smartDictationEnabled: Bool, transformationsEnabled: Bool, text: String) -> Bool {
-        isActive(smartDictationEnabled: smartDictationEnabled, transformationsEnabled: transformationsEnabled)
-            && !text.isEmpty
-    }
-
-    /// Both switches are on. Before the transcript exists this is all that can be checked,
-    /// so the model preload uses it.
-    static func isActive(smartDictationEnabled: Bool, transformationsEnabled: Bool) -> Bool {
-        smartDictationEnabled && transformationsEnabled
+    static func willRun(smartDictationEnabled: Bool, text: String) -> Bool {
+        smartDictationEnabled && !text.isEmpty
     }
 }
 
@@ -153,17 +154,13 @@ class TranscriptionCoordinator: ObservableObject {
 
         // Smart Dictation needs the text model as soon as the transcript is ready.
         // Load it while the user is still speaking so they don't wait for it afterwards.
-        if SmartDictationPolicy.isActive(
-            smartDictationEnabled: settings.smartDictationEnabled,
-            transformationsEnabled: settings.transformationsEnabled
-        ) {
+        if settings.smartDictationEnabled {
             Task { await MLXTransformManager.shared.loadModelIfNeeded() }
         }
 
         // Create recorder with user's settings
         audioRecorder = AudioRecorder(
             silenceDuration: settings.silenceDuration,
-            timeoutEnabled: settings.timeoutEnabled,
             adaptiveVADEnabled: settings.adaptiveVADEnabled
         )
 
@@ -218,7 +215,8 @@ class TranscriptionCoordinator: ObservableObject {
         isRecording = false
         audioRecorder = nil
         audioFeedback.playErrorSound()
-        onTranscriptionComplete?(.error(message: UserFacingError.message(for: error)))
+        onTranscriptionComplete?(.error(
+            message: UserFacingError.message(for: error), action: UserFacingError.action(for: error)))
     }
 
     /// Transcribe recording using WhisperKit (on-device)
@@ -248,7 +246,6 @@ class TranscriptionCoordinator: ObservableObject {
 
         let smartDictationWillRun = SmartDictationPolicy.willRun(
             smartDictationEnabled: settings.smartDictationEnabled,
-            transformationsEnabled: settings.transformationsEnabled,
             text: text
         )
 
@@ -264,17 +261,21 @@ class TranscriptionCoordinator: ObservableObject {
         // Determine if we should and can paste
         var didPaste = false
         pendingSmartDictationPaste = false
-        if pendingAutoPaste && settings.autoPasteEnabled && !text.isEmpty {
-            if PasteTargetDetector.hasValidPasteTarget() {
-                if smartDictationWillRun {
-                    // Defer paste — smart dictation will paste the transformed result
-                    pendingSmartDictationPaste = true
-                } else {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-                        self.pasteManager.pasteText(text)
-                    }
-                    didPaste = true
+        let canPaste = RecorderRules.canPaste(
+            requested: pendingAutoPaste,
+            enabled: settings.autoPasteEnabled,
+            text: text,
+            hasTarget: PasteTargetDetector.hasValidPasteTarget(),
+            hasAccessibility: pasteManager.hasAccessibilityPermission())
+        if canPaste {
+            if smartDictationWillRun {
+                // Defer paste — smart dictation will paste the transformed result
+                pendingSmartDictationPaste = true
+            } else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
+                    self.pasteManager.pasteText(text)
                 }
+                didPaste = true
             }
         }
 
@@ -286,6 +287,7 @@ class TranscriptionCoordinator: ObservableObject {
         isTranscribing = false
         AppLogger.log("Transcription failed: \(error.localizedDescription)", category: "transcription")
         audioFeedback.playErrorSound()
-        onTranscriptionComplete?(.error(message: UserFacingError.message(for: error)))
+        onTranscriptionComplete?(.error(
+            message: UserFacingError.message(for: error), action: UserFacingError.action(for: error)))
     }
 }

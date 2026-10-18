@@ -81,4 +81,18 @@ final class WhisperModelCatalogTests: XCTestCase {
     func testTurboModelsGetTheTurboDescription() {
         XCTAssertEqual(WhisperModelCatalog.description(for: "openai_whisper-large-v3_turbo"), "Fast large model, great accuracy")
     }
+
+    func testFeaturedModelsAreRecommendedSmallAndBase() {
+        let available = ["openai_whisper-base", "openai_whisper-small", "big_turbo", "openai_whisper-tiny"]
+        XCTAssertEqual(
+            WhisperModelCatalog.featured(recommended: "big_turbo", selected: "big_turbo", available: available),
+            ["big_turbo", "openai_whisper-small", "openai_whisper-base"])
+    }
+
+    func testTheModelInUseIsAlwaysFeatured() {
+        let available = ["openai_whisper-base", "openai_whisper-small", "big_turbo", "openai_whisper-tiny"]
+        XCTAssertEqual(
+            WhisperModelCatalog.featured(recommended: "big_turbo", selected: "openai_whisper-tiny", available: available),
+            ["big_turbo", "openai_whisper-small", "openai_whisper-base", "openai_whisper-tiny"])
+    }
 }
