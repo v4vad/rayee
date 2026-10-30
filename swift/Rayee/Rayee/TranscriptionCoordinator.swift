@@ -12,6 +12,7 @@
 
 import Foundation
 import Combine
+import AppKit
 
 /// Result of a transcription attempt
 enum TranscriptionResult {
@@ -142,6 +143,7 @@ class TranscriptionCoordinator: ObservableObject {
 
     /// Start recording audio
     private func startRecording() {
+        AppLogger.diag("recording start requested")  // DIAG
         Task { @MainActor in
             // Request microphone permission if needed
             let hasPermission = await AudioRecorder.requestMicrophonePermission()
@@ -150,6 +152,7 @@ class TranscriptionCoordinator: ObservableObject {
                 print("[TranscriptionCoordinator] Permission check returned false, attempting recording...")
             }
 
+            AppLogger.diag("mic permission check done (\(hasPermission))")  // DIAG
             self.beginRecordingSession()
         }
     }
@@ -198,6 +201,7 @@ class TranscriptionCoordinator: ObservableObject {
         // Start recording
         do {
             try audioRecorder?.startRecording()
+            AppLogger.diag("engine started (liveTranscriber already existed: \(liveTranscriber != nil))")  // DIAG
         } catch {
             handleRecordingError(error)
         }
@@ -271,6 +275,7 @@ class TranscriptionCoordinator: ObservableObject {
     private func handleTranscriptionSuccess(_ text: String) {
         isTranscribing = false
         AppLogger.log("Transcription succeeded: \(text.prefix(80))...", category: "transcription")
+        AppLogger.diag("transcription success, \(text.count) chars")  // DIAG
         audioFeedback.playStopSound()
 
         let smartDictationWillRun = SmartDictationPolicy.willRun(
@@ -296,11 +301,13 @@ class TranscriptionCoordinator: ObservableObject {
             text: text,
             hasTarget: PasteTargetDetector.hasValidPasteTarget(),
             hasAccessibility: pasteManager.hasAccessibilityPermission())
+        AppLogger.diag("canPaste=\(canPaste) smart=\(smartDictationWillRun) front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")")  // DIAG
         if canPaste {
             if smartDictationWillRun {
                 // Defer paste — smart dictation will paste the transformed result
                 pendingSmartDictationPaste = true
             } else {
+                AppLogger.diag("paste scheduled in \(Config.autoPasteDelay)s")  // DIAG
                 DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
                     self.pasteManager.pasteText(text)
                 }

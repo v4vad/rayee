@@ -44,22 +44,26 @@ class PasteManager: ObservableObject {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         let ourChangeCount = pasteboard.changeCount
+        AppLogger.diag("clipboard set (\(text.count) chars), physical mods=\(AppLogger.diagPhysicalModifiers())")  // DIAG
 
         // Step 2: Small delay to ensure the clipboard is ready, then paste
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.simulatePaste()
+            self?.simulatePaste(text: text)
 
             // Step 3: Give the user's clipboard back, unless something new was copied meanwhile
             DispatchQueue.main.asyncAfter(deadline: .now() + Config.clipboardRestoreDelay) {
                 if pasteboard.changeCount == ourChangeCount {
                     snapshot.restore(to: pasteboard)
+                    AppLogger.diag("clipboard restored")  // DIAG
+                } else {
+                    AppLogger.diag("clipboard restore skipped (changed since)")  // DIAG
                 }
             }
         }
     }
 
     /// Simulate pressing Cmd+V to paste from clipboard
-    private func simulatePaste() {
+    private func simulatePaste(text: String) {
         // Create a CGEvent source
         let source = CGEventSource(stateID: .hidSystemState)
 
@@ -85,11 +89,15 @@ class PasteManager: ObservableObject {
 
         // Post the events to simulate the key press
         // The events are posted to the currently focused application
+        let targetApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"
+        AppLogger.diag("Cmd+V keyDown posting, physical mods=\(AppLogger.diagPhysicalModifiers()), front=\(targetApp)")  // DIAG
         keyDown.post(tap: .cghidEventTap)
 
         // Small delay between key down and key up for reliability
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
             keyUp.post(tap: .cghidEventTap)
+            AppLogger.diag("Cmd+V keyUp posted, physical mods=\(AppLogger.diagPhysicalModifiers()), front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")")  // DIAG
+            AppLogger.log("Pasted \(text.count) chars into \(targetApp)", category: "paste")
             print("PasteManager: Paste command sent")
         }
     }

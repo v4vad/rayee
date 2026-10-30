@@ -54,6 +54,8 @@ class AudioRecorder {
     private var isRecording = false
     private var recordingStartTime: Date?
     private var lastSpeechTime: Date?
+    private var diagFirstBufferSeen = false  // DIAG
+    private var diagSpeechSeen = false  // DIAG
 
     // Callbacks
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
@@ -117,6 +119,8 @@ class AudioRecorder {
         recordingStartTime = Date()
         lastSpeechTime = nil
         isRecording = true
+        diagFirstBufferSeen = false  // DIAG
+        diagSpeechSeen = false  // DIAG
 
         // Create audio engine
         audioEngine = AVAudioEngine()
@@ -183,6 +187,7 @@ class AudioRecorder {
 
         // Check if we got any audio
         let audioData = gate.kept
+        AppLogger.diag("recording stopped, kept \(audioData.count) samples")  // DIAG
         if audioData.isEmpty {
             onRecordingComplete?(.failure(.noAudioRecorded))
             return
@@ -254,6 +259,10 @@ class AudioRecorder {
         }
         let frameLength = Int(convertedBuffer.frameLength)
         guard frameLength > 0 else { return }
+        if !diagFirstBufferSeen {  // DIAG
+            diagFirstBufferSeen = true  // DIAG
+            AppLogger.diag("first audio buffer received")  // DIAG
+        }  // DIAG
         onRawBuffer?(convertedBuffer)
         let samples = Array(UnsafeBufferPointer(start: channelData, count: frameLength))
 
@@ -270,6 +279,10 @@ class AudioRecorder {
         if gate.feed(samples, rms: rms) {
             lastSpeechTime = now
         }
+        if gate.speechDetected && !diagSpeechSeen {  // DIAG
+            diagSpeechSeen = true  // DIAG
+            AppLogger.diag("speech gate opened, kept \(gate.kept.count) samples (incl. pre-roll)")  // DIAG
+        }  // DIAG
 
         // Check stopping conditions
         let elapsed = now.timeIntervalSince(recordingStartTime ?? now)

@@ -8,6 +8,7 @@
 //
 
 import Foundation
+import CoreGraphics
 
 /// Logs important app events to a file for debugging
 /// Check ~/.rayee/app.log to see what happened before a crash
@@ -109,5 +110,30 @@ enum AppLogger {
         } catch {
             print("[AppLogger] Could not open log file: \(error)")
         }
+    }
+
+    // MARK: - Timing diagnostics (DIAG)
+
+    /// Formatter with milliseconds, used only by the timing lines
+    private static let diagFormatter: DateFormatter = {  // DIAG
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
+    }()
+
+    /// Keys physically held right now (not what an event claims), e.g. "opt+space"-style modifier list
+    static func diagPhysicalModifiers() -> String {  // DIAG
+        let flags = CGEventSource.flagsState(.hidSystemState)
+        var held: [String] = []
+        if flags.contains(.maskCommand) { held.append("cmd") }
+        if flags.contains(.maskAlternate) { held.append("opt") }
+        if flags.contains(.maskShift) { held.append("shift") }
+        if flags.contains(.maskControl) { held.append("ctrl") }
+        return held.isEmpty ? "none" : held.joined(separator: "+")
+    }
+
+    /// One short timing line with a millisecond timestamp, category "diag"
+    static func diag(_ message: String) {  // DIAG
+        log("\(diagFormatter.string(from: Date())) \(message)", category: "diag")
     }
 }

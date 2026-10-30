@@ -246,6 +246,7 @@ class AppState: ObservableObject {
         hotkeyManager.onHotkeyPressed = { [weak self] in
             guard let self = self else { return }
             AppLogger.log("Hotkey pressed! Current status: \(self.status.rawValue)", category: "hotkey")
+            AppLogger.diag("hotkey handled on main, status=\(self.status.rawValue), physical mods=\(AppLogger.diagPhysicalModifiers())")  // DIAG
 
             if self.status == .recording {
                 // Already recording - stop and transcribe

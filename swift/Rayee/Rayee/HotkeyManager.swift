@@ -203,6 +203,7 @@ class HotkeyManager: ObservableObject {
         if keyCode == config.keyCode && modifiers == config.modifiers {
             // Hotkey matched! Execute the callback on the main thread
             AppLogger.log("Hotkey matched! keyCode=\(keyCode) modifiers=\(modifiers)", category: "hotkey")
+            AppLogger.diag("hotkey keyDown in tap, physical mods=\(AppLogger.diagPhysicalModifiers())")  // DIAG
             DispatchQueue.main.async { [weak self] in
                 self?.onHotkeyPressed?()
             }
