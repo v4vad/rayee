@@ -9,9 +9,52 @@ import SwiftUI
 
 struct RecordingSettingsTab: View {
     @ObservedObject var settings = SettingsManager.shared
+    @StateObject private var languages = LivePreviewLanguages()
+
+    /// True when Apple can't show live words for the chosen language (checked once the list has loaded)
+    private var previewUnsupported: Bool {
+        guard languages.hasLoaded else { return false }
+        return !languages.isAvailable || !languages.options.contains { $0.id == settings.livePreviewLanguage }
+    }
 
     var body: some View {
         Form {
+            Section {
+                Toggle("Show words while I speak", isOn: $settings.livePreviewEnabled)
+                if settings.livePreviewEnabled {
+                    HStack {
+                        Picker("Preview language", selection: $settings.livePreviewLanguage) {
+                            // Keep the saved choice selectable even if it isn't in the list
+                            if !languages.options.contains(where: { $0.id == settings.livePreviewLanguage }) {
+                                Text(settings.livePreviewLanguage).tag(settings.livePreviewLanguage)
+                            }
+                            ForEach(languages.options) { option in
+                                Text(option.name).tag(option.id)
+                            }
+                        }
+                        if let progress = languages.downloadProgress {
+                            if progress > 0 {
+                                ProgressView(value: progress)
+                                    .progressViewStyle(.linear)
+                                    .frame(width: 60)
+                            } else {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                            Text("Downloading…")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } footer: {
+                if settings.livePreviewEnabled && previewUnsupported {
+                    Text("This Mac can't show live words for this language. Dictation works as usual.")
+                } else {
+                    Text("See your words in the recorder as you speak. The pasted text still comes from your speech model.")
+                }
+            }
+
             Section {
                 LabeledContent("Stop after silence") {
                     Text("\(Int(settings.silenceDuration)) s")
@@ -38,5 +81,12 @@ struct RecordingSettingsTab: View {
         }
         .formStyle(.grouped)
         .toggleStyle(.switch)
+        .onChange(of: settings.livePreviewLanguage) { _, newValue in
+            Task { await languages.choose(newValue) }
+        }
+        .task {
+            await languages.load()
+            await languages.choose(settings.livePreviewLanguage)
+        }
     }
 }

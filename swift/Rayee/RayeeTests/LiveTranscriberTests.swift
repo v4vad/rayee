@@ -52,4 +52,11 @@ final class LiveTranscriberTests: XCTestCase {
         transcriber.stop()
         wait(for: [expectation], timeout: 0.5)
     }
+
+    func testLanguageOptionsAreNamedAndSorted() {
+        let options = LivePreviewLanguages.sortedOptions(
+            ["te-IN", "en-US", "en-IN"], displayLocale: Locale(identifier: "en-US"))
+        XCTAssertEqual(options.map(\.id), ["en-IN", "en-US", "te-IN"])
+        XCTAssertEqual(options.first?.name, "English (India)")
+    }
 }
