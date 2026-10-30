@@ -82,11 +82,11 @@ struct RecordingSettingsTab: View {
         .formStyle(.grouped)
         .toggleStyle(.switch)
         .onChange(of: settings.livePreviewLanguage) { _, newValue in
-            Task { await languages.choose(newValue) }
+            languages.choose(newValue)
         }
         .task {
             await languages.load()
-            await languages.choose(settings.livePreviewLanguage)
+            languages.choose(settings.livePreviewLanguage)
         }
     }
 }

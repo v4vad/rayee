@@ -43,38 +43,72 @@ final class LivePreviewLanguages: ObservableObject {
         hasLoaded = true
     }
 
-    /// Keeps only `identifier` reserved with Apple, and downloads its speech data if missing.
-    func choose(_ identifier: String) async {
+    /// Keeps only the latest `identifier` reserved with Apple, and downloads its speech data if missing.
+    /// Starts the work and returns; a newer pick cancels the one before it. The work belongs to the
+    /// model, so leaving the Settings tab doesn't stop a first-time download.
+    func choose(_ identifier: String) {
+        currentTask?.cancel()
+        generation += 1
+        let mine = generation
+        currentTask = Task { [weak self] in
+            await self?.perform(identifier, generation: mine)
+        }
+    }
+
+    private var currentTask: Task<Void, Never>?
+    /// Bumped on every pick; a task whose number is out of date has been superseded
+    private var generation = 0
+
+    private func isLatest(_ mine: Int) -> Bool {
+        mine == generation && !Task.isCancelled
+    }
+
+    private func perform(_ identifier: String, generation mine: Int) async {
+        var ownsProgress = false
+        defer {
+            if ownsProgress && mine == generation {
+                progressObservation?.invalidate()
+                progressObservation = nil
+                downloadProgress = nil
+            }
+        }
         do {
             guard let locale = await SpeechTranscriber.supportedLocale(equivalentTo: Locale(identifier: identifier)) else {
                 AppLogger.log("Live preview language \(identifier) not supported", category: "live")
                 return
             }
+            guard isLatest(mine) else { return }
             for reserved in await AssetInventory.reservedLocales
             where reserved.identifier(.bcp47) != locale.identifier(.bcp47) {
                 await AssetInventory.release(reservedLocale: reserved)
             }
+            guard isLatest(mine) else { return }
             try await AssetInventory.reserve(locale: locale)
+            guard isLatest(mine) else {
+                // Superseded while reserving: give this one back (the newer pick released the rest earlier)
+                await AssetInventory.release(reservedLocale: locale)
+                return
+            }
 
             let transcriber = SpeechTranscriber(locale: locale, preset: .timeIndexedProgressiveTranscription)
             if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+                guard isLatest(mine) else { return }
+                ownsProgress = true
                 downloadProgress = 0
+                progressObservation?.invalidate()
                 progressObservation = request.progress.observe(\.fractionCompleted) { progress, _ in
                     let fraction = progress.fractionCompleted
                     DispatchQueue.main.async { [weak self] in
-                        guard let self, self.downloadProgress != nil else { return }
+                        guard let self, mine == self.generation, self.downloadProgress != nil else { return }
                         self.downloadProgress = fraction
                     }
-                }
-                defer {
-                    progressObservation?.invalidate()
-                    progressObservation = nil
-                    downloadProgress = nil
                 }
                 try await request.downloadAndInstall()
             }
         } catch {
-            AppLogger.log("Live preview language \(identifier) failed: \(error)", category: "live")
+            if isLatest(mine) {
+                AppLogger.log("Live preview language \(identifier) failed: \(error)", category: "live")
+            }
         }
     }
 }
