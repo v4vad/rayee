@@ -53,6 +53,7 @@
 		A10005A0001 /* RecordingSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005A0000 /* RecordingSettingsTab.swift */; };
 		A10005B0001 /* AboutSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005B0000 /* AboutSettingsTab.swift */; };
 		A10005C0001 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005C0000 /* OnboardingView.swift */; };
+		A10005D0001 /* LiveTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005D0000 /* LiveTranscript.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -109,6 +110,7 @@
 		A10005A0000 /* RecordingSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordingSettingsTab.swift; sourceTree = "<group>"; };
 		A10005B0000 /* AboutSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutSettingsTab.swift; sourceTree = "<group>"; };
 		A10005C0000 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A10005D0000 /* LiveTranscript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTranscript.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -182,6 +184,7 @@
 				A1000530000 /* VocabularySettingsTab.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
 				A1000520000 /* UpdateManager.swift */,
+				A10005D0000 /* LiveTranscript.swift */,
 				A10005C0000 /* OnboardingView.swift */,
 				A10005B0000 /* AboutSettingsTab.swift */,
 				A10005A0000 /* RecordingSettingsTab.swift */,
@@ -361,6 +364,7 @@
 				A1000530001 /* VocabularySettingsTab.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
 				A1000520001 /* UpdateManager.swift in Sources */,
+				A10005D0001 /* LiveTranscript.swift in Sources */,
 				A10005C0001 /* OnboardingView.swift in Sources */,
 				A10005B0001 /* AboutSettingsTab.swift in Sources */,
 				A10005A0001 /* RecordingSettingsTab.swift in Sources */,
