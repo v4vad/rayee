@@ -51,6 +51,9 @@ before each merge. Nothing below has been tried in the real app yet. When the ne
 ready, build it, walk the user through this list, record the results in the Session log, and
 tick or remove each line.
 
+**From the overlap fix (feature/live-transcription)**
+- [ ] Smart Dictation on: start a second dictation during "Cleaning up" — both texts are pasted, cleaned, in the order spoken.
+
 **From v0.8 (recording fixes)**
 - [ ] Noisy room: adaptive detection still auto-stops after you stop talking.
 - [ ] Microphone permission denied: the panel says so and explains where to fix it.

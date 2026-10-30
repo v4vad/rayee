@@ -79,8 +79,12 @@ class TranscriptionCoordinator: ObservableObject {
     /// Whether to auto-paste after current transcription
     private var pendingAutoPaste = false
 
-    /// Whether smart dictation should paste the transformed result (set when auto-paste is deferred)
-    var pendingSmartDictationPaste = false
+    /// The place in the paste line held for the transcription that just finished, when Smart Dictation
+    /// will paste its cleaned text later (nil when nothing is waiting to be pasted)
+    private(set) var pendingSmartDictationSlot: DeliveryLine.Slot?
+
+    /// Everything Rayee pastes goes through this line, so dictations land in the order they were spoken
+    let deliveryLine: DeliveryLine
 
     /// Callback when transcription completes
     var onTranscriptionComplete: ((TranscriptionResult) -> Void)?
@@ -103,6 +107,10 @@ class TranscriptionCoordinator: ObservableObject {
         self.historyManager = historyManager
         self.audioFeedback = audioFeedback
         self.pasteManager = pasteManager
+        self.deliveryLine = DeliveryLine(paste: { text in
+            try? await Task.sleep(for: .seconds(Config.autoPasteDelay))
+            await pasteManager.paste(text)
+        })
     }
 
     // MARK: - Public Methods
@@ -116,7 +124,7 @@ class TranscriptionCoordinator: ObservableObject {
         }
 
         pendingAutoPaste = autoPaste
-        pendingSmartDictationPaste = false
+        pendingSmartDictationSlot = nil
         startRecording()
     }
 
@@ -143,7 +151,6 @@ class TranscriptionCoordinator: ObservableObject {
 
     /// Start recording audio
     private func startRecording() {
-        AppLogger.diag("recording start requested")  // DIAG
         Task { @MainActor in
             // Request microphone permission if needed
             let hasPermission = await AudioRecorder.requestMicrophonePermission()
@@ -152,7 +159,6 @@ class TranscriptionCoordinator: ObservableObject {
                 print("[TranscriptionCoordinator] Permission check returned false, attempting recording...")
             }
 
-            AppLogger.diag("mic permission check done (\(hasPermission))")  // DIAG
             self.beginRecordingSession()
         }
     }
@@ -201,7 +207,6 @@ class TranscriptionCoordinator: ObservableObject {
         // Start recording
         do {
             try audioRecorder?.startRecording()
-            AppLogger.diag("engine started (liveTranscriber already existed: \(liveTranscriber != nil))")  // DIAG
         } catch {
             handleRecordingError(error)
         }
@@ -275,7 +280,6 @@ class TranscriptionCoordinator: ObservableObject {
     private func handleTranscriptionSuccess(_ text: String) {
         isTranscribing = false
         AppLogger.log("Transcription succeeded: \(text.prefix(80))...", category: "transcription")
-        AppLogger.diag("transcription success, \(text.count) chars")  // DIAG
         audioFeedback.playStopSound()
 
         let smartDictationWillRun = SmartDictationPolicy.willRun(
@@ -294,23 +298,21 @@ class TranscriptionCoordinator: ObservableObject {
 
         // Determine if we should and can paste
         var didPaste = false
-        pendingSmartDictationPaste = false
+        pendingSmartDictationSlot = nil
         let canPaste = RecorderRules.canPaste(
             requested: pendingAutoPaste,
             enabled: settings.autoPasteEnabled,
             text: text,
             hasTarget: PasteTargetDetector.hasValidPasteTarget(),
             hasAccessibility: pasteManager.hasAccessibilityPermission())
-        AppLogger.diag("canPaste=\(canPaste) smart=\(smartDictationWillRun) front=\(NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?")")  // DIAG
         if canPaste {
+            // Take a place in the paste line now, so this text can't land before an earlier dictation's
+            let slot = deliveryLine.reserve()
             if smartDictationWillRun {
-                // Defer paste — smart dictation will paste the transformed result
-                pendingSmartDictationPaste = true
+                // Defer paste — smart dictation fills the place with the cleaned text
+                pendingSmartDictationSlot = slot
             } else {
-                AppLogger.diag("paste scheduled in \(Config.autoPasteDelay)s")  // DIAG
-                DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-                    self.pasteManager.pasteText(text)
-                }
+                deliveryLine.fill(slot, text)
                 didPaste = true
             }
         }

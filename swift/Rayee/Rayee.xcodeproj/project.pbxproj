@@ -57,6 +57,7 @@
 		A10005D0001 /* LiveTranscript.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005D0000 /* LiveTranscript.swift */; };
 		A10005E0001 /* LiveTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005E0000 /* LiveTranscriber.swift */; };
 		A10005F0001 /* LivePreviewLanguages.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10005F0000 /* LivePreviewLanguages.swift */; };
+		A1000FF0001 /* DictationDelivery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000FF0000 /* DictationDelivery.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,6 +118,7 @@
 		A10005D0000 /* LiveTranscript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTranscript.swift; sourceTree = "<group>"; };
 		A10005E0000 /* LiveTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveTranscriber.swift; sourceTree = "<group>"; };
 		A10005F0000 /* LivePreviewLanguages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePreviewLanguages.swift; sourceTree = "<group>"; };
+		A1000FF0000 /* DictationDelivery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationDelivery.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -190,6 +192,7 @@
 				A1000530000 /* VocabularySettingsTab.swift */,
 				A1000400000 /* HotkeyPickerView.swift */,
 				A1000520000 /* UpdateManager.swift */,
+				A1000FF0000 /* DictationDelivery.swift */,
 				A10005F0000 /* LivePreviewLanguages.swift */,
 				A10005E0000 /* LiveTranscriber.swift */,
 				A10005D0000 /* LiveTranscript.swift */,
@@ -374,6 +377,7 @@
 				A1000530001 /* VocabularySettingsTab.swift in Sources */,
 				A1000400001 /* HotkeyPickerView.swift in Sources */,
 				A1000520001 /* UpdateManager.swift in Sources */,
+				A1000FF0001 /* DictationDelivery.swift in Sources */,
 				A10005F0001 /* LivePreviewLanguages.swift in Sources */,
 				A10005E0001 /* LiveTranscriber.swift in Sources */,
 				A10005D0001 /* LiveTranscript.swift in Sources */,
