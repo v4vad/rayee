@@ -30,6 +30,8 @@ enum SettingsKey {
     static let smartDictationEnabled = "smartDictationEnabled"
     static let recorderStyle = "recorderStyle"
     static let transformModel = "transformModel"
+    static let livePreviewEnabled = "livePreviewEnabled"
+    static let livePreviewLanguage = "livePreviewLanguage"
 }
 
 // MARK: - Hotkey Configuration
@@ -182,6 +184,16 @@ class SettingsManager: ObservableObject {
         }
     }
 
+    // Show draft words in the recorder while speaking
+    @Published var livePreviewEnabled: Bool {
+        didSet { UserDefaults.standard.set(livePreviewEnabled, forKey: SettingsKey.livePreviewEnabled) }
+    }
+
+    // Language for the live preview (BCP-47)
+    @Published var livePreviewLanguage: String {
+        didSet { UserDefaults.standard.set(livePreviewLanguage, forKey: SettingsKey.livePreviewLanguage) }
+    }
+
     // True while `reloadTransformModelFromDefaults` updates the value, so it isn't written back
     private var isReloadingTransformModel = false
 
@@ -303,6 +315,15 @@ class SettingsManager: ObservableObject {
         self.transformModel = TransformModelSelection(
             savedValue: UserDefaults.standard.string(forKey: SettingsKey.transformModel)
         ).tag
+
+        // Load live preview (on unless turned off)
+        if UserDefaults.standard.object(forKey: SettingsKey.livePreviewEnabled) != nil {
+            self.livePreviewEnabled = UserDefaults.standard.bool(forKey: SettingsKey.livePreviewEnabled)
+        } else {
+            self.livePreviewEnabled = true
+        }
+        self.livePreviewLanguage = UserDefaults.standard.string(forKey: SettingsKey.livePreviewLanguage)
+            ?? LivePreviewLanguages.defaultIdentifier
     }
 
     // Save hotkey configuration to UserDefaults
@@ -335,6 +356,8 @@ class SettingsManager: ObservableObject {
         recorderStyle = .automatic
         // Automatic is saved as no value; setting it removes the saved key
         transformModel = TransformModelSelection.automaticTag
+        livePreviewEnabled = true
+        livePreviewLanguage = LivePreviewLanguages.defaultIdentifier
     }
 
     /// The design refresh removed three settings. Carry over what they meant, then delete them:

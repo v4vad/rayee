@@ -58,6 +58,8 @@ class AudioRecorder {
     // Callbacks
     var onRecordingComplete: ((Result<RecordingResult, AudioRecorderError>) -> Void)?
     var onAudioLevel: ((Float) -> Void)?  // For UI feedback
+    /// Every converted 16kHz mono buffer, silence included, before the speech gate. Called on the audio thread.
+    var onRawBuffer: ((AVAudioPCMBuffer) -> Void)?
 
     init(silenceDuration: TimeInterval = Config.defaultSilenceDuration,
          adaptiveVADEnabled: Bool = false) {
@@ -252,6 +254,7 @@ class AudioRecorder {
         }
         let frameLength = Int(convertedBuffer.frameLength)
         guard frameLength > 0 else { return }
+        onRawBuffer?(convertedBuffer)
         let samples = Array(UnsafeBufferPointer(start: channelData, count: frameLength))
 
         // Calculate audio level (RMS)

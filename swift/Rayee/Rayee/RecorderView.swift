@@ -13,31 +13,64 @@ struct RecorderView: View {
     /// Watched so "Cleaning up" can say "Downloading model… 45%" the first time
     @ObservedObject private var transformManager = MLXTransformManager.shared
 
-    private var bodyHeight: CGFloat { RecorderLayout.bodyHeight(for: controller.phase) }
+    private var bodyHeight: CGFloat { controller.bodyHeight }
     private var bandHeight: CGFloat { NotchGeometry.bandHeight(controller.mode) }
     private var shapeWidth: CGFloat { NotchGeometry.shapeWidth(controller.mode) }
-
-    private var isCapsule: Bool {
-        if case .capsule = controller.mode { return true }
-        return false
-    }
 
     private var shape: NotchShape {
         switch controller.mode {
         case .notch(let width, let height):
             return NotchShape(bandWidth: width, bandHeight: height,
-                              bottomRadius: bodyHeight > 0 ? 22 : 14, topRadius: 6)
+                              bottomRadius: 20, topRadius: 20)
         case .capsule:
             return NotchShape(bandWidth: 0, bandHeight: 0, bottomRadius: 22, topRadius: 22)
         }
+    }
+
+    /// Where the body starts, as a fraction of the shape's height (0 for the capsule)
+    private var bodyStart: CGFloat {
+        let total = bandHeight + bodyHeight
+        return total > 0 ? bandHeight / total : 0
+    }
+
+    /// Pure black inside the menu bar (so it matches the notch), lifting to a dark grey at the bottom
+    private var bodyFill: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .black, location: 0),
+            .init(color: .black, location: bodyStart),
+            .init(color: Color(white: 0.06), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// A soft glow just inside the edge, only near the bottom
+    private var glassSheen: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .white.opacity(0), location: 0),
+            .init(color: .white.opacity(0), location: bodyStart + (1 - bodyStart) * 0.5),
+            .init(color: .white.opacity(0.18), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// A glass edge that is invisible at the notch and brightest along the bottom
+    /// (even down the sides on purpose: a top-to-bottom ramp made the body look like a trapezium)
+    private var glassEdge: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .white.opacity(0), location: 0),
+            .init(color: .white.opacity(0), location: bodyStart),
+            .init(color: .white.opacity(0.08), location: min(1, bodyStart + 0.02)),
+            .init(color: .white.opacity(0.08), location: bodyStart + (1 - bodyStart) * 0.6),
+            .init(color: .white.opacity(0.5), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
     }
 
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
                 shape
-                    .fill(Color.black)
-                    .shadow(color: .black.opacity(isCapsule ? 0.35 : 0), radius: 12, y: 4)
+                    .fill(bodyFill)
+                    .overlay { shape.stroke(glassSheen, lineWidth: 6).blur(radius: 3).clipShape(shape) }
+                    .overlay { shape.stroke(glassEdge, lineWidth: 1.5).clipShape(shape) }
+                    .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
                 content
                     .frame(width: shapeWidth, height: bodyHeight)
                     .clipped()
@@ -80,10 +113,36 @@ struct RecorderView: View {
     }
 
     private var listening: some View {
+        VStack(spacing: 0) {
+            listeningRow
+                .frame(height: RecorderLayout.compactHeight)
+            if !controller.liveTranscript.isEmpty {
+                liveText
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// The words heard so far: settled words bright, the still-changing end dimmer.
+    private var liveText: some View {
+        let tail = controller.liveTranscript.visibleTail(
+            maxCharacters: RecorderLayout.charsPerLine * RecorderLayout.maxLiveLines)
+        return (Text(tail.settled).foregroundStyle(.white.opacity(0.9))
+                + Text(tail.draft).foregroundStyle(.white.opacity(0.45)))
+            .font(.system(size: 13))
+            .lineLimit(RecorderLayout.maxLiveLines)
+            .truncationMode(.head)
+            .frame(maxWidth: .infinity, alignment: .bottomLeading)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 12)
+            .allowsHitTesting(false)
+    }
+
+    private var listeningRow: some View {
         HStack(spacing: 12) {
-            PulsingDot()
-            Spacer(minLength: 0)
-            LevelBars(monitor: controller.audioLevelMonitor)
+            Circle()
+                .fill(Color(red: 1, green: 0.27, blue: 0.23))
+                .frame(width: 8, height: 8)
             Spacer(minLength: 0)
             Text(controller.recordingDuration >= 3 ? Self.timer(controller.recordingDuration) : "")
                 .font(.system(size: 12, weight: .medium).monospacedDigit())
@@ -91,6 +150,8 @@ struct RecorderView: View {
                 .frame(width: 36, alignment: .trailing)
         }
         .padding(.horizontal, 18)
+        // Centred on the recorder (under the camera), not in the gap between the dot and the timer
+        .overlay { LevelBars(monitor: controller.audioLevelMonitor, barWidth: 2, gap: 4) }
     }
 
     private func statusRow(icon: String, text: String) -> some View {
@@ -177,10 +238,12 @@ struct RecorderView: View {
 struct LevelBars: View {
     @ObservedObject var monitor: AudioLevelMonitor
     var barWidth: CGFloat = 3
+    /// Space between bars; defaults to the bar width
+    var gap: CGFloat? = nil
     var maxHeight: CGFloat = 22
 
     var body: some View {
-        HStack(spacing: barWidth) {
+        HStack(spacing: gap ?? barWidth) {
             ForEach(Array(monitor.levels.enumerated()), id: \.offset) { _, level in
                 Capsule()
                     .fill(.white.opacity(0.9))
@@ -196,22 +259,6 @@ struct LevelBars: View {
         // and curve it so quiet sounds still show.
         let amplified = min(1.0, level * 7.0)
         return 3 + pow(CGFloat(amplified), 0.65) * (maxHeight - 3)
-    }
-}
-
-private struct PulsingDot: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var dimmed = false
-
-    var body: some View {
-        Circle()
-            .fill(Color(red: 1, green: 0.27, blue: 0.23))
-            .frame(width: 8, height: 8)
-            .opacity(dimmed ? 0.45 : 1)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 0.9).repeatForever()) { dimmed = true }
-            }
     }
 }
 

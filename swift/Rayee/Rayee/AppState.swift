@@ -57,10 +57,20 @@ class AppState: ObservableObject {
     /// For observing state changes
     private var cancellables = Set<AnyCancellable>()
 
-    /// The Smart Dictation clean-up in progress, and what it needs if the user skips it
-    private var cleanupTask: Task<Void, Never>?
-    private var cleanupRaw = ""
-    private var cleanupCanPaste = false
+    /// A Smart Dictation clean-up running (or waiting its turn) in the background
+    private struct Cleanup {
+        let raw: String
+        let canPaste: Bool
+        /// Its place in the paste line (nil when there is nowhere to paste)
+        let slot: DeliveryLine.Slot?
+        var task: Task<Void, Never>?
+    }
+    private var cleanups: [Int: Cleanup] = [:]
+    private var nextCleanupID = 0
+    /// The clean-up the recorder is showing ("Cleaning up"); Esc or a click skips this one
+    private var shownCleanupID: Int?
+    /// Clean-ups run one at a time, in the order the dictations were spoken
+    private let cleanupQueue = CleanupQueue()
 
     /// When set (onboarding's "Try it" step), finished text goes here instead of being pasted
     var practiceHandler: ((String) -> Void)?
@@ -85,7 +95,6 @@ class AppState: ObservableObject {
     func startTranscription(autoPaste: Bool = false) {
         guard status == .ready || status == .error else { return }
         errorMessage = nil
-        abandonCleanup()
         transcriptionCoordinator.startTranscription(autoPaste: autoPaste)
     }
 
@@ -183,6 +192,11 @@ class AppState: ObservableObject {
             self?.recorder.audioLevelMonitor.addLevel(level)
         }
 
+        // Forward live words to the recorder's preview
+        transcriptionCoordinator.onLiveTranscript = { [weak self] transcript in
+            self?.recorder.showLiveTranscript(transcript)
+        }
+
         // Recorder clicks and buttons
         recorder.onCommand = { [weak self] command in
             self?.perform(command)
@@ -214,21 +228,27 @@ class AppState: ObservableObject {
                 didPaste = true
             }
 
-            recorder.show(RecorderRules.afterTranscription(
-                text: text, didPaste: didPaste, smartDictationWillRun: smartDictationWillRun))
+            let phase = RecorderRules.afterTranscription(
+                text: text, didPaste: didPaste, smartDictationWillRun: smartDictationWillRun)
             if smartDictationWillRun {
-                runSmartDictation(
-                    raw: text,
-                    canPaste: transcriptionCoordinator.pendingSmartDictationPaste || practiceHandler != nil)
+                recorder.show(phase)
+                let slot = transcriptionCoordinator.pendingSmartDictationSlot
+                runSmartDictation(raw: text, slot: slot, canPaste: slot != nil || practiceHandler != nil)
+            } else if phase == .hidden, showCleanupIndicatorIfRunning() {
+                // Nothing to show for this one; an earlier clean-up is still going
+            } else {
+                shownCleanupID = nil
+                recorder.show(phase)
             }
 
         case .cancelled:
             status = .ready
-            recorder.hide()
+            if !showCleanupIndicatorIfRunning() { recorder.hide() }
 
         case .error(let message, let action):
             errorMessage = message
             status = .error
+            shownCleanupID = nil
             // Explain what went wrong; Esc, ✕ or the timer closes it
             recorder.show(.error(message: message, action: action))
         }
@@ -281,11 +301,11 @@ class AppState: ObservableObject {
     }
 
     /// Cancel recording without transcribing (called when user presses Escape)
+    /// Earlier clean-ups carry on in the background.
     func cancelRecording() {
-        abandonCleanup()
         transcriptionCoordinator.cancel()
-        recorder.hide()
         status = .ready
+        if !showCleanupIndicatorIfRunning() { recorder.hide() }
     }
 
     private func copyToClipboard(_ text: String) {
@@ -299,12 +319,16 @@ class AppState: ObservableObject {
 
     // MARK: - Smart Dictation
 
-    /// Cleans up the transcript, then pastes it (or shows it, when there's nowhere to paste).
-    private func runSmartDictation(raw: String, canPaste: Bool) {
-        abandonCleanup()
-        cleanupRaw = raw
-        cleanupCanPaste = canPaste
-        cleanupTask = Task { @MainActor in
+    /// Cleans up the transcript in the background, then pastes it (or shows it, when there's nowhere to paste).
+    /// A newer dictation can start meanwhile; clean-ups run one at a time and pastes keep the spoken order.
+    private func runSmartDictation(raw: String, slot: DeliveryLine.Slot?, canPaste: Bool) {
+        let id = nextCleanupID
+        nextCleanupID += 1
+        cleanups[id] = Cleanup(raw: raw, canPaste: canPaste, slot: slot, task: nil)
+        shownCleanupID = id
+        let task = cleanupQueue.enqueue { [weak self] in
+            // Skipped while waiting for an earlier clean-up: the skip already delivered the raw text
+            guard !Task.isCancelled else { return }
             var cleaned: String?
             do {
                 // The returned text is the final result; the streamed pieces aren't shown any more.
@@ -322,45 +346,57 @@ class AppState: ObservableObject {
             } catch {
                 AppLogger.log("Smart Dictation failed: \(error.localizedDescription)", category: "mlx")
             }
-            // Skipped while the model was finishing: the skip already pasted the raw text
+            // Skipped while the model was finishing: the skip already delivered the raw text
             guard !Task.isCancelled else { return }
-            self.finishCleanup(raw: raw, cleaned: cleaned, canPaste: canPaste)
+            self?.finishCleanup(id: id, cleaned: cleaned)
+        }
+        cleanups[id]?.task = task
+    }
+
+    private func finishCleanup(id: Int, cleaned: String?) {
+        guard let cleanup = cleanups.removeValue(forKey: id) else { return }
+        saveSmartDictationHistory(raw: cleanup.raw, cleaned: cleaned)
+        let outcome = RecorderRules.afterCleanup(raw: cleanup.raw, cleaned: cleaned, canPaste: cleanup.canPaste)
+        if let text = outcome.pasteText {
+            deliver(text, slot: cleanup.slot)
+        } else if let slot = cleanup.slot {
+            transcriptionCoordinator.deliveryLine.drop(slot)
+        }
+        transcribedText = cleaned ?? cleanup.raw
+        // The recorder shows only the newest dictation: an older clean-up changes it only
+        // when it is the one on screen and nothing newer is being recorded or transcribed.
+        if shownCleanupID == id {
+            shownCleanupID = nil
+            // A newer recording or transcription has already replaced "Cleaning up" on the recorder
+            if recorder.phase == .cleaningUp { recorder.show(outcome.phase) }
         }
     }
 
-    private func finishCleanup(raw: String, cleaned: String?, canPaste: Bool) {
-        cleanupTask = nil
-        saveSmartDictationHistory(raw: raw, cleaned: cleaned)
-        let outcome = RecorderRules.afterCleanup(raw: raw, cleaned: cleaned, canPaste: canPaste)
-        if let text = outcome.pasteText { deliver(text) }
-        transcribedText = cleaned ?? raw
-        recorder.show(outcome.phase)
-    }
-
-    /// Esc or a click during "Cleaning up": use the raw text now.
+    /// Esc or a click during "Cleaning up": use the raw text now (in its turn in the paste line).
+    /// Earlier clean-ups still running are ahead of it in the line, so they are skipped too.
     private func skipCleanup() {
-        guard let task = cleanupTask else { return }
-        task.cancel()
-        finishCleanup(raw: cleanupRaw, cleaned: nil, canPaste: cleanupCanPaste)
+        guard let shown = shownCleanupID, cleanups[shown] != nil else { return }
+        for id in CleanupSkip.ids(upTo: shown, among: Array(cleanups.keys)) {
+            cleanups[id]?.task?.cancel()
+            finishCleanup(id: id, cleaned: nil)
+        }
     }
 
-    /// A new recording started mid clean-up: keep the raw text in History, paste nothing.
-    private func abandonCleanup() {
-        guard let task = cleanupTask else { return }
-        task.cancel()
-        cleanupTask = nil
-        saveSmartDictationHistory(raw: cleanupRaw, cleaned: nil)
+    /// Puts "Cleaning up" back on the recorder if the clean-up it showed is still running.
+    private func showCleanupIndicatorIfRunning() -> Bool {
+        guard let id = shownCleanupID, cleanups[id] != nil else { return false }
+        recorder.show(.cleaningUp)
+        return true
     }
 
-    /// Pastes the text into the user's app, or hands it to onboarding's practice box.
-    private func deliver(_ text: String) {
+    /// Hands the text to onboarding's practice box, or fills its place in the paste line.
+    private func deliver(_ text: String, slot: DeliveryLine.Slot?) {
         if let practiceHandler {
             practiceHandler(text)
+            if let slot { transcriptionCoordinator.deliveryLine.drop(slot) }
             return
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-            PasteManager.shared.pasteText(text)
-        }
+        if let slot { transcriptionCoordinator.deliveryLine.fill(slot, text) }
     }
 
     /// Smart Dictation holds back the history save until the clean-up ends.

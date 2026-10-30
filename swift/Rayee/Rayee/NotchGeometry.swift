@@ -67,7 +67,7 @@ enum NotchGeometry {
     /// Transparent room around the shape for the capsule's shadow
     static let shadowMargin: CGFloat = 20
     /// Radius of the curve where the body meets the notch
-    static let joinRadius: CGFloat = 10
+    static let joinRadius: CGFloat = 12
     /// Used when the menu bar is hidden and can't be measured
     static let fallbackMenuBarHeight: CGFloat = 24
 

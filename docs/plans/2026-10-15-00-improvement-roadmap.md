@@ -36,7 +36,7 @@ the app only when a step says "Manual check".
 | 1. Clean-up (dead code, wrong text, stale docs) | `2026-10-15-01-cleanup.md` | `release/v0.8` | part of v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
 | 2. Recording and feedback fixes | `2026-10-15-02-recording-fixes.md` | `release/v0.8` | v0.8 | Done (shipped in v0.8; hands-on check skipped by user) |
 | 3. AI model upgrades | `2026-10-16-03-model-upgrades.md` | `release/v0.9` | v0.9 | Done, awaiting user testing (default text model still Llama) |
-| 4. Live transcription | brainstorm, then plan (see below) | `feature/live-transcription` | v1.0 | Not planned yet |
+| 4. Live transcription | `docs/superpowers/plans/2026-10-31-live-transcription.md` | `feature/live-transcription` | v1.0 | Done; hands-on checks carried forward |
 | Design refresh | `docs/superpowers/plans/2026-10-17-design-refresh.md` | `feature/design-refresh` | v1.0 or v0.10 (user decides) | Done; hands-on check moved to the next release (see "Hands-on checks carried forward") |
 
 Phases 1 and 2 share one branch and ship together as v0.8. Phase 1 changes nothing you can see in
@@ -50,6 +50,9 @@ The user decided on 2026-10-18 to test everything together with the next release
 before each merge. Nothing below has been tried in the real app yet. When the next release is
 ready, build it, walk the user through this list, record the results in the Session log, and
 tick or remove each line.
+
+**From the overlap fix (feature/live-transcription)**
+- [ ] Smart Dictation on: start a second dictation during "Cleaning up" — both texts are pasted, cleaned, in the order spoken.
 
 **From v0.8 (recording fixes)**
 - [ ] Noisy room: adaptive detection still auto-stops after you stop talking.
@@ -76,6 +79,20 @@ tick or remove each line.
 - [ ] Settings sidebar: selecting items works and the window sizes sensibly. Opening a menu link while Settings is already open goes to the right page.
 - [ ] History: the search field and filters show inside Settings.
 - [ ] Change a permission, then reopen the menu: the status warning updates.
+
+**Live transcription**
+- [ ] English dictation: grey words appear within about a second and turn solid after a pause.
+- [ ] Pause for 10 s mid-sentence: the recording keeps going, and new words follow on.
+- [ ] Live preview: pause twice in one dictation: settled sentences are separated by a space (not "so.And").
+- [ ] A long dictation (1 minute or more): only the last 2–3 lines show, and the recorder doesn't jitter.
+- [ ] Smart Dictation on: the preview shows raw words, and "Cleaning up" and the paste work as before.
+- [ ] Switch off: the recorder looks exactly as it did before this feature.
+- [ ] Telugu as the preview language: the first-time download shows progress, the preview is in English letters, and the paste is in Telugu script.
+- [ ] Microphone denied or recognizer unavailable: dictation still behaves as today.
+
+**Recorder look**
+- [ ] Recorder look: smooth rounded corners, a light glass edge along the bottom, steady red dot, waveform centred under the camera.
+- [ ] Recorder on a screen without a notch (floating capsule): same edge and shadow, nothing clipped.
 
 ---
 
@@ -171,12 +188,11 @@ have changed the files, so the detailed code must be written against the code as
 - **Unload timer:** when Smart Dictation is on, keep the text model loaded longer (for example 5 minutes) so each dictation doesn't reload it.
 - **Release:** v0.9 via `/publish-release`.
 
-## Phase 4: Live transcription (to be planned)
+## Phase 4: Live transcription (done)
 
-Start with superpowers:brainstorming with the user. Decide where live text appears (the panel or
-straight into the app), what happens to Smart Dictation, and how corrections are shown. Then write
-the plan with superpowers:writing-plans. WhisperKit has a streaming transcription API. Check the
-installed `argmax-oss-swift` version's documentation for it first.
+Done on `feature/live-transcription`. Your words now appear in the notch recorder while you dictate, using Apple's on-device speech recognizer; the pasted text still comes from Whisper. The design is in `docs/superpowers/specs/2026-10-18-live-transcription-design.md` and the plan is in `docs/superpowers/plans/2026-10-31-live-transcription.md`.
+
+Next feature: an in-place preview (live words at the text cursor, using a macOS input method's temporary "marked text"). To be brainstormed with an early spike in the user's main apps. User decision 2026-10-31.
 
 ---
 
@@ -204,3 +220,11 @@ installed `argmax-oss-swift` version's documentation for it first.
 - **2026-10-16:** Phase 3 done on release/v0.9 (Tasks 1-3, plus 3b download progress after a user report). Whole-branch review: 0 critical, 2 important (turbo unsupported on M1; character-based output cap truncated non-Latin scripts), both fixed with 6 minors. 64 tests pass. Not yet released: waiting on the user's testing and the text-model scoring (eval set). Next: user testing, then /publish-release v0.9.
 - **2026-10-18:** Design refresh done on feature/design-refresh (plan: `docs/superpowers/plans/2026-10-17-design-refresh.md`). It covers the notch recorder, the Settings sidebar, the leaner menu, the 5-step setup guide, and the macOS 26 minimum. Tasks 1-10 are committed and each was reviewed. Test suite: all 120 tests pass. Next: a whole-branch review, then the hands-on check with the user (9 checks in Task 11, step 6). After that, the user decides whether this ships as v1.0 or v0.10. Surprise: the menu's status warning does not update while the menu is open; it refreshes the next time the menu opens.
 - **2026-10-18:** Final whole-branch review of the design refresh: 0 critical, 2 important (Esc pass-through, appcast minimum macOS), both fixed in 5c20129. 120 tests pass. The user chose to do all hands-on checks with the next release, so they are now collected under "Hands-on checks carried forward". Next: Phase 4 (live transcription) brainstorm, using `docs/brainstorms/2026-10-17-live-transcription-engines.md` as the brief.
+- **2026-10-31 (Phase 4 measurements, Task 5 of the live transcription plan):** Measured in the real app (Debug build) on the user's M4 Pro, macOS 27.
+  - Rayee's memory while recording: preview off +4 MB (56 → 60 MB; the 56 MB was the first recording after launch, before Whisper had run), preview on +2 MB (150 → 152 MB). The fair comparison is the second off-run (~142 MB, same running app after Whisper had run once) against on (~150 MB): about 8–10 MB more with the preview on. Apple's recognizer runs in its own macOS process (`localspeechrecognition`), so it doesn't count against Rayee. Well under the 50 MB limit.
+  - CPU while recording: about 14% off, 16–19% on.
+  - Paste after the user stops: about 1 s with the preview off and on (30–35 s recordings). Pasted text still comes from Whisper.
+  - First live words: about 1.2 s when the user starts talking right away. Longer runs logged 2.1–3.1 s, but that timer starts at the hotkey press, so it includes the pause before the user starts talking. No speed-up work needed.
+  - Hand checks: Esc in the first second closes cleanly (twice, no hang). Two quick recordings back to back both work. With the switch off, no preview. Grey words turned white after a pause ("I think so"). The recorder did not jump.
+  - **Found, not caused by this feature (preview was off):** starting a second recording while the first was still pasting meant only the second one pasted ("Quick recording."), and its first word was clipped. Investigate separately.
+- **2026-10-31 (Phase 4, notch recorder look):** Refined the notch recorder with the user on feature/live-transcription: smoothed corners (20 pt outer, 12 pt where the notch meets the body), a black-to-dark-grey fill with a light glass edge and shadow, a steady red dot, and a 24-bar waveform centred under the camera. Two hands-on checks added under "Recorder look".

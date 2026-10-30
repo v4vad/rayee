@@ -25,9 +25,11 @@ class PasteManager: ObservableObject {
 
     // MARK: - Paste Operations
 
-    /// Paste text to the currently focused application
-    /// This works by: 1) Copying text to clipboard, 2) Simulating Cmd+V
-    func pasteText(_ text: String) {
+    /// Paste text to the currently focused application, and return once the user's clipboard is back.
+    /// This works by: 1) Copying text to clipboard, 2) Simulating Cmd+V, 3) Restoring the clipboard.
+    /// Callers paste one text at a time (see DeliveryLine), so two pastes never share the clipboard.
+    @MainActor
+    func paste(_ text: String) async {
         guard !text.isEmpty else {
             print("PasteManager: Empty text, nothing to paste")
             return
@@ -46,20 +48,30 @@ class PasteManager: ObservableObject {
         let ourChangeCount = pasteboard.changeCount
 
         // Step 2: Small delay to ensure the clipboard is ready, then paste
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.simulatePaste()
+        try? await Task.sleep(for: .milliseconds(50))
 
-            // Step 3: Give the user's clipboard back, unless something new was copied meanwhile
-            DispatchQueue.main.asyncAfter(deadline: .now() + Config.clipboardRestoreDelay) {
-                if pasteboard.changeCount == ourChangeCount {
-                    snapshot.restore(to: pasteboard)
-                }
-            }
+        // A held modifier (e.g. Option from the hotkey) would turn Cmd+V into another shortcut
+        await ModifierWait.untilReleased(
+            isHeld: { Self.modifierKeysHeld() },
+            sleep: { try? await Task.sleep(for: $0) })
+        await simulatePaste(text: text)
+
+        // Step 3: Give the user's clipboard back, unless something new was copied meanwhile
+        try? await Task.sleep(for: .seconds(Config.clipboardRestoreDelay))
+        if pasteboard.changeCount == ourChangeCount {
+            snapshot.restore(to: pasteboard)
         }
     }
 
+    /// Whether ⌘, ⌥, ⌃ or ⇧ is physically held down right now
+    private static func modifierKeysHeld() -> Bool {
+        let flags = CGEventSource.flagsState(.hidSystemState)
+        return !flags.intersection([.maskCommand, .maskAlternate, .maskControl, .maskShift]).isEmpty
+    }
+
     /// Simulate pressing Cmd+V to paste from clipboard
-    private func simulatePaste() {
+    @MainActor
+    private func simulatePaste(text: String) async {
         // Create a CGEvent source
         let source = CGEventSource(stateID: .hidSystemState)
 
@@ -85,13 +97,14 @@ class PasteManager: ObservableObject {
 
         // Post the events to simulate the key press
         // The events are posted to the currently focused application
+        let targetApp = NSWorkspace.shared.frontmostApplication?.bundleIdentifier ?? "?"
         keyDown.post(tap: .cghidEventTap)
 
         // Small delay between key down and key up for reliability
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
-            keyUp.post(tap: .cghidEventTap)
-            print("PasteManager: Paste command sent")
-        }
+        try? await Task.sleep(for: .milliseconds(20))
+        keyUp.post(tap: .cghidEventTap)
+        AppLogger.log("Pasted \(text.count) chars into \(targetApp)", category: "paste")
+        print("PasteManager: Paste command sent")
     }
 }
 

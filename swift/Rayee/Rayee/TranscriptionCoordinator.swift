@@ -72,17 +72,27 @@ class TranscriptionCoordinator: ObservableObject {
     /// Audio recorder instance (created per recording session)
     private var audioRecorder: AudioRecorder?
 
+    /// Shows words while the user speaks (created per recording session, only if enabled)
+    private var liveTranscriber: LiveTranscriber?
+
     /// Whether to auto-paste after current transcription
     private var pendingAutoPaste = false
 
-    /// Whether smart dictation should paste the transformed result (set when auto-paste is deferred)
-    var pendingSmartDictationPaste = false
+    /// The place in the paste line held for the transcription that just finished, when Smart Dictation
+    /// will paste its cleaned text later (nil when nothing is waiting to be pasted)
+    private(set) var pendingSmartDictationSlot: DeliveryLine.Slot?
+
+    /// Everything Rayee pastes goes through this line, so dictations land in the order they were spoken
+    let deliveryLine: DeliveryLine
 
     /// Callback when transcription completes
     var onTranscriptionComplete: ((TranscriptionResult) -> Void)?
 
     /// Callback for audio level updates (for waveform visualization)
     var onAudioLevelUpdate: ((Float) -> Void)?
+
+    /// Callback for live words while recording (for the recorder's preview)
+    var onLiveTranscript: ((LiveTranscript) -> Void)?
 
     // MARK: - Initialization
 
@@ -96,6 +106,10 @@ class TranscriptionCoordinator: ObservableObject {
         self.historyManager = historyManager
         self.audioFeedback = audioFeedback
         self.pasteManager = pasteManager
+        self.deliveryLine = DeliveryLine(paste: { text in
+            try? await Task.sleep(for: .seconds(Config.autoPasteDelay))
+            await pasteManager.paste(text)
+        })
     }
 
     // MARK: - Public Methods
@@ -109,7 +123,7 @@ class TranscriptionCoordinator: ObservableObject {
         }
 
         pendingAutoPaste = autoPaste
-        pendingSmartDictationPaste = false
+        pendingSmartDictationSlot = nil
         startRecording()
     }
 
@@ -123,6 +137,7 @@ class TranscriptionCoordinator: ObservableObject {
     /// Cancel recording without transcribing (e.g., user pressed Escape)
     func cancel() {
         if isRecording {
+            stopLiveTranscriber()
             audioRecorder?.cancelRecording()
             audioRecorder = nil
             isRecording = false
@@ -174,6 +189,20 @@ class TranscriptionCoordinator: ObservableObject {
             self?.onAudioLevelUpdate?(level)
         }
 
+        // Show words while the user speaks. Only a preview: the pasted text still comes from WhisperKit.
+        if settings.livePreviewEnabled {
+            let transcriber = LiveTranscriber(languageIdentifier: settings.livePreviewLanguage)
+            liveTranscriber = transcriber
+            audioRecorder?.onRawBuffer = { [weak transcriber] buffer in
+                transcriber?.append(buffer)
+            }
+            transcriber.onTranscript = { [weak self, weak transcriber] transcript in
+                guard let self, let transcriber, self.liveTranscriber === transcriber else { return }
+                self.onLiveTranscript?(transcript)
+            }
+            transcriber.start()
+        }
+
         // Start recording
         do {
             try audioRecorder?.startRecording()
@@ -182,8 +211,15 @@ class TranscriptionCoordinator: ObservableObject {
         }
     }
 
+    /// Tear down the live preview without waiting for it
+    private func stopLiveTranscriber() {
+        liveTranscriber?.stop()
+        liveTranscriber = nil
+    }
+
     /// Handle when recording finishes
     private func handleRecordingComplete(_ result: Result<RecordingResult, AudioRecorderError>) {
+        stopLiveTranscriber()
         audioRecorder = nil
         isRecording = false
 
@@ -212,6 +248,7 @@ class TranscriptionCoordinator: ObservableObject {
 
     /// Handle recording errors
     private func handleRecordingError(_ error: Error) {
+        stopLiveTranscriber()
         isRecording = false
         audioRecorder = nil
         audioFeedback.playErrorSound()
@@ -260,7 +297,7 @@ class TranscriptionCoordinator: ObservableObject {
 
         // Determine if we should and can paste
         var didPaste = false
-        pendingSmartDictationPaste = false
+        pendingSmartDictationSlot = nil
         let canPaste = RecorderRules.canPaste(
             requested: pendingAutoPaste,
             enabled: settings.autoPasteEnabled,
@@ -268,13 +305,13 @@ class TranscriptionCoordinator: ObservableObject {
             hasTarget: PasteTargetDetector.hasValidPasteTarget(),
             hasAccessibility: pasteManager.hasAccessibilityPermission())
         if canPaste {
+            // Take a place in the paste line now, so this text can't land before an earlier dictation's
+            let slot = deliveryLine.reserve()
             if smartDictationWillRun {
-                // Defer paste — smart dictation will paste the transformed result
-                pendingSmartDictationPaste = true
+                // Defer paste — smart dictation fills the place with the cleaned text
+                pendingSmartDictationSlot = slot
             } else {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Config.autoPasteDelay) {
-                    self.pasteManager.pasteText(text)
-                }
+                deliveryLine.fill(slot, text)
                 didPaste = true
             }
         }

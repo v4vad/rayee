@@ -78,6 +78,9 @@ enum RecorderLayout {
     static let charsPerLine = 36
     static let maxResultLines = 4
     static let maxErrorLines = 4
+    static let maxLiveLines = 3
+    /// Gap below the live words, above the bottom edge
+    private static let liveTextPadding: CGFloat = 12
     /// Padding above and below the text plus the button row (16 + 8 + 32 + 12)
     private static let textWithButtons: CGFloat = 68
     /// Padding above and below the text alone (16 + 16)
@@ -93,11 +96,19 @@ enum RecorderLayout {
         return Swift.min(Swift.max(lines, 1), max)
     }
 
+    /// Never fewer lines than `previous`, so the recorder grows while recording and doesn't shrink.
+    static func liveLines(previous: Int, transcript: LiveTranscript) -> Int {
+        if transcript.isEmpty { return previous }
+        return Swift.max(previous, estimatedLines(transcript.text, max: maxLiveLines))
+    }
+
     /// Height of the body below the menu bar for a state.
-    static func bodyHeight(for phase: RecorderPhase) -> CGFloat {
+    static func bodyHeight(for phase: RecorderPhase, liveLines: Int = 0) -> CGFloat {
         switch phase {
         case .hidden:
             return 0
+        case .listening where liveLines > 0:
+            return compactHeight + lineHeight * CGFloat(Swift.min(liveLines, maxLiveLines)) + liveTextPadding
         case .listening, .transcribing, .cleaningUp, .pasted:
             return compactHeight
         case .result(let text):
@@ -110,6 +121,12 @@ enum RecorderLayout {
 }
 
 enum RecorderRules {
+    /// Live words show only while the microphone is open.
+    static func acceptsLiveTranscript(in phase: RecorderPhase) -> Bool {
+        if case .listening = phase { return true }
+        return false
+    }
+
     static func escape(in phase: RecorderPhase) -> RecorderCommand {
         switch phase {
         case .listening: return .cancelRecording
