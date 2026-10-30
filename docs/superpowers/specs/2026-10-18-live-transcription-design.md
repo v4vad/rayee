@@ -113,11 +113,10 @@ change. Live text is a preview of what's coming. The pasted text still comes fro
   1-minute dictation and reads Rayee's memory and CPU use while it runs. Building pauses until
   the numbers are in.
 
-## Left to decide (my proposal, user to confirm)
-
+**Confirmed by the user (2026-10-31):**
 - **Which language the preview listens for.** Apple's recognizer needs one language per
   recording. Whisper guesses the language by itself each time, and Rayee has no language
-  setting today. My proposal: a "Preview language" menu under the switch, defaulting to
+  setting today. A "Preview language" menu sits under the switch, defaulting to
   **English (India)**. It lists only the languages macOS reports as supported (Telugu included on
   macOS 27). Picking a language that isn't installed starts the macOS download, with progress
   shown next to the menu. Whisper keeps guessing by itself, unchanged.
