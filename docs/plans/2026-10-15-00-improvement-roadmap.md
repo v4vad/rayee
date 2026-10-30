@@ -80,6 +80,7 @@ tick or remove each line.
 **Live transcription**
 - [ ] English dictation: grey words appear within about a second and turn solid after a pause.
 - [ ] Pause for 10 s mid-sentence: the recording keeps going, and new words follow on.
+- [ ] Live preview: pause twice in one dictation: settled sentences are separated by a space (not "so.And").
 - [ ] A long dictation (1 minute or more): only the last 2–3 lines show, and the recorder doesn't jitter.
 - [ ] Smart Dictation on: the preview shows raw words, and "Cleaning up" and the paste work as before.
 - [ ] Switch off: the recorder looks exactly as it did before this feature.
@@ -182,10 +183,9 @@ have changed the files, so the detailed code must be written against the code as
 
 ## Phase 4: Live transcription (done)
 
-Start with superpowers:brainstorming with the user. Decide where live text appears (the panel or
-straight into the app), what happens to Smart Dictation, and how corrections are shown. Then write
-the plan with superpowers:writing-plans. WhisperKit has a streaming transcription API. Check the
-installed `argmax-oss-swift` version's documentation for it first.
+Done on `feature/live-transcription`. Your words now appear in the notch recorder while you dictate, using Apple's on-device speech recognizer; the pasted text still comes from Whisper. The design is in `docs/superpowers/specs/2026-10-18-live-transcription-design.md` and the plan is in `docs/superpowers/plans/2026-10-31-live-transcription.md`.
+
+Next feature: an in-place preview (live words at the text cursor, using a macOS input method's temporary "marked text"). To be brainstormed with an early spike in the user's main apps. User decision 2026-10-31.
 
 ---
 
@@ -214,7 +214,7 @@ installed `argmax-oss-swift` version's documentation for it first.
 - **2026-10-18:** Design refresh done on feature/design-refresh (plan: `docs/superpowers/plans/2026-10-17-design-refresh.md`). It covers the notch recorder, the Settings sidebar, the leaner menu, the 5-step setup guide, and the macOS 26 minimum. Tasks 1-10 are committed and each was reviewed. Test suite: all 120 tests pass. Next: a whole-branch review, then the hands-on check with the user (9 checks in Task 11, step 6). After that, the user decides whether this ships as v1.0 or v0.10. Surprise: the menu's status warning does not update while the menu is open; it refreshes the next time the menu opens.
 - **2026-10-18:** Final whole-branch review of the design refresh: 0 critical, 2 important (Esc pass-through, appcast minimum macOS), both fixed in 5c20129. 120 tests pass. The user chose to do all hands-on checks with the next release, so they are now collected under "Hands-on checks carried forward". Next: Phase 4 (live transcription) brainstorm, using `docs/brainstorms/2026-10-17-live-transcription-engines.md` as the brief.
 - **2026-10-31 (Phase 4 measurements, Task 5 of the live transcription plan):** Measured in the real app (Debug build) on the user's M4 Pro, macOS 27.
-  - Rayee's memory while recording: preview off +4 MB (56 → 60 MB), preview on +2 MB (150 → 152 MB). Apple's recognizer runs in its own macOS process (`localspeechrecognition`), so it doesn't count against Rayee. Well under the 50 MB limit.
+  - Rayee's memory while recording: preview off +4 MB (56 → 60 MB; the 56 MB was the first recording after launch, before Whisper had run), preview on +2 MB (150 → 152 MB). The fair comparison is the second off-run (~142 MB, same running app after Whisper had run once) against on (~150 MB): about 8–10 MB more with the preview on. Apple's recognizer runs in its own macOS process (`localspeechrecognition`), so it doesn't count against Rayee. Well under the 50 MB limit.
   - CPU while recording: about 14% off, 16–19% on.
   - Paste after the user stops: about 1 s with the preview off and on (30–35 s recordings). Pasted text still comes from Whisper.
   - First live words: about 1.2 s when the user starts talking right away. Longer runs logged 2.1–3.1 s, but that timer starts at the hotkey press, so it includes the pause before the user starts talking. No speed-up work needed.

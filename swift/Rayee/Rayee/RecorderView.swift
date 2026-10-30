@@ -98,6 +98,7 @@ struct RecorderView: View {
                 + Text(tail.draft).foregroundStyle(.white.opacity(0.45)))
             .font(.system(size: 13))
             .lineLimit(RecorderLayout.maxLiveLines)
+            .truncationMode(.head)
             .frame(maxWidth: .infinity, alignment: .bottomLeading)
             .padding(.horizontal, 18)
             .padding(.bottom, 12)

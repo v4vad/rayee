@@ -6,7 +6,7 @@
 - Grey words are a draft; they turn white once settled (usually after a pause)
 - The pasted text still comes from Whisper, so Smart Dictation, Vocabulary and History work as before
 - Settings → Recording: "Show words while I speak" (on by default) and "Preview language" (English (India) by default; Telugu and others download once)
-- Uses Apple's built-in speech recognizer, which runs outside Rayee, so Rayee uses no extra memory
+- Uses Apple's built-in speech recognizer, which runs outside Rayee, so Rayee uses about 10 MB more
 
 ---
 

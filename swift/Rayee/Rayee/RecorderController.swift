@@ -127,6 +127,8 @@ final class RecorderController: ObservableObject {
                 liveTranscript = transcript
                 liveLines = lines
             }
+            // The body grew, so the clickable area must grow with it.
+            pointerMoved()
         } else {
             liveTranscript = transcript
         }
