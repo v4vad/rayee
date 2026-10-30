@@ -7,7 +7,8 @@
 #
 # Prerequisites:
 #   - Xcode and command line tools
-#   - Valid code signing identity (or use ad-hoc for testing)
+#   - Developer ID Application certificate (Xcode > Settings > Accounts)
+#   - Notary credentials saved once: xcrun notarytool store-credentials rayee-notary
 #
 # Usage:
 #   ./publish_release.sh
@@ -79,18 +80,34 @@ success "Swift app built successfully"
 echo ""
 
 # ==========================================
-# Step 1b: Re-sign app bundle
+# Step 1b: Sign app bundle with Developer ID
 # ==========================================
-# Sparkle.framework ships with its own Team ID. Re-signing --deep with our
-# Apple Development cert makes every component share the same team ID (VXYPQ995EU).
-# Using a real cert (not ad-hoc "-") produces a stable code signature so macOS
-# preserves accessibility/microphone permissions across app updates.
-info "Step 1b: Re-signing app bundle to fix framework Team ID mismatch..."
+# Apps shared outside the App Store need a Developer ID Application cert,
+# hardened runtime (-o runtime) and a secure timestamp, or Gatekeeper rejects
+# them. Sign inside-out (Sparkle's helpers first, the app last) instead of
+# --deep, which drops hardened runtime and the XPC services' entitlements.
+# A stable Team ID (VXYPQ995EU) also keeps macOS permissions across updates.
+info "Step 1b: Signing app bundle with Developer ID..."
 ENTITLEMENTS="$SWIFT_DIR/Rayee/Rayee.entitlements"
-SIGN_IDENTITY="Apple Development: vadlapatla.karthik@gmail.com (R34JDNZ6DV)"
-codesign --force --deep --sign "$SIGN_IDENTITY" --entitlements "$ENTITLEMENTS" "$APP_PATH"
+SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep -o '"Developer ID Application: [^"]*(VXYPQ995EU)"' | head -1 | tr -d '"')
+if [ -z "$SIGN_IDENTITY" ]; then
+    error "No Developer ID Application certificate found. Create one in Xcode > Settings > Accounts > Manage Certificates."
+fi
+info "Using: $SIGN_IDENTITY"
+sign() { codesign --force --timestamp --options runtime --sign "$SIGN_IDENTITY" "$@"; }
+
+SPARKLE="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+sign "$SPARKLE/XPCServices/Installer.xpc"
+sign --preserve-metadata=entitlements "$SPARKLE/XPCServices/Downloader.xpc"
+sign "$SPARKLE/Autoupdate"
+sign "$SPARKLE/Updater.app"
+sign "$APP_PATH/Contents/Frameworks/Sparkle.framework"
+for DYLIB in "$APP_PATH"/Contents/Frameworks/*.dylib; do
+    [ -e "$DYLIB" ] && sign "$DYLIB"
+done
+sign --entitlements "$ENTITLEMENTS" "$APP_PATH"
 codesign --verify --deep --strict "$APP_PATH"
-success "App re-signed"
+success "App signed"
 echo ""
 
 # ==========================================
@@ -115,6 +132,25 @@ APP_SIZE=$(du -sh "$APP_PATH" | cut -f1)
 DMG_SIZE=$(du -sh "$DMG_NAME" | cut -f1)
 
 rm -rf "$BUILD_DIR"
+
+# ==========================================
+# Step 2b: Sign, notarize and staple the DMG
+# ==========================================
+# Notarization: Apple scans the DMG and issues a ticket; stapling attaches the
+# ticket so Gatekeeper accepts it even offline. Must run before Sparkle's
+# signature, because stapling changes the file.
+# One-time setup: xcrun notarytool store-credentials rayee-notary
+info "Step 2b: Notarizing DMG (usually a few minutes)..."
+codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG_NAME"
+NOTARY_OUTPUT=$(xcrun notarytool submit "$DMG_NAME" --keychain-profile rayee-notary --wait 2>&1) || true
+echo "$NOTARY_OUTPUT"
+if ! echo "$NOTARY_OUTPUT" | grep -q "status: Accepted"; then
+    error "Notarization failed. See details with: xcrun notarytool log <submission id> --keychain-profile rayee-notary"
+fi
+xcrun stapler staple "$DMG_NAME"
+spctl -a -vv -t open --context context:primary-signature "$DMG_NAME"
+success "DMG notarized and stapled"
+echo ""
 
 # ==========================================
 # Step 3: Sign DMG for Sparkle Updates
