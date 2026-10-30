@@ -49,6 +49,11 @@ final class LivePreviewLanguages: ObservableObject {
     func choose(_ identifier: String) {
         currentTask?.cancel()
         generation += 1
+        latestIdentifier = identifier
+        // A new pick ends any earlier download display; its task is out of date now
+        progressObservation?.invalidate()
+        progressObservation = nil
+        downloadProgress = nil
         let mine = generation
         currentTask = Task { [weak self] in
             await self?.perform(identifier, generation: mine)
@@ -58,6 +63,7 @@ final class LivePreviewLanguages: ObservableObject {
     private var currentTask: Task<Void, Never>?
     /// Bumped on every pick; a task whose number is out of date has been superseded
     private var generation = 0
+    private var latestIdentifier: String?
 
     private func isLatest(_ mine: Int) -> Bool {
         mine == generation && !Task.isCancelled
@@ -86,7 +92,10 @@ final class LivePreviewLanguages: ObservableObject {
             try await AssetInventory.reserve(locale: locale)
             guard isLatest(mine) else {
                 // Superseded while reserving: give this one back (the newer pick released the rest earlier)
-                await AssetInventory.release(reservedLocale: locale)
+                // ...unless the newest pick is this same language (A, B, A): then keep it
+                if identifier != latestIdentifier {
+                    await AssetInventory.release(reservedLocale: locale)
+                }
                 return
             }
 
