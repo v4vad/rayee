@@ -183,6 +183,11 @@ class AppState: ObservableObject {
             self?.recorder.audioLevelMonitor.addLevel(level)
         }
 
+        // Forward live words to the recorder's preview
+        transcriptionCoordinator.onLiveTranscript = { [weak self] transcript in
+            self?.recorder.showLiveTranscript(transcript)
+        }
+
         // Recorder clicks and buttons
         recorder.onCommand = { [weak self] command in
             self?.perform(command)

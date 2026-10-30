@@ -72,6 +72,9 @@ class TranscriptionCoordinator: ObservableObject {
     /// Audio recorder instance (created per recording session)
     private var audioRecorder: AudioRecorder?
 
+    /// Shows words while the user speaks (created per recording session, only if enabled)
+    private var liveTranscriber: LiveTranscriber?
+
     /// Whether to auto-paste after current transcription
     private var pendingAutoPaste = false
 
@@ -83,6 +86,9 @@ class TranscriptionCoordinator: ObservableObject {
 
     /// Callback for audio level updates (for waveform visualization)
     var onAudioLevelUpdate: ((Float) -> Void)?
+
+    /// Callback for live words while recording (for the recorder's preview)
+    var onLiveTranscript: ((LiveTranscript) -> Void)?
 
     // MARK: - Initialization
 
@@ -123,6 +129,7 @@ class TranscriptionCoordinator: ObservableObject {
     /// Cancel recording without transcribing (e.g., user pressed Escape)
     func cancel() {
         if isRecording {
+            stopLiveTranscriber()
             audioRecorder?.cancelRecording()
             audioRecorder = nil
             isRecording = false
@@ -174,6 +181,20 @@ class TranscriptionCoordinator: ObservableObject {
             self?.onAudioLevelUpdate?(level)
         }
 
+        // Show words while the user speaks. Only a preview: the pasted text still comes from WhisperKit.
+        if settings.livePreviewEnabled {
+            let transcriber = LiveTranscriber(languageIdentifier: settings.livePreviewLanguage)
+            liveTranscriber = transcriber
+            audioRecorder?.onRawBuffer = { [weak transcriber] buffer in
+                transcriber?.append(buffer)
+            }
+            transcriber.onTranscript = { [weak self, weak transcriber] transcript in
+                guard let self, let transcriber, self.liveTranscriber === transcriber else { return }
+                self.onLiveTranscript?(transcript)
+            }
+            transcriber.start()
+        }
+
         // Start recording
         do {
             try audioRecorder?.startRecording()
@@ -182,8 +203,15 @@ class TranscriptionCoordinator: ObservableObject {
         }
     }
 
+    /// Tear down the live preview without waiting for it
+    private func stopLiveTranscriber() {
+        liveTranscriber?.stop()
+        liveTranscriber = nil
+    }
+
     /// Handle when recording finishes
     private func handleRecordingComplete(_ result: Result<RecordingResult, AudioRecorderError>) {
+        stopLiveTranscriber()
         audioRecorder = nil
         isRecording = false
 
@@ -212,6 +240,7 @@ class TranscriptionCoordinator: ObservableObject {
 
     /// Handle recording errors
     private func handleRecordingError(_ error: Error) {
+        stopLiveTranscriber()
         isRecording = false
         audioRecorder = nil
         audioFeedback.playErrorSound()

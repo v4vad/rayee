@@ -13,7 +13,7 @@ struct RecorderView: View {
     /// Watched so "Cleaning up" can say "Downloading model… 45%" the first time
     @ObservedObject private var transformManager = MLXTransformManager.shared
 
-    private var bodyHeight: CGFloat { RecorderLayout.bodyHeight(for: controller.phase) }
+    private var bodyHeight: CGFloat { controller.bodyHeight }
     private var bandHeight: CGFloat { NotchGeometry.bandHeight(controller.mode) }
     private var shapeWidth: CGFloat { NotchGeometry.shapeWidth(controller.mode) }
 
@@ -80,6 +80,31 @@ struct RecorderView: View {
     }
 
     private var listening: some View {
+        VStack(spacing: 0) {
+            listeningRow
+                .frame(height: RecorderLayout.compactHeight)
+            if !controller.liveTranscript.isEmpty {
+                liveText
+            }
+        }
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// The words heard so far: settled words bright, the still-changing end dimmer.
+    private var liveText: some View {
+        let tail = controller.liveTranscript.visibleTail(
+            maxCharacters: RecorderLayout.charsPerLine * RecorderLayout.maxLiveLines)
+        return (Text(tail.settled).foregroundStyle(.white.opacity(0.9))
+                + Text(tail.draft).foregroundStyle(.white.opacity(0.45)))
+            .font(.system(size: 13))
+            .lineLimit(RecorderLayout.maxLiveLines)
+            .frame(maxWidth: .infinity, alignment: .bottomLeading)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 12)
+            .allowsHitTesting(false)
+    }
+
+    private var listeningRow: some View {
         HStack(spacing: 12) {
             PulsingDot()
             Spacer(minLength: 0)

@@ -32,6 +32,12 @@ final class RecorderController: ObservableObject {
     @Published private(set) var phase: RecorderPhase = .hidden
     @Published private(set) var mode: RecorderLayoutMode = .capsule(gap: 30)
     @Published private(set) var recordingDuration: TimeInterval = 0
+    /// Words heard so far while listening
+    @Published private(set) var liveTranscript = LiveTranscript()
+    /// Lines the live words have needed so far; the body never shrinks while recording
+    private var liveLines = 0
+
+    var bodyHeight: CGFloat { RecorderLayout.bodyHeight(for: phase, liveLines: liveLines) }
 
     let audioLevelMonitor = AudioLevelMonitor()
 
@@ -70,7 +76,10 @@ final class RecorderController: ObservableObject {
             stopTimer()
         }
 
-        withAnimation(RecorderMotion.change) { phase = newPhase }
+        withAnimation(RecorderMotion.change) {
+            if newPhase != phase { resetLiveTranscript() }
+            phase = newPhase
+        }
 
         if newPhase.takesKeyboardFocus {
             panel?.allowsKeyFocus = true
@@ -93,7 +102,10 @@ final class RecorderController: ObservableObject {
         dismissWork?.cancel()
         stopTimer()
         releaseKeyFocus()
-        withAnimation(RecorderMotion.close) { phase = .hidden }
+        withAnimation(RecorderMotion.close) {
+            resetLiveTranscript()
+            phase = .hidden
+        }
         updateMouseHandling()
 
         // Take the window off screen once the close animation is done, unless it reopened meanwhile.
@@ -104,6 +116,25 @@ final class RecorderController: ObservableObject {
         }
         orderOutWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
+    /// Shows the latest live words. The body grows only when a line is added, not on every update.
+    func showLiveTranscript(_ transcript: LiveTranscript) {
+        guard RecorderRules.acceptsLiveTranscript(in: phase) else { return }
+        let lines = RecorderLayout.liveLines(previous: liveLines, transcript: transcript)
+        if lines > liveLines {
+            withAnimation(RecorderMotion.change) {
+                liveTranscript = transcript
+                liveLines = lines
+            }
+        } else {
+            liveTranscript = transcript
+        }
+    }
+
+    private func resetLiveTranscript() {
+        liveTranscript = LiveTranscript()
+        liveLines = 0
     }
 
     // MARK: - Window
@@ -193,7 +224,7 @@ final class RecorderController: ObservableObject {
     private func pointerMoved() {
         let point = NSEvent.mouseLocation
         let rects = NotchGeometry.hitRects(
-            screen: screenFrame, mode: mode, bodyHeight: RecorderLayout.bodyHeight(for: phase))
+            screen: screenFrame, mode: mode, bodyHeight: bodyHeight)
         let inside = rects.contains { NotchGeometry.contains($0, point) }
         panel?.ignoresMouseEvents = !inside
         setHovering(inside)
