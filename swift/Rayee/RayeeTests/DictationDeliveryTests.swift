@@ -97,6 +97,38 @@ final class DictationDeliveryTests: XCTestCase {
         XCTAssertEqual(log, ["1 start", "1 end", "2 start"])
     }
 
+    // MARK: - Skipping
+
+    func testSkippingACleanupAlsoSkipsEveryEarlierOne() {
+        XCTAssertEqual(CleanupSkip.ids(upTo: 2, among: [3, 1, 2, 0]), [0, 1, 2])
+        XCTAssertEqual(CleanupSkip.ids(upTo: 1, among: [1]), [1])
+        XCTAssertEqual(CleanupSkip.ids(upTo: 0, among: [1, 2]), [])
+    }
+
+    func testSkippingTheSecondWhileTheFirstIsStuckPastesBothRawTextsInOrder() async {
+        var pasted: [String] = []
+        let line = DeliveryLine(paste: { pasted.append($0) })
+        let queue = CleanupQueue()
+        let firstSlot = line.reserve()
+        let secondSlot = line.reserve()
+        // The first clean-up never finishes (model still downloading)
+        let stuck = queue.enqueue { while !Task.isCancelled { await Task.yield() } }
+        let waiting = queue.enqueue { }
+
+        // Skip the shown (second) clean-up: everything up to it is skipped, earliest first
+        let skipped = CleanupSkip.ids(upTo: 1, among: [0, 1])
+        let raw = ["one raw", "two raw"]
+        let slots = [firstSlot, secondSlot]
+        for id in skipped { line.fill(slots[id], raw[id]) }
+        await line.idle()
+        XCTAssertEqual(pasted, ["one raw", "two raw"])
+
+        stuck.cancel()
+        waiting.cancel()
+        await stuck.value
+        await waiting.value
+    }
+
     // MARK: - Waiting for modifier keys
 
     func testPasteWaitsUntilModifiersAreReleased() async {

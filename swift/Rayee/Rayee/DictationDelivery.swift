@@ -100,6 +100,14 @@ final class CleanupQueue {
     }
 }
 
+/// Which clean-ups a skip covers. Clean-ups and pastes are strictly in order, so skipping one
+/// can't take effect until every earlier clean-up is skipped too. Ids grow in the order spoken.
+enum CleanupSkip {
+    static func ids(upTo shown: Int, among running: [Int]) -> [Int] {
+        running.filter { $0 <= shown }.sorted()
+    }
+}
+
 /// Waits for modifier keys to be let go before a paste, so ⌘V isn't turned into something else.
 enum ModifierWait {
     static let pollInterval: Duration = .milliseconds(20)

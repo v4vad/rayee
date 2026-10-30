@@ -12,7 +12,6 @@
 
 import Foundation
 import Combine
-import AppKit
 
 /// Result of a transcription attempt
 enum TranscriptionResult {

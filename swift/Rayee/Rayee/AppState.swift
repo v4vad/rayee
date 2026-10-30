@@ -367,15 +367,19 @@ class AppState: ObservableObject {
         // when it is the one on screen and nothing newer is being recorded or transcribed.
         if shownCleanupID == id {
             shownCleanupID = nil
-            if status == .ready { recorder.show(outcome.phase) }
+            // A newer recording or transcription has already replaced "Cleaning up" on the recorder
+            if recorder.phase == .cleaningUp { recorder.show(outcome.phase) }
         }
     }
 
     /// Esc or a click during "Cleaning up": use the raw text now (in its turn in the paste line).
+    /// Earlier clean-ups still running are ahead of it in the line, so they are skipped too.
     private func skipCleanup() {
-        guard let id = shownCleanupID, let cleanup = cleanups[id] else { return }
-        cleanup.task?.cancel()
-        finishCleanup(id: id, cleaned: nil)
+        guard let shown = shownCleanupID, cleanups[shown] != nil else { return }
+        for id in CleanupSkip.ids(upTo: shown, among: Array(cleanups.keys)) {
+            cleanups[id]?.task?.cancel()
+            finishCleanup(id: id, cleaned: nil)
+        }
     }
 
     /// Puts "Cleaning up" back on the recorder if the clean-up it showed is still running.

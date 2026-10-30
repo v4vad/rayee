@@ -28,6 +28,7 @@ class PasteManager: ObservableObject {
     /// Paste text to the currently focused application, and return once the user's clipboard is back.
     /// This works by: 1) Copying text to clipboard, 2) Simulating Cmd+V, 3) Restoring the clipboard.
     /// Callers paste one text at a time (see DeliveryLine), so two pastes never share the clipboard.
+    @MainActor
     func paste(_ text: String) async {
         guard !text.isEmpty else {
             print("PasteManager: Empty text, nothing to paste")
@@ -39,11 +40,6 @@ class PasteManager: ObservableObject {
             return
         }
 
-        // A held modifier (e.g. Option from the hotkey) would turn Cmd+V into another shortcut
-        await ModifierWait.untilReleased(
-            isHeld: { Self.modifierKeysHeld() },
-            sleep: { try? await Task.sleep(for: $0) })
-
         // Step 1: Remember what the user had copied, then put our text on the clipboard
         let pasteboard = NSPasteboard.general
         let snapshot = ClipboardSnapshot(of: pasteboard)
@@ -53,6 +49,11 @@ class PasteManager: ObservableObject {
 
         // Step 2: Small delay to ensure the clipboard is ready, then paste
         try? await Task.sleep(for: .milliseconds(50))
+
+        // A held modifier (e.g. Option from the hotkey) would turn Cmd+V into another shortcut
+        await ModifierWait.untilReleased(
+            isHeld: { Self.modifierKeysHeld() },
+            sleep: { try? await Task.sleep(for: $0) })
         await simulatePaste(text: text)
 
         // Step 3: Give the user's clipboard back, unless something new was copied meanwhile
@@ -69,6 +70,7 @@ class PasteManager: ObservableObject {
     }
 
     /// Simulate pressing Cmd+V to paste from clipboard
+    @MainActor
     private func simulatePaste(text: String) async {
         // Create a CGEvent source
         let source = CGEventSource(stateID: .hidSystemState)
