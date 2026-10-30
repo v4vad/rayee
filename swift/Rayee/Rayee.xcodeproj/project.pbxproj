@@ -25,6 +25,7 @@
 		A10001C0001 /* PasteTargetDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001C0000 /* PasteTargetDetector.swift */; };
 		A10001D0001 /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10001D0000 /* AppLogger.swift */; };
 		A10001E0001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10001E0000 /* Assets.xcassets */; };
+		A1000FE0001 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000FE0000 /* AppIcon.icon */; };
 		A10002F0001 /* GeneralSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10002F0000 /* GeneralSettingsTab.swift */; };
 		A1000330001 /* ModelsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000330000 /* ModelsSettingsTab.swift */; };
 		A1000370001 /* ModelRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000370000 /* ModelRow.swift */; };
@@ -90,6 +91,7 @@
 		A10001C0000 /* PasteTargetDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteTargetDetector.swift; sourceTree = "<group>"; };
 		A10001D0000 /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		A10001E0000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000FE0000 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		A10002F0000 /* GeneralSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsTab.swift; sourceTree = "<group>"; };
 		A1000330000 /* ModelsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelsSettingsTab.swift; sourceTree = "<group>"; };
 		A1000370000 /* ModelRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelRow.swift; sourceTree = "<group>"; };
@@ -201,6 +203,7 @@
 				A1000550000 /* RecorderState.swift */,
 				A1000540000 /* NotchGeometry.swift */,
 				A10001E0000 /* Assets.xcassets */,
+				A1000FE0000 /* AppIcon.icon */,
 				A1000006000 /* Info.plist */,
 				A100000B000 /* Rayee.entitlements */,
 			);
@@ -324,6 +327,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10001E0001 /* Assets.xcassets in Resources */,
+				A1000FE0001 /* AppIcon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
