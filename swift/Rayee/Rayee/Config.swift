@@ -58,7 +58,7 @@ enum Config {
     // MARK: - Recorder
 
     /// Number of bars in the recorder's level meter
-    static let waveformBarCount = 9
+    static let waveformBarCount = 24
 
     // MARK: - UI Delays
 

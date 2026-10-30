@@ -87,6 +87,10 @@ tick or remove each line.
 - [ ] Telugu as the preview language: the first-time download shows progress, the preview is in English letters, and the paste is in Telugu script.
 - [ ] Microphone denied or recognizer unavailable: dictation still behaves as today.
 
+**Recorder look**
+- [ ] Recorder look: smooth rounded corners, a light glass edge along the bottom, steady red dot, waveform centred under the camera.
+- [ ] Recorder on a screen without a notch (floating capsule): same edge and shadow, nothing clipped.
+
 ---
 
 ## Review findings (the spec)
@@ -220,3 +224,4 @@ Next feature: an in-place preview (live words at the text cursor, using a macOS 
   - First live words: about 1.2 s when the user starts talking right away. Longer runs logged 2.1–3.1 s, but that timer starts at the hotkey press, so it includes the pause before the user starts talking. No speed-up work needed.
   - Hand checks: Esc in the first second closes cleanly (twice, no hang). Two quick recordings back to back both work. With the switch off, no preview. Grey words turned white after a pause ("I think so"). The recorder did not jump.
   - **Found, not caused by this feature (preview was off):** starting a second recording while the first was still pasting meant only the second one pasted ("Quick recording."), and its first word was clipped. Investigate separately.
+- **2026-10-31 (Phase 4, notch recorder look):** Refined the notch recorder with the user on feature/live-transcription: smoothed corners (20 pt outer, 12 pt where the notch meets the body), a black-to-dark-grey fill with a light glass edge and shadow, a steady red dot, and a 24-bar waveform centred under the camera. Two hands-on checks added under "Recorder look".

@@ -47,21 +47,39 @@ struct NotchShape: Shape {
         let bandRight = rect.midX + bandWidth / 2
         let join = max(0, min(joinRadius, bandHeight, (rect.width - bandWidth) / 2 - top))
 
+        // Each corner's curve starts and ends `reach` away from it, clamped so neighbouring curves never overlap
+        let side = (rect.width - bandWidth) / 2
+        let joinReach = min(join * 1.6, bandHeight, side / 2)
+        let topReach = min(top * 1.6, side / 2, bodyHeight / 2)
+        let bottomReach = min(bottom * 1.6, bodyHeight / 2, rect.width / 2)
+
         path.move(to: CGPoint(x: bandLeft, y: rect.minY))
         path.addLine(to: CGPoint(x: bandRight, y: rect.minY))
-        path.addLine(to: CGPoint(x: bandRight, y: bodyTop - join))
-        path.addQuadCurve(to: CGPoint(x: bandRight + join, y: bodyTop), control: CGPoint(x: bandRight, y: bodyTop))
-        path.addLine(to: CGPoint(x: rect.maxX - top, y: bodyTop))
-        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: bodyTop + top), control: CGPoint(x: rect.maxX, y: bodyTop))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - bottom))
-        path.addQuadCurve(to: CGPoint(x: rect.maxX - bottom, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX + bottom, y: rect.maxY))
-        path.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - bottom), control: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: bodyTop + top))
-        path.addQuadCurve(to: CGPoint(x: rect.minX + top, y: bodyTop), control: CGPoint(x: rect.minX, y: bodyTop))
-        path.addLine(to: CGPoint(x: bandLeft - join, y: bodyTop))
-        path.addQuadCurve(to: CGPoint(x: bandLeft, y: bodyTop - join), control: CGPoint(x: bandLeft, y: bodyTop))
+        Self.smoothCorner(&path, CGPoint(x: bandRight, y: bodyTop), in: CGVector(dx: 0, dy: 1), out: CGVector(dx: 1, dy: 0), reach: joinReach)
+        Self.smoothCorner(&path, CGPoint(x: rect.maxX, y: bodyTop), in: CGVector(dx: 1, dy: 0), out: CGVector(dx: 0, dy: 1), reach: topReach)
+        Self.smoothCorner(&path, CGPoint(x: rect.maxX, y: rect.maxY), in: CGVector(dx: 0, dy: 1), out: CGVector(dx: -1, dy: 0), reach: bottomReach)
+        Self.smoothCorner(&path, CGPoint(x: rect.minX, y: rect.maxY), in: CGVector(dx: -1, dy: 0), out: CGVector(dx: 0, dy: -1), reach: bottomReach)
+        Self.smoothCorner(&path, CGPoint(x: rect.minX, y: bodyTop), in: CGVector(dx: 0, dy: -1), out: CGVector(dx: 1, dy: 0), reach: topReach)
+        Self.smoothCorner(&path, CGPoint(x: bandLeft, y: bodyTop), in: CGVector(dx: 1, dy: 0), out: CGVector(dx: 0, dy: -1), reach: joinReach)
         path.closeSubpath()
         return path
+    }
+
+    // MARK: - Corners
+
+    /// One smoothed ("continuous") corner, like iOS uses. Travels along `incoming` toward `corner` and leaves along `outgoing`.
+    /// The curve starts `reach` before the corner and ends `reach` after it; its handles sit close to the corner
+    /// (0.22 × reach), which gives the long, gradual ease-in with no kink where a straight edge meets the round.
+    private static func smoothCorner(_ path: inout Path, _ corner: CGPoint, in incoming: CGVector, out outgoing: CGVector, reach: CGFloat) {
+        guard reach > 0 else {
+            path.addLine(to: corner)
+            return
+        }
+        let handle = reach * 0.22
+        path.addLine(to: CGPoint(x: corner.x - incoming.dx * reach, y: corner.y - incoming.dy * reach))
+        path.addCurve(
+            to: CGPoint(x: corner.x + outgoing.dx * reach, y: corner.y + outgoing.dy * reach),
+            control1: CGPoint(x: corner.x - incoming.dx * handle, y: corner.y - incoming.dy * handle),
+            control2: CGPoint(x: corner.x + outgoing.dx * handle, y: corner.y + outgoing.dy * handle))
     }
 }
