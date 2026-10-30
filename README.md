@@ -16,6 +16,7 @@ A local voice-to-text transcription app for macOS. Press a hotkey, speak, and te
 - **100% Local** - All processing happens on your Mac. No internet required, fully private.
 - **Global Hotkey** - Trigger from any app with a keyboard shortcut (Option+Space by default)
 - **Notch Recorder** - While you dictate, a small recorder grows out of the notch at the top of the screen (a floating capsule on screens without a notch)
+- **Live Preview** - See your words in the recorder as you speak (English, Telugu and more, via macOS)
 - **Auto-paste** - Transcribed text goes directly where your cursor is
 - **Multiple AI Models** - Choose between speed and accuracy (tiny, small, medium, large)
 - **Custom Vocabulary** - Teach it names, jargon, and technical terms

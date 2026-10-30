@@ -22,7 +22,6 @@ final class LiveTranscriber: @unchecked Sendable {
     var onTranscript: ((LiveTranscript) -> Void)?
 
     private let languageIdentifier: String
-    private let createdAt = Date()
 
     private let rawStream: AsyncStream<AVAudioPCMBuffer>
     private let rawContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation
@@ -34,7 +33,6 @@ final class LiveTranscriber: @unchecked Sendable {
     private var setupTask: Task<Void, Never>?
     private var resultsTask: Task<Void, Never>?
     private var analyzer: SpeechAnalyzer?
-    private var loggedFirstWords = false
 
     init(languageIdentifier: String) {
         self.languageIdentifier = languageIdentifier
@@ -170,16 +168,6 @@ final class LiveTranscriber: @unchecked Sendable {
     }
 
     private func deliver(_ transcript: LiveTranscript) {
-        let isFirst: Bool
-        lock.lock()
-        isFirst = !loggedFirstWords && !transcript.isEmpty
-        if isFirst { loggedFirstWords = true }
-        lock.unlock()
-        if isFirst {
-            // Temporary measurement log (removed in Task 6)
-            AppLogger.log(String(format: "Live first words after %.2f s", Date().timeIntervalSince(createdAt)),
-                          category: "live")
-        }
         DispatchQueue.main.async { [weak self] in
             guard let self, !self.stopped else { return }
             self.onTranscript?(transcript)

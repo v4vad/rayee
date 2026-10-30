@@ -1,5 +1,15 @@
 # Rayee Roadmap
 
+## Completed: live transcription
+
+- While you dictate, your words appear in the notch recorder about a second after you say them
+- Grey words are a draft; they turn white once settled (usually after a pause)
+- The pasted text still comes from Whisper, so Smart Dictation, Vocabulary and History work as before
+- Settings → Recording: "Show words while I speak" (on by default) and "Preview language" (English (India) by default; Telugu and others download once)
+- Uses Apple's built-in speech recognizer, which runs outside Rayee, so Rayee uses no extra memory
+
+---
+
 ## Completed: design refresh
 
 - The recorder grows out of the notch at the top of the screen (a floating capsule on screens without a notch)
@@ -27,14 +37,6 @@
 - mlx-swift-lm v3.31.3 for Metal-accelerated LLM transforms
 
 Single .app binary, no Python dependency, instant startup.
-
----
-
-## Future: Live Transcription (Real-Time Streaming)
-
-**Goal:** Text appears word-by-word as you speak — like Apple's built-in dictation.
-
-**How:** WhisperKit has a built-in streaming transcription API. Feed audio chunks in real-time and display partial results as they arrive.
 
 ---
 
