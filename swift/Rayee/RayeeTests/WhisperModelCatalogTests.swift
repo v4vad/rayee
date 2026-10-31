@@ -8,8 +8,11 @@ final class WhisperModelCatalogTests: XCTestCase {
 
     override func setUp() {
         super.setUp()
-        // A private settings store, so tests never touch the real app settings
-        suiteName = "rayee-tests-\(UUID().uuidString)"
+        // A private settings store, so tests never touch the real app settings.
+        // One fixed name, emptied before each test: macOS leaves an empty file behind for
+        // every name used, so a new name per run piled up files in ~/Library/Preferences.
+        suiteName = "RayeeTests.WhisperModelCatalog"
+        UserDefaults().removePersistentDomain(forName: suiteName)
         defaults = UserDefaults(suiteName: suiteName)
     }
 

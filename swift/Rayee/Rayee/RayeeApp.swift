@@ -66,6 +66,10 @@ private struct MenuBarLabel: View {
 class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Unit tests start Rayee in the background. It must not ask for permissions
+        // (each run would pop up macOS dialogs), check for updates, or touch ~/.rayee.
+        guard !Config.isRunningTests else { return }
+
         // Initialize logging first so we capture everything
         AppLogger.initialize()
 

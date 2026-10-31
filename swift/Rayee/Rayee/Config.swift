@@ -13,6 +13,9 @@ import Foundation
 /// Group related settings together for easy discovery
 enum Config {
 
+    /// True when Rayee was started by Xcode to run the unit tests, not by the user
+    static let isRunningTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
     // MARK: - Model Storage
 
     /// Local directory for WhisperKit model downloads.

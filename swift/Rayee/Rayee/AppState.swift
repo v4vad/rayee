@@ -29,7 +29,17 @@ class AppState: ObservableObject {
     // MARK: - Published State
 
     /// Current status (ready, recording, etc.)
-    @Published var status: AppStatus = .ready
+    @Published var status: AppStatus = .ready {
+        didSet { lastActivity = Date() }
+    }
+
+    /// When Rayee last started or finished something; updates wait for a quiet spell after it
+    private(set) var lastActivity: Date?
+
+    /// True while a dictation is being recorded, transcribed, cleaned up or shown
+    var isBusy: Bool {
+        status == .recording || status == .transcribing || !cleanups.isEmpty || recorder.phase != .hidden
+    }
 
     /// The transcribed text from your speech
     @Published var transcribedText: String = ""
@@ -365,6 +375,7 @@ class AppState: ObservableObject {
 
     private func finishCleanup(id: Int, cleaned: String?) {
         guard let cleanup = cleanups.removeValue(forKey: id) else { return }
+        lastActivity = Date()
         saveSmartDictationHistory(raw: cleanup.raw, cleaned: cleaned)
         let outcome = RecorderRules.afterCleanup(raw: cleanup.raw, cleaned: cleaned, canPaste: cleanup.canPaste)
         if let text = outcome.pasteText {

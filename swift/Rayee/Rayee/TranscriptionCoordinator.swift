@@ -278,7 +278,7 @@ class TranscriptionCoordinator: ObservableObject {
     /// Handle successful transcription
     private func handleTranscriptionSuccess(_ text: String) {
         isTranscribing = false
-        AppLogger.log("Transcription succeeded: \(text.prefix(80))...", category: "transcription")
+        AppLogger.log("Transcription succeeded: \(text.count) characters", category: "transcription")
         audioFeedback.playStopSound()
 
         let smartDictationWillRun = SmartDictationPolicy.willRun(
