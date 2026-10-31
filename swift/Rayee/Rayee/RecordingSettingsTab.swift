@@ -57,26 +57,28 @@ struct RecordingSettingsTab: View {
 
             Section {
                 LabeledContent("Stop after silence") {
-                    Text("\(Int(settings.silenceDuration)) s")
-                        .monospacedDigit()
+                    HStack(spacing: 10) {
+                        Slider(
+                            value: $settings.silenceDuration,
+                            in: Config.minSilenceDuration...Config.maxSilenceDuration,
+                            step: 5
+                        )
+                        .labelsHidden()
+                        .frame(width: 180)
+                        Text("\(Int(settings.silenceDuration)) s")
+                            .monospacedDigit()
+                            .frame(width: 32, alignment: .trailing)
+                    }
                 }
-                Slider(
-                    value: $settings.silenceDuration,
-                    in: Config.minSilenceDuration...Config.maxSilenceDuration,
-                    step: 5
-                )
+                LabeledContent("Longest recording", value: "5 minutes")
             } footer: {
-                Text("When you stop talking, recording ends after this many seconds. You can always stop sooner with your hotkey.")
+                Text("When you stop talking, recording ends after this many seconds. You can always stop sooner with your shortcut.")
             }
 
             Section {
                 Toggle("Noisy room mode", isOn: $settings.adaptiveVADEnabled)
             } footer: {
                 Text("Listens to the room for a moment when you start, so background noise isn't mistaken for speech.")
-            }
-
-            Section {
-                LabeledContent("Longest recording", value: "5 minutes")
             }
         }
         .formStyle(.grouped)

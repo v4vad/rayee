@@ -197,6 +197,16 @@ class AppState: ObservableObject {
             self?.recorder.showLiveTranscript(transcript)
         }
 
+        // Load Apple's recognizer at launch and whenever the preview language changes,
+        // so the first live words of a dictation come sooner
+        SettingsManager.shared.$livePreviewEnabled
+            .combineLatest(SettingsManager.shared.$livePreviewLanguage)
+            .sink { enabled, language in
+                guard enabled else { return }
+                Task { await LivePreviewPreparer.shared.warmUp(languageIdentifier: language) }
+            }
+            .store(in: &cancellables)
+
         // Recorder clicks and buttons
         recorder.onCommand = { [weak self] command in
             self?.perform(command)

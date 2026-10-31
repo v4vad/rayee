@@ -29,7 +29,7 @@ struct SmartDictationSettingsTab: View {
                             .disabled(model == .apple && !AppleIntelligence.isAvailable)
                     }
                 }
-                .onChange(of: settings.transformModel) { _ in
+                .onChange(of: settings.transformModel) {
                     // Free the old model now; the new one loads on next use
                     transformManager.unloadModel()
                 }
@@ -52,60 +52,41 @@ struct SmartDictationSettingsTab: View {
     private var selectionNote: some View {
         if let model = transformManager.effectiveModel {
             if TransformModelSelection(tag: settings.transformModel) == .automatic {
-                Text("Currently: \(model.displayName)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                LabeledContent("Currently", value: model.displayName)
             }
         } else {
             Text(MLXTransformError.appleUnavailableMessage)
-                .font(.caption)
-                .foregroundColor(.red)
+                .foregroundStyle(.secondary)
         }
     }
 
     // MARK: - Model Status Row
 
+    /// "Status ● Ready", the same style as Settings → General.
+    @ViewBuilder
     private var modelStatusRow: some View {
-        HStack {
-            Text("Status")
-            Spacer()
-
+        LabeledContent("Status") {
             if transformManager.appleChosenButUnavailable {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.red)
-                Text("Apple Intelligence isn't ready")
-                    .font(.caption)
-                    .foregroundColor(.red)
+                StatusValue(text: "Not available", color: .orange)
             } else if transformManager.usesAppleModel {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text("Built in, ready")
-                    .font(.caption)
-                    .foregroundColor(.green)
+                StatusValue(text: "Ready", color: .green)
             } else if transformManager.isModelLoading {
-                ProgressView()
-                    .controlSize(.small)
-                Text(MLXTransformManager.preparingText(
-                    isLoading: true, downloadFraction: transformManager.downloadProgress) ?? "Loading model…")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.mini)
+                    Text(MLXTransformManager.preparingText(
+                        isLoading: true, downloadFraction: transformManager.downloadProgress) ?? "Loading model…")
+                }
             } else if transformManager.isModelLoaded {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(.green)
-                Text("Loaded")
-                    .font(.caption)
-                    .foregroundColor(.green)
-            } else if let error = transformManager.loadError {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.red)
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
+                StatusValue(text: "Ready", color: .green)
+            } else if transformManager.loadError != nil {
+                StatusValue(text: "Couldn't load", color: .red)
             } else {
-                Text("Loads on first use")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                StatusValue(text: "Loads on first use", color: .secondary)
             }
+        }
+        if !transformManager.usesAppleModel, let error = transformManager.loadError {
+            Text(error)
+                .foregroundStyle(.secondary)
         }
     }
 

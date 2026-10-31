@@ -148,7 +148,14 @@ class WhisperKitModelManager: ObservableObject {
                 _ = try await WhisperKit.download(variant: name, downloadBase: Config.whisperKitDownloadBase) { [weak self] progress in
                     guard let self else { return }
                     Task { @MainActor in
-                        self.updateStatus(name, .downloading(fractionCompleted: progress.fractionCompleted))
+                        // Only publish when the whole-number percent moves, to avoid needless redraws
+                        let fraction = progress.fractionCompleted
+                        if let current = self.models.first(where: { $0.id == name }),
+                           case .downloading(let old) = current.status,
+                           !MLXTransformManager.progressChanged(from: old, to: fraction) {
+                            return
+                        }
+                        self.updateStatus(name, .downloading(fractionCompleted: fraction))
                     }
                 }
                 updateStatus(name, .ready)

@@ -10,8 +10,6 @@ import SwiftUI
 
 struct RecorderView: View {
     @ObservedObject var controller: RecorderController
-    /// Watched so "Cleaning up" can say "Downloading model… 45%" the first time
-    @ObservedObject private var transformManager = MLXTransformManager.shared
 
     private var bodyHeight: CGFloat { controller.bodyHeight }
     private var bandHeight: CGFloat { NotchGeometry.bandHeight(controller.mode) }
@@ -27,50 +25,12 @@ struct RecorderView: View {
         }
     }
 
-    /// Where the body starts, as a fraction of the shape's height (0 for the capsule)
-    private var bodyStart: CGFloat {
-        let total = bandHeight + bodyHeight
-        return total > 0 ? bandHeight / total : 0
-    }
-
-    /// Pure black inside the menu bar (so it matches the notch), lifting to a dark grey at the bottom
-    private var bodyFill: LinearGradient {
-        LinearGradient(stops: [
-            .init(color: .black, location: 0),
-            .init(color: .black, location: bodyStart),
-            .init(color: Color(white: 0.06), location: 1),
-        ], startPoint: .top, endPoint: .bottom)
-    }
-
-    /// A soft glow just inside the edge, only near the bottom
-    private var glassSheen: LinearGradient {
-        LinearGradient(stops: [
-            .init(color: .white.opacity(0), location: 0),
-            .init(color: .white.opacity(0), location: bodyStart + (1 - bodyStart) * 0.5),
-            .init(color: .white.opacity(0.18), location: 1),
-        ], startPoint: .top, endPoint: .bottom)
-    }
-
-    /// A glass edge that is invisible at the notch and brightest along the bottom
-    /// (even down the sides on purpose: a top-to-bottom ramp made the body look like a trapezium)
-    private var glassEdge: LinearGradient {
-        LinearGradient(stops: [
-            .init(color: .white.opacity(0), location: 0),
-            .init(color: .white.opacity(0), location: bodyStart),
-            .init(color: .white.opacity(0.08), location: min(1, bodyStart + 0.02)),
-            .init(color: .white.opacity(0.08), location: bodyStart + (1 - bodyStart) * 0.6),
-            .init(color: .white.opacity(0.5), location: 1),
-        ], startPoint: .top, endPoint: .bottom)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .bottom) {
-                shape
-                    .fill(bodyFill)
-                    .overlay { shape.stroke(glassSheen, lineWidth: 6).blur(radius: 3).clipShape(shape) }
-                    .overlay { shape.stroke(glassEdge, lineWidth: 1.5).clipShape(shape) }
-                    .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+                // Only redrawn when the mode or height changes (the height change is animated)
+                RecorderBackground(mode: controller.mode, bodyHeight: bodyHeight)
+                    .equatable()
                 content
                     .frame(width: shapeWidth, height: bodyHeight)
                     .clipped()
@@ -94,9 +54,9 @@ struct RecorderView: View {
         case .listening:
             listening.transition(.opacity)
         case .transcribing:
-            statusRow(icon: "waveform", text: "Transcribing").transition(.opacity)
+            StatusRow(icon: "waveform", text: "Transcribing").transition(.opacity)
         case .cleaningUp:
-            statusRow(icon: "wand.and.sparkles", text: cleaningText).transition(.opacity)
+            CleaningUpRow().transition(.opacity)
         case .pasted:
             pasted.transition(.opacity)
         case .result(let text):
@@ -104,12 +64,6 @@ struct RecorderView: View {
         case .error(let message, let action):
             error(message, action).transition(.opacity)
         }
-    }
-
-    private var cleaningText: String {
-        MLXTransformManager.preparingText(
-            isLoading: transformManager.isModelLoading,
-            downloadFraction: transformManager.downloadProgress) ?? "Cleaning up"
     }
 
     private var listening: some View {
@@ -152,15 +106,6 @@ struct RecorderView: View {
         .padding(.horizontal, 18)
         // Centred on the recorder (under the camera), not in the gap between the dot and the timer
         .overlay { LevelBars(monitor: controller.audioLevelMonitor, barWidth: 2, gap: 4) }
-    }
-
-    private func statusRow(icon: String, text: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 13))
-            ShimmerText(text)
-        }
-        .foregroundStyle(.white.opacity(0.85))
     }
 
     private var pasted: some View {
@@ -233,6 +178,99 @@ struct RecorderView: View {
 }
 
 // MARK: - Pieces
+
+/// The black shape with its fill, glow, edge and shadow. Kept apart so it is only redrawn
+/// when the mode or height changes, not on every live-transcript or timer update.
+private struct RecorderBackground: View, Equatable {
+    let mode: RecorderLayoutMode
+    let bodyHeight: CGFloat
+
+    private var bandHeight: CGFloat { NotchGeometry.bandHeight(mode) }
+
+    private var shape: NotchShape {
+        switch mode {
+        case .notch(let width, let height):
+            return NotchShape(bandWidth: width, bandHeight: height,
+                              bottomRadius: 20, topRadius: 20)
+        case .capsule:
+            return NotchShape(bandWidth: 0, bandHeight: 0, bottomRadius: 22, topRadius: 22)
+        }
+    }
+
+    /// Where the body starts, as a fraction of the shape's height (0 for the capsule)
+    private var bodyStart: CGFloat {
+        let total = bandHeight + bodyHeight
+        return total > 0 ? bandHeight / total : 0
+    }
+
+    /// Pure black inside the menu bar (so it matches the notch), lifting to a dark grey at the bottom
+    private var bodyFill: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .black, location: 0),
+            .init(color: .black, location: bodyStart),
+            .init(color: Color(white: 0.06), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// A soft glow just inside the edge, only near the bottom
+    private var glassSheen: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .white.opacity(0), location: 0),
+            .init(color: .white.opacity(0), location: bodyStart + (1 - bodyStart) * 0.5),
+            .init(color: .white.opacity(0.18), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    }
+
+    /// A glass edge that is invisible at the notch and brightest along the bottom
+    /// (even down the sides on purpose: a top-to-bottom ramp made the body look like a trapezium)
+    private var glassEdge: LinearGradient {
+        LinearGradient(stops: [
+            .init(color: .white.opacity(0), location: 0),
+            .init(color: .white.opacity(0), location: bodyStart),
+            .init(color: .white.opacity(0.08), location: min(1, bodyStart + 0.02)),
+            .init(color: .white.opacity(0.08), location: bodyStart + (1 - bodyStart) * 0.6),
+            .init(color: .white.opacity(0.5), location: 1),
+        ], startPoint: .top, endPoint: .bottom)
+    }
+
+    var body: some View {
+        let shape = self.shape
+        return shape
+            .fill(bodyFill)
+            .overlay { shape.stroke(glassSheen, lineWidth: 6).blur(radius: 3).clipShape(shape) }
+            .overlay { shape.stroke(glassEdge, lineWidth: 1.5).clipShape(shape) }
+            .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+    }
+}
+
+/// Icon plus shimmering text for "working on it" states.
+private struct StatusRow: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+            ShimmerText(text)
+        }
+        .foregroundStyle(.white.opacity(0.85))
+    }
+}
+
+/// The "Cleaning up" status. Watches the model manager so only this text redraws as the
+/// first-time download progresses ("Downloading model… 45%").
+private struct CleaningUpRow: View {
+    @ObservedObject private var transformManager = MLXTransformManager.shared
+
+    var body: some View {
+        StatusRow(
+            icon: "wand.and.sparkles",
+            text: MLXTransformManager.preparingText(
+                isLoading: transformManager.isModelLoading,
+                downloadFraction: transformManager.downloadProgress) ?? "Cleaning up")
+    }
+}
 
 /// Live microphone level as a row of bars. Also used by onboarding's microphone step.
 struct LevelBars: View {

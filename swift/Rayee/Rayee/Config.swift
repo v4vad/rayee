@@ -62,10 +62,6 @@ enum Config {
 
     // MARK: - UI Delays
 
-    /// Delay before auto-pasting transcribed text (seconds)
-    /// Gives time for the previous app to regain focus
-    static let autoPasteDelay: TimeInterval = 0.1
-
     /// How long after pasting before the user's own clipboard is put back (seconds).
     /// Gives the target app time to read the pasted text first.
     static let clipboardRestoreDelay: TimeInterval = 1.0

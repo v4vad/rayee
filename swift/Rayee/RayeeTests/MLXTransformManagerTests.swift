@@ -120,4 +120,23 @@ final class MLXTransformManagerTests: XCTestCase {
         // A late progress update after loading finished must not show a stale "Downloading".
         XCTAssertNil(MLXTransformManager.preparingText(isLoading: false, downloadFraction: 0.5))
     }
+
+    // MARK: - Download progress throttle
+
+    func testProgressFirstValueIsPublished() {
+        XCTAssertTrue(MLXTransformManager.progressChanged(from: nil, to: 0.001))
+    }
+
+    func testProgressWithinSamePercentIsSkipped() {
+        XCTAssertFalse(MLXTransformManager.progressChanged(from: 0.451, to: 0.459))
+    }
+
+    func testProgressNewPercentIsPublished() {
+        XCTAssertTrue(MLXTransformManager.progressChanged(from: 0.459, to: 0.46))
+    }
+
+    func testProgressReachingOneIsPublishedOnce() {
+        XCTAssertTrue(MLXTransformManager.progressChanged(from: 0.995, to: 1.0))
+        XCTAssertFalse(MLXTransformManager.progressChanged(from: 1.0, to: 1.0))
+    }
 }

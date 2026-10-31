@@ -43,29 +43,33 @@ struct ModelsSettingsTab: View {
     }
 
     private var modelListView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Turns your voice into text, on this Mac. Bigger models are more accurate but take more space.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .padding(.bottom, 4)
-
+        Form {
+            Section {
                 ForEach(featuredModels) { row(for: $0) }
-
-                if !otherModels.isEmpty {
-                    DisclosureGroup("Show all models", isExpanded: $showAll) {
-                        VStack(spacing: 8) {
-                            ForEach(otherModels) { row(for: $0) }
-                        }
-                        .padding(.top, 8)
-                    }
-                    .padding(.top, 8)
-                }
-
-                errorBannerView
+            } footer: {
+                Text("Turns your voice into text, on this Mac. Bigger models are more accurate but take more space.")
             }
-            .padding(20)
+
+            if !otherModels.isEmpty {
+                Section {
+                    DisclosureGroup("All models", isExpanded: $showAll) {
+                        ForEach(otherModels) { row(for: $0) }
+                    }
+                }
+            }
+
+            if let error = modelManager.errorMessage {
+                Section {
+                    LabeledContent {
+                        Button("Dismiss") { modelManager.errorMessage = nil }
+                    } label: {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .symbolRenderingMode(.multicolor)
+                    }
+                }
+            }
         }
+        .formStyle(.grouped)
     }
 
     private func row(for model: WKModelInfo) -> some View {
@@ -83,35 +87,8 @@ struct ModelsSettingsTab: View {
     // MARK: - Loading View
 
     private var loadingView: some View {
-        VStack(spacing: 12) {
-            ProgressView()
-            Text("Loading models...")
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - Error Banner
-
-    @ViewBuilder
-    private var errorBannerView: some View {
-        if let error = modelManager.errorMessage {
-            HStack {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-                Text(error)
-                    .font(.caption)
-                Spacer()
-                Button("Dismiss") {
-                    modelManager.errorMessage = nil
-                }
-                .buttonStyle(.plain)
-                .font(.caption)
-            }
-            .padding(8)
-            .background(Color.orange.opacity(0.1))
-            .cornerRadius(8)
-        }
+        ProgressView("Loading models…")
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Status & Actions

@@ -33,6 +33,8 @@ class HistoryManager: ObservableObject {
     @Published var hasMorePages = true
     @Published var isLoadingMore = false
     private var currentSearchQuery = ""
+    // Goes up whenever the list is reset, so a page that finishes late can tell it is out of date (main thread only)
+    private var generation = 0
     @Published var totalCount: Int = 0
 
     private init() {
@@ -118,6 +120,7 @@ class HistoryManager: ObservableObject {
     /// Search transcriptions by querying the database directly
     /// - Parameter query: The search text to look for (empty string returns all)
     func performSearch(query: String) {
+        generation += 1
         currentSearchQuery = query
         loadedCount = 0
         isLoadingMore = false
@@ -158,6 +161,8 @@ class HistoryManager: ObservableObject {
         if sqlite3_prepare_v2(db, deleteSQL, -1, &statement, nil) == SQLITE_OK {
             if sqlite3_step(statement) == SQLITE_DONE {
                 DispatchQueue.main.async {
+                    self.generation += 1
+                    self.isLoadingMore = false
                     self.transcriptions.removeAll()
                     self.loadedCount = 0
                     self.hasMorePages = false
@@ -213,6 +218,9 @@ class HistoryManager: ObservableObject {
         }
 
         sqlite3_finalize(statement)
+
+        // Index on time so pages don't have to sort the whole table
+        sqlite3_exec(db, "CREATE INDEX IF NOT EXISTS idx_transcriptions_timestamp ON transcriptions(timestamp);", nil, nil, nil)
     }
 
     /// Add original_text and transformations_applied columns if they don't exist
@@ -235,6 +243,7 @@ class HistoryManager: ObservableObject {
 
     /// Reset pagination and load the first page
     private func loadFirstPage() {
+        generation += 1
         loadedCount = 0
         hasMorePages = true
         currentSearchQuery = ""
@@ -251,6 +260,7 @@ class HistoryManager: ObservableObject {
         let query = currentSearchQuery
         let offset = loadedCount
         let limit = pageSize
+        let startedGeneration = generation
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -312,6 +322,8 @@ class HistoryManager: ObservableObject {
             sqlite3_finalize(statement)
 
             DispatchQueue.main.async {
+                // The list was reset while this page loaded: throw the rows away
+                guard self.generation == startedGeneration else { return }
                 self.transcriptions.append(contentsOf: loadedRecords)
                 self.loadedCount += loadedRecords.count
                 self.hasMorePages = loadedRecords.count == limit
