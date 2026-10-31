@@ -14,6 +14,16 @@ enum SystemSettingsLink {
     static let microphone = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!
     static let accessibility = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
 
+    /// What Privacy & Security calls the list that lets Rayee paste and hear its shortcut.
+    /// macOS 27 renamed "Accessibility" to "Device Control and Data Access".
+    static func accessibilityName(macOSMajor: Int) -> String {
+        macOSMajor >= 27 ? "Device Control and Data Access" : "Accessibility"
+    }
+
+    static var accessibilityName: String {
+        accessibilityName(macOSMajor: ProcessInfo.processInfo.operatingSystemVersion.majorVersion)
+    }
+
     static func open(_ url: URL) {
         NSWorkspace.shared.open(url)
     }
@@ -32,7 +42,7 @@ enum SystemProblem: String, Identifiable, Equatable {
         switch self {
         case .microphoneOff: return "Microphone is off"
         case .speechModelNotLoaded: return "Speech model isn't loaded"
-        case .accessibilityOff: return "Accessibility is off"
+        case .accessibilityOff: return "\(SystemSettingsLink.accessibilityName) is off"
         case .speechModelLoading: return "Speech model is loading…"
         }
     }
@@ -42,7 +52,7 @@ enum SystemProblem: String, Identifiable, Equatable {
         switch self {
         case .microphoneOff: return "Rayee can't hear you."
         case .speechModelNotLoaded: return "Rayee can't turn speech into text yet."
-        case .accessibilityOff: return "Rayee needs it to paste and to hear your shortcut."
+        case .accessibilityOff: return "Turn on Rayee in Privacy & Security so it can paste and hear your shortcut."
         case .speechModelLoading: return nil
         }
     }

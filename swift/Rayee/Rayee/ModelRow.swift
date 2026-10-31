@@ -2,8 +2,7 @@
 //  ModelRow.swift
 //  Rayee
 //
-//  A unified model row card for displaying transcription models
-//  with download/use/delete actions.
+//  One speech model as a Settings row: name, description and size, then its action.
 //
 
 import SwiftUI
@@ -30,47 +29,12 @@ struct ModelRow: View {
     let onDelete: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Model info
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 6) {
-                    Text(name)
-                        .font(.system(.body, weight: .medium))
-
-                    if isActive {
-                        Text("Active")
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.green)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.green.opacity(0.15))
-                            .cornerRadius(4)
-                    }
-                }
-
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-
-                Text(sizeText)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-
-            Spacer()
-
-            // Status / Actions
+        LabeledContent {
             statusView
+        } label: {
+            Text(name)
+            Text("\(description) · \(sizeText)")
         }
-        .padding(12)
-        .background(Color(nsColor: .controlBackgroundColor))
-        .cornerRadius(8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isActive ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
-        )
     }
 
     @ViewBuilder
@@ -78,39 +42,37 @@ struct ModelRow: View {
         switch status {
         case .notDownloaded:
             Button("Download & Use") { onUse() }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
 
         case .downloading(let progress):
-            VStack(spacing: 4) {
+            HStack(spacing: 8) {
                 if let progress = progress {
                     ProgressView(value: progress, total: 100)
                         .frame(width: 80)
                     Text("\(Int(progress))%")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 36, alignment: .trailing)
                 } else {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Downloading...")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    Text("Downloading…")
                 }
             }
+            .foregroundStyle(.secondary)
 
         case .ready:
             HStack(spacing: 8) {
-                if !isActive {
+                if isActive {
+                    Label("In Use", systemImage: "checkmark")
+                        .foregroundStyle(.secondary)
+                } else {
                     Button("Use") { onUse() }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
                 }
                 if let onDelete = onDelete {
                     Button(role: .destructive) { onDelete() } label: {
                         Image(systemName: "trash")
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+                    .buttonStyle(.borderless)
+                    .help("Delete this model")
                 }
             }
 
@@ -119,16 +81,11 @@ struct ModelRow: View {
                 .controlSize(.small)
 
         case .error(let msg):
-            VStack(spacing: 4) {
+            HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundColor(.orange)
-                Text(msg)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
+                    .symbolRenderingMode(.multicolor)
+                    .help(msg)
                 Button("Retry") { onUse() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.mini)
             }
         }
     }

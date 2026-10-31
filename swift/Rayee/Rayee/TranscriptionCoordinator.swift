@@ -106,8 +106,8 @@ class TranscriptionCoordinator: ObservableObject {
         self.historyManager = historyManager
         self.audioFeedback = audioFeedback
         self.pasteManager = pasteManager
+        // No wait before pasting: the recorder never takes focus away from the user's app
         self.deliveryLine = DeliveryLine(paste: { text in
-            try? await Task.sleep(for: .seconds(Config.autoPasteDelay))
             await pasteManager.paste(text)
         })
     }

@@ -24,6 +24,12 @@ final class SystemStatusTests: XCTestCase {
         XCTAssertNil(SystemProblem.speechModelLoading.fixLabel)
     }
 
+    func testAccessibilityUsesTheNameSystemSettingsShows() {
+        XCTAssertEqual(SystemSettingsLink.accessibilityName(macOSMajor: 26), "Accessibility")
+        XCTAssertEqual(SystemSettingsLink.accessibilityName(macOSMajor: 27), "Device Control and Data Access")
+        XCTAssertEqual(SystemSettingsLink.accessibilityName(macOSMajor: 28), "Device Control and Data Access")
+    }
+
     func testEveryBlockingProblemOffersAFix() {
         for problem in [SystemProblem.microphoneOff, .speechModelNotLoaded, .accessibilityOff] {
             XCTAssertTrue(problem.isBlocking)

@@ -17,11 +17,84 @@ enum LivePreviewGate {
     }
 }
 
+/// What Apple's recognizer needs for one language, worked out once and reused by every dictation.
+struct LivePreviewSetup: @unchecked Sendable {
+    let locale: Locale
+    let format: AVAudioFormat
+}
+
+/// Does the slow per-language checks once, and keeps Apple's recognizer loaded between dictations,
+/// so the first live words come sooner. Never starts a download.
+actor LivePreviewPreparer {
+    static let shared = LivePreviewPreparer()
+
+    /// Apple keeps its speech model loaded while Rayee runs. It lives in a macOS process, not Rayee's memory.
+    static let options = SpeechAnalyzer.Options(priority: .userInitiated, modelRetention: .processLifetime)
+
+    static func makeTranscriber(_ locale: Locale) -> SpeechTranscriber {
+        SpeechTranscriber(locale: locale, preset: .timeIndexedProgressiveTranscription)
+    }
+
+    private var ready: [String: LivePreviewSetup] = [:]
+    private var warmed: Set<String> = []
+
+    /// The setup for a language, or nil when it can't be previewed right now.
+    /// Only a ready answer is remembered, so a language that finishes downloading is picked up next time.
+    func setup(for languageIdentifier: String) async -> LivePreviewSetup? {
+        if let known = ready[languageIdentifier] { return known }
+
+        let supported = await SpeechTranscriber.supportedLocale(
+            equivalentTo: Locale(identifier: languageIdentifier))
+        guard let locale = supported else {
+            AppLogger.log("Live preview off: language \(languageIdentifier) not supported", category: "live")
+            return nil
+        }
+        let modules: [any SpeechModule] = [Self.makeTranscriber(locale)]
+        let installed = await AssetInventory.status(forModules: modules) == .installed
+        guard LivePreviewGate.shouldRun(
+            isAvailable: SpeechTranscriber.isAvailable, supportedLocale: supported, installed: installed
+        ) else {
+            AppLogger.log("Live preview off: speech assets not ready for \(languageIdentifier)", category: "live")
+            return nil
+        }
+        guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: modules) else {
+            AppLogger.log("Live preview off: no usable audio format", category: "live")
+            return nil
+        }
+        let setup = LivePreviewSetup(locale: locale, format: format)
+        ready[languageIdentifier] = setup
+        return setup
+    }
+
+    /// Loads Apple's recognizer before the first dictation. Does nothing if it's already loaded.
+    func warmUp(languageIdentifier: String) async {
+        guard !warmed.contains(languageIdentifier),
+              let setup = await setup(for: languageIdentifier) else { return }
+        let analyzer = SpeechAnalyzer(modules: [Self.makeTranscriber(setup.locale)], options: Self.options)
+        do {
+            try await analyzer.prepareToAnalyze(in: setup.format)
+            warmed.insert(languageIdentifier)
+            AppLogger.log("Live preview ready for \(languageIdentifier)", category: "live")
+        } catch {
+            AppLogger.log("Live preview warm-up failed: \(error)", category: "live")
+        }
+        await analyzer.cancelAndFinishNow()
+    }
+
+    /// Drops what was remembered, after the recognizer failed (for example, the language was removed).
+    func forget(_ languageIdentifier: String) {
+        ready[languageIdentifier] = nil
+        warmed.remove(languageIdentifier)
+    }
+}
+
 final class LiveTranscriber: @unchecked Sendable {
     /// Always called on the main thread, and never after `stop()`
     var onTranscript: ((LiveTranscript) -> Void)?
 
     private let languageIdentifier: String
+    /// When the recording started, for the "first words after" log line
+    private let startedAt = Date()
 
     private let rawStream: AsyncStream<AVAudioPCMBuffer>
     private let rawContinuation: AsyncStream<AVAudioPCMBuffer>.Continuation
@@ -89,28 +162,15 @@ final class LiveTranscriber: @unchecked Sendable {
         do {
             guard !stopped else { return }
 
-            let supported = await SpeechTranscriber.supportedLocale(
-                equivalentTo: Locale(identifier: languageIdentifier))
-            guard let locale = supported else {
-                AppLogger.log("Live preview off: language \(languageIdentifier) not supported", category: "live")
+            guard let setup = await LivePreviewPreparer.shared.setup(for: languageIdentifier) else {
                 stop()
                 return
             }
-            let transcriber = SpeechTranscriber(locale: locale, preset: .timeIndexedProgressiveTranscription)
+            let transcriber = LivePreviewPreparer.makeTranscriber(setup.locale)
             let modules: [any SpeechModule] = [transcriber]
+            let targetFormat = setup.format
 
-            // The preview never starts a download
-            let installed = await AssetInventory.status(forModules: modules) == .installed
-            guard LivePreviewGate.shouldRun(
-                isAvailable: SpeechTranscriber.isAvailable, supportedLocale: supported, installed: installed
-            ) else {
-                AppLogger.log("Live preview off: speech assets not ready for \(languageIdentifier)", category: "live")
-                stop()
-                return
-            }
-
-            guard let targetFormat = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: modules),
-                  let sourceFormat = AVAudioFormat(
+            guard let sourceFormat = AVAudioFormat(
                     commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false),
                   let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
                 AppLogger.log("Live preview off: no usable audio format", category: "live")
@@ -119,7 +179,7 @@ final class LiveTranscriber: @unchecked Sendable {
             }
 
             let (inputStream, inputContinuation) = AsyncStream<AnalyzerInput>.makeStream()
-            let analyzer = SpeechAnalyzer(modules: modules)
+            let analyzer = SpeechAnalyzer(modules: modules, options: LivePreviewPreparer.options)
 
             lock.lock()
             if isStopped {
@@ -132,11 +192,18 @@ final class LiveTranscriber: @unchecked Sendable {
 
             try await analyzer.prepareToAnalyze(in: targetFormat)
 
+            let startedAt = self.startedAt
             let results = Task { [weak self] in
                 var transcript = LiveTranscript()
+                var loggedFirstWords = false
                 do {
                     for try await result in transcriber.results {
                         transcript.apply(String(result.text.characters), isFinal: result.isFinal)
+                        if !loggedFirstWords && !transcript.isEmpty {
+                            loggedFirstWords = true
+                            AppLogger.log(String(format: "Live first words after %.2f s",
+                                                 Date().timeIntervalSince(startedAt)), category: "live")
+                        }
                         self?.deliver(transcript)
                     }
                 } catch {
@@ -176,6 +243,8 @@ final class LiveTranscriber: @unchecked Sendable {
 
     private func fail(_ error: Error) {
         if !stopped {
+            let language = languageIdentifier
+            Task { await LivePreviewPreparer.shared.forget(language) }
             let text = "\(error)".lowercased()
             if text.contains("authoriz") || text.contains("permission") {
                 AppLogger.log("Live preview needs speech-recognition permission", category: "live")

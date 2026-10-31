@@ -246,7 +246,7 @@ struct OnboardingView: View {
     }
 
     private var accessibility: some View {
-        StepLayout(icon: "hand.raised.fill", title: "Allow Accessibility",
+        StepLayout(icon: "hand.raised.fill", title: "Allow \(SystemSettingsLink.accessibilityName)",
                    message: "So Rayee can paste into your apps and hear your shortcut from anywhere.") {
             if input.accessibilityAllowed {
                 Label("Allowed", systemImage: "checkmark.circle.fill")
@@ -297,7 +297,7 @@ struct OnboardingView: View {
                         .foregroundStyle(.green)
                 }
                 if !input.accessibilityAllowed {
-                    Label("Your shortcut won't work until Accessibility is allowed. You can allow it later in Settings.",
+                    Label("Your shortcut won't work until \(SystemSettingsLink.accessibilityName) is allowed. You can allow it later in Settings.",
                           systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
                         .foregroundStyle(.orange)

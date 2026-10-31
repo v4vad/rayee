@@ -30,83 +30,56 @@ struct HotkeyPickerView: View {
     @State private var isRecording = false
     @State private var pendingConfig: HotkeyConfig?
     @State private var conflictWarning: String?
+    @State private var keyMonitor: Any?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Current hotkey display
-            HStack {
-                Text("Recording Hotkey")
-                    .font(.headline)
-                Spacer()
-                hotkeyDisplay
+        VStack(alignment: .leading, spacing: 8) {
+            LabeledContent("Dictation shortcut") {
+                shortcutButton
             }
-
-            Text("Press this shortcut anywhere on your Mac to start recording")
-                .font(.caption)
-                .foregroundColor(.secondary)
 
             // Conflict warning
             if let warning = conflictWarning {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text(warning)
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-                .padding(8)
-                .background(Color.orange.opacity(0.1))
-                .cornerRadius(6)
+                Label(warning, systemImage: "exclamationmark.triangle.fill")
+                    .symbolRenderingMode(.multicolor)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
 
                 HStack {
                     Button("Use Anyway") {
                         applyPendingConfig()
                     }
-                    .controlSize(.small)
-
                     Button("Cancel") {
-                        pendingConfig = nil
-                        conflictWarning = nil
-                        isRecording = false
+                        cancelRecording()
                     }
-                    .controlSize(.small)
                 }
+                .controlSize(.small)
             }
         }
         .onAppear { setupKeyMonitor() }
+        .onDisappear { removeKeyMonitor() }
     }
 
-    // MARK: - Hotkey Display
+    // MARK: - Shortcut Button
 
-    private var hotkeyDisplay: some View {
-        Button(action: { isRecording.toggle() }) {
-            HStack(spacing: 4) {
-                if isRecording {
-                    Text("Press keys...")
-                        .foregroundColor(.orange)
-                } else {
-                    Text(settings.hotkeyConfig.displayString)
-                        .fontWeight(.medium)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isRecording ? Color.orange.opacity(0.2) : Color.secondary.opacity(0.1))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .stroke(isRecording ? Color.orange : Color.clear, lineWidth: 2)
-            )
+    private var shortcutButton: some View {
+        Button {
+            if isRecording { cancelRecording() } else { isRecording = true }
+        } label: {
+            Text(isRecording ? "Type shortcut…" : settings.hotkeyConfig.displayString)
+                .foregroundStyle(isRecording ? .secondary : .primary)
+                .frame(minWidth: 90)
         }
-        .buttonStyle(.plain)
+        .help(isRecording ? "Press the new shortcut, or Esc to cancel" : "Click to change")
     }
 
     // MARK: - Key Monitor
 
+    /// Listens for the new shortcut while this view is on screen. Removed on disappear, so
+    /// opening Settings again doesn't stack up listeners.
     private func setupKeyMonitor() {
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard isRecording else { return event }
 
             let keyCode = UInt32(event.keyCode)
@@ -117,6 +90,12 @@ struct HotkeyPickerView: View {
             if event.modifierFlags.contains(.shift) { modifiers |= UInt32(shiftKey) }
             if event.modifierFlags.contains(.command) { modifiers |= UInt32(cmdKey) }
 
+            // Esc on its own stops recording a shortcut
+            if keyCode == UInt32(kVK_Escape) && modifiers == 0 {
+                cancelRecording()
+                return nil
+            }
+
             // Require at least one modifier
             guard modifiers != 0 else { return nil }
 
@@ -125,7 +104,7 @@ struct HotkeyPickerView: View {
             // Check for conflicts
             if let conflict = checkConflict(newConfig) {
                 pendingConfig = newConfig
-                conflictWarning = "\(newConfig.displayString) is used by \(conflict). Use anyway?"
+                conflictWarning = "\(newConfig.displayString) is used by \(conflict). Use it anyway?"
             } else {
                 settings.hotkeyConfig = newConfig
                 isRecording = false
@@ -136,6 +115,18 @@ struct HotkeyPickerView: View {
 
             return nil
         }
+    }
+
+    private func removeKeyMonitor() {
+        if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+        keyMonitor = nil
+        cancelRecording()
+    }
+
+    private func cancelRecording() {
+        pendingConfig = nil
+        conflictWarning = nil
+        isRecording = false
     }
 
     /// Check if a hotkey config conflicts with known system shortcuts

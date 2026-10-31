@@ -308,6 +308,14 @@ final class MLXTransformManager: ObservableObject {
         return "Loading model…"
     }
 
+    /// Whether a new download fraction is worth publishing: the first value, a new whole-number
+    /// percent, or reaching 100%.
+    nonisolated static func progressChanged(from old: Double?, to new: Double) -> Bool {
+        guard let old else { return true }
+        if new >= 1 { return old < 1 }
+        return Int((new * 100).rounded(.down)) != Int((old * 100).rounded(.down))
+    }
+
     // MARK: - Model Loading
 
     /// Loads the text model chosen in Settings, if it isn't loaded already.
@@ -374,7 +382,11 @@ final class MLXTransformManager: ObservableObject {
                 configuration: configuration,
                 progressHandler: { [weak self] progress in
                     let fraction = progress.fractionCompleted
-                    Task { @MainActor in self?.downloadProgress = fraction }
+                    Task { @MainActor in
+                        // Only publish when the whole-number percent moves, so the UI isn't redrawn on every tiny step
+                        guard let self, Self.progressChanged(from: self.downloadProgress, to: fraction) else { return }
+                        self.downloadProgress = fraction
+                    }
                 }
             )
             loadedModel = wanted

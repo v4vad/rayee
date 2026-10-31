@@ -3,6 +3,7 @@
 //  Rayee
 //
 //  Settings → About: version, updates, setup again, reset.
+//  Laid out like System Settings → General → About: a centred header, then labelled rows.
 //
 
 import SwiftUI
@@ -19,28 +20,31 @@ struct AboutSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                HStack(spacing: 14) {
-                    Image(nsImage: NSApp.applicationIconImage)
-                        .resizable()
-                        .frame(width: 56, height: 56)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Rayee").font(.title2.bold())
-                        Text("Version \(version)").foregroundStyle(.secondary)
-                        Text("Everything stays on this Mac.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                LabeledContent("Version", value: version)
+                LabeledContent("Updates") {
+                    Button("Check for Updates…") { updates.checkForUpdates() }
+                        .disabled(!updates.canCheckForUpdates)
                 }
+            } header: {
+                header
             }
 
             Section {
-                Button("Check for Updates…") { updates.checkForUpdates() }
-                    .disabled(!updates.canCheckForUpdates)
-                Button("Run Setup Again…") {
-                    openWindow(id: "setup-guide")
-                    NSApp.activate()
+                LabeledContent {
+                    Button("Run Setup Again…") {
+                        openWindow(id: "setup-guide")
+                        NSApp.activate()
+                    }
+                } label: {
+                    Text("Setup guide")
+                    Text("Walks you through permissions, the speech model and your shortcut.")
                 }
-                Button("Reset All Settings…", role: .destructive) { confirmingReset = true }
+                LabeledContent {
+                    Button("Reset…", role: .destructive) { confirmingReset = true }
+                } label: {
+                    Text("Reset all settings")
+                    Text("Your shortcut, dictionary and choices go back to how they were. History is kept.")
+                }
             }
         }
         .formStyle(.grouped)
@@ -49,5 +53,23 @@ struct AboutSettingsTab: View {
         } message: {
             Text("Your hotkey, dictionary and choices go back to how they were when you installed Rayee. History is kept.")
         }
+    }
+
+    /// Icon, name and a one-line promise, centred above the rows
+    private var header: some View {
+        VStack(spacing: 6) {
+            Image(nsImage: NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 72, height: 72)
+            Text("Rayee")
+                .font(.title2.bold())
+                .foregroundStyle(.primary)
+            Text("Everything stays on this Mac.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 12)
+        .textCase(nil)
     }
 }

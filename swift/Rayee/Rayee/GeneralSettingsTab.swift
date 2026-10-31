@@ -16,11 +16,13 @@ struct GeneralSettingsTab: View {
     var body: some View {
         Form {
             Section {
-                statusCard
+                statusRows
             }
 
-            Section("Hotkey") {
+            Section {
                 HotkeyPickerView()
+            } footer: {
+                Text("Press it in any app to start dictating, and again to stop.")
             }
 
             Section {
@@ -48,34 +50,53 @@ struct GeneralSettingsTab: View {
         .onDisappear { status.stopPolling() }
     }
 
-    // MARK: - Status Card
+    // MARK: - Status
 
+    private var blockingProblems: [SystemProblem] {
+        status.problems.filter(\.isBlocking)
+    }
+
+    /// "Status ● Ready" like System Settings, then one row per thing to fix, each with its button.
     @ViewBuilder
-    private var statusCard: some View {
-        if status.problems.isEmpty {
-            Label("Ready to dictate", systemImage: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        } else {
-            ForEach(status.problems) { problem in
-                HStack(alignment: .firstTextBaseline) {
-                    Image(systemName: problem.isBlocking ? "exclamationmark.triangle.fill" : "arrow.down.circle")
-                        .foregroundStyle(problem.isBlocking ? .orange : .secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(problem.title)
-                        if let detail = problem.detail {
-                            Text(detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    if let label = problem.fixLabel {
-                        Button(label) { status.fix(problem) }
-                    } else {
-                        ProgressView().controlSize(.small)
-                    }
+    private var statusRows: some View {
+        LabeledContent("Status") {
+            if !blockingProblems.isEmpty {
+                StatusValue(text: "Needs attention", color: .orange)
+            } else if status.problems.contains(.speechModelLoading) {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.mini)
+                    Text("Loading speech model…")
+                }
+            } else {
+                StatusValue(text: "Ready", color: .green)
+            }
+        }
+        ForEach(blockingProblems) { problem in
+            LabeledContent {
+                if let label = problem.fixLabel {
+                    Button(label) { status.fix(problem) }
+                }
+            } label: {
+                Text(problem.title)
+                if let detail = problem.detail {
+                    Text(detail)
                 }
             }
+        }
+    }
+}
+
+/// A status value the way System Settings shows one: a small coloured dot, then a word or two.
+struct StatusValue: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(text)
         }
     }
 }
