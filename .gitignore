@@ -1,5 +1,3 @@
-# Project planning (kept locally, not in repo)
-
 # Python
 __pycache__/
 *.py[cod]
@@ -41,8 +39,9 @@ DerivedData/
 *.m4a
 *.dmg
 
-# Local planning docs
-OPTIMIZATIONS.md
-
 # Claude Code
 .claude/
+
+# Local session notes and agent workspaces
+.session/
+.superpowers/

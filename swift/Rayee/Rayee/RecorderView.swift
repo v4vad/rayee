@@ -3,7 +3,6 @@
 //  Rayee
 //
 //  The recorder's black shape and what it shows in each state.
-//  Spec: docs/superpowers/specs/2026-10-17-design-refresh-design.md §1
 //
 
 import SwiftUI
@@ -19,7 +18,7 @@ struct RecorderView: View {
         switch controller.mode {
         case .notch(let width, let height):
             return NotchShape(bandWidth: width, bandHeight: height,
-                              bottomRadius: 20, topRadius: 20)
+                              bottomRadius: 12, topRadius: 12)
         case .capsule:
             return NotchShape(bandWidth: 0, bandHeight: 0, bottomRadius: 22, topRadius: 22)
         }
@@ -191,7 +190,7 @@ private struct RecorderBackground: View, Equatable {
         switch mode {
         case .notch(let width, let height):
             return NotchShape(bandWidth: width, bandHeight: height,
-                              bottomRadius: 20, topRadius: 20)
+                              bottomRadius: 12, topRadius: 12)
         case .capsule:
             return NotchShape(bandWidth: 0, bandHeight: 0, bottomRadius: 22, topRadius: 22)
         }
