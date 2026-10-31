@@ -3,7 +3,6 @@
 //  Rayee
 //
 //  The recorder's black shape and what it shows in each state.
-//  Spec: docs/superpowers/specs/2026-10-17-design-refresh-design.md §1
 //
 
 import SwiftUI

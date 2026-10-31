@@ -4,7 +4,6 @@
 //
 //  What the recorder shows, how tall each state is, and what Esc, clicks and a finished
 //  transcript do. Pure values and functions, so they can be tested.
-//  Spec: docs/superpowers/specs/2026-10-17-design-refresh-design.md §1.3
 //
 
 import Foundation

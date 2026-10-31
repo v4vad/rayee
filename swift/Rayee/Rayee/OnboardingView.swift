@@ -4,7 +4,6 @@
 //
 //  First-run setup, one step per screen: welcome, microphone, accessibility, speech model,
 //  then a real dictation into a practice box. Also opened from Settings → About.
-//  Spec: docs/superpowers/specs/2026-10-17-design-refresh-design.md §4
 //
 
 import SwiftUI

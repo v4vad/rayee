@@ -1,52 +1,33 @@
 # Rayee Roadmap
 
-## Completed: live transcription
+## Next update
 
-- While you dictate, your words appear in the notch recorder about a second after you say them
-- Grey words are a draft; they turn white once settled (usually after a pause)
-- The pasted text still comes from Whisper, so Smart Dictation, Vocabulary and History work as before
-- Settings → Recording: "Show words while I speak" (on by default) and "Preview language" (English (India) by default; Telugu and others download once)
-- Uses Apple's built-in speech recognizer, which runs outside Rayee, so Rayee uses about 10 MB more
+- **Notch recorder:** tighter corners (12 instead of 20 on the outer corners, matching the 12 where it meets the notch). On branch `feature/next-update`.
+- **Docs:** cleaned up; finished plans removed (they're in git history).
 
----
+## Next feature: in-place preview
 
-## Completed: design refresh
+Show the live words at the text cursor, in the app you're typing into, instead of only in the notch. The likely route is a macOS input method's temporary "marked text". Brainstorm first, then a quick spike in the apps the user dictates into most, before any real build.
 
-- The recorder grows out of the notch at the top of the screen (a floating capsule on screens without a notch)
-- Settings has a sidebar: General, Recording, Smart Dictation and About
-- The menu-bar menu is leaner and shows a warning when something stops Rayee from working
-- Setup is a 5-step guide, replacing the System Status window
-- Minimum macOS is now 26
+## Known issues
 
----
+- **Switching microphones mid-recording** (for example, AirPods switching to call mode when a Zoom or Meet call starts) probably stops the recording silently. Rayee doesn't yet react when the audio device changes. Untested.
+- **A skipped clean-up that is stuck on a model download can't stop early.** Later clean-ups wait behind it until the download finishes.
+- **"Pasted" can flash briefly** at the start of a new recording.
+- **Preview language only downloads after Settings → Recording is opened.** On a Mac whose system language isn't English, there's no live preview until then.
 
-## Completed: v0.8 reliability release
+## Hands-on checks
 
-- Errors (like a blocked microphone) now show in the panel instead of it silently closing
-- Recordings can run up to 5 minutes (was 1 minute)
-- The first word is no longer clipped, and audio is never repeated
-- Your clipboard is put back after auto-paste
-- Smart Dictation saves the cleaned text to History, and Discard really stops it
+Things no unit test covers. Walk through [docs/manual-checks.md](docs/manual-checks.md) with a release build.
 
 ---
 
-## Completed: Eliminated Python — Pure Native App
+## Shipped
 
-**Shipped in v0.4.** Replaced the Python server with:
-- WhisperKit (`argmax-oss-swift` v1.0.0) for CoreML transcription
-- mlx-swift-lm v3.31.3 for Metal-accelerated LLM transforms
-
-Single .app binary, no Python dependency, instant startup.
-
----
-
-## Future Consideration: Upgrade LLM Model
-
-**Current:** `mlx-community/Llama-3.2-1B-Instruct-4bit` — smallest capable instruct model (~800MB).
-
-**Options:**
-- `Llama-3.2-3B-Instruct-4bit` — better quality, ~2GB more RAM
-- `Llama-3.3-8B-Instruct-4bit` — much better quality, ~5GB more RAM
-- Llama 4 variants — latest generation
-
-**Trade-off:** Better transform quality vs. more memory. Consider making this user-configurable like the Whisper model picker.
+- **v0.10.3** (Oct 31, 2026): new app icon.
+- **v0.10.2** (Oct 31): updates install by themselves after 2 minutes idle; no log file at all.
+- **v0.10.1** (Oct 31): faster live words, fewer redraws, Settings restyled like System Settings, macOS 27's "Device Control and Data Access" name in warnings.
+- **v0.10** (Oct 30): live preview of your words in the recorder (Apple's on-device recognizer); notch recorder; Settings sidebar; 5-step setup guide; Smart Dictation uses Apple Intelligence or Qwen3; dictations stay in order when one is still being cleaned up. Needs macOS 26.
+- **v0.9** (Oct 15): large-v3 turbo speech model for new installs; choice of writing model; Smart Dictation cleans up instead of answering what you dictated.
+- **v0.8** (Oct 15): errors shown instead of the panel silently closing; recordings up to 5 minutes; first word no longer clipped; clipboard put back after paste.
+- **v0.4**: Python removed. One native Swift app with WhisperKit and mlx-swift-lm.

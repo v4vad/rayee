@@ -96,7 +96,7 @@ final class ModelEvalTests: XCTestCase {
             .deletingLastPathComponent() // Rayee
             .deletingLastPathComponent() // swift
             .deletingLastPathComponent() // repo root
-            .appendingPathComponent("docs/plans/2026-10-17-model-eval-results.md")
+            .appendingPathComponent("docs/eval/model-eval-results.md")
 
         let markdown = Self.buildMarkdown(runs: runs)
         try FileManager.default.createDirectory(
@@ -138,7 +138,7 @@ final class ModelEvalTests: XCTestCase {
             .deletingLastPathComponent() // Rayee
             .deletingLastPathComponent() // swift
             .deletingLastPathComponent() // repo root
-            .appendingPathComponent("docs/plans/2026-10-17-model-eval-candidates.md")
+            .appendingPathComponent("docs/eval/model-eval-candidates.md")
         try FileManager.default.createDirectory(
             at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Self.buildCandidateMarkdown(runs: runs).write(to: outputURL, atomically: true, encoding: .utf8)
