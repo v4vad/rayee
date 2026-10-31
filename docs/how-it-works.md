@@ -24,7 +24,7 @@ What happens on each dictation, the rules each part must keep, and the decisions
 
 **Recorder look (approved by the user)**
 - Never covers the menu bar beside the notch. Inside the menu bar it stays as wide as the notch, and grows **down**.
-- T shape: notch-wide band, 300 pt body below the menu bar. Smoothed corners: 12 everywhere on notched screens (from the next update), 22 on the capsule.
+- T shape: notch-wide band, 300 pt body below the menu bar. Smoothed corners: 12 everywhere on notched screens (since v0.10.4), 22 on the capsule.
 - Pure black at the top lifting to `white 0.06`; glass edge brightest along the bottom; soft shadow; 24 white bars, 2 pt wide with 4 pt gaps, centred under the camera; steady red dot.
 - The window is hidden from screenshots and screen recordings (`panel.sharingType = .none`). To tune the look, temporarily switch it to `.readOnly` on a throwaway branch so screenshots show it, and switch it back before shipping.
 - Rejected: an S-curve flare ("chimney"), coloured or voice-reactive glows, cyan bars, a notch-width body (too few words per line).

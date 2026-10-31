@@ -1,10 +1,5 @@
 # Rayee Roadmap
 
-## Next update
-
-- **Notch recorder:** tighter corners (12 instead of 20 on the outer corners, matching the 12 where it meets the notch). On branch `feature/next-update`.
-- **Docs:** cleaned up; finished plans removed (they're in git history).
-
 ## Next feature: in-place preview
 
 Show the live words at the text cursor, in the app you're typing into, instead of only in the notch. The likely route is a macOS input method's temporary "marked text". Brainstorm first, then a quick spike in the apps the user dictates into most, before any real build.
@@ -24,7 +19,8 @@ Things no unit test covers. Walk through [docs/manual-checks.md](docs/manual-che
 
 ## Shipped
 
-- **v0.10.3** (Oct 31, 2026): new app icon.
+- **v0.10.4** (Oct 31, 2026): tighter notch recorder corners (12 instead of 20); docs cleaned up.
+- **v0.10.3** (Oct 31): new app icon.
 - **v0.10.2** (Oct 31): updates install by themselves after 2 minutes idle; no log file at all.
 - **v0.10.1** (Oct 31): faster live words, fewer redraws, Settings restyled like System Settings, macOS 27's "Device Control and Data Access" name in warnings.
 - **v0.10** (Oct 30): live preview of your words in the recorder (Apple's on-device recognizer); notch recorder; Settings sidebar; 5-step setup guide; Smart Dictation uses Apple Intelligence or Qwen3; dictations stay in order when one is still being cleaned up. Needs macOS 26.
