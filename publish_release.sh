@@ -8,7 +8,7 @@
 # Prerequisites:
 #   - Xcode and command line tools
 #   - Developer ID Application certificate (Xcode > Settings > Accounts)
-#   - Notary credentials saved once: xcrun notarytool store-credentials rayee-notary
+#   - Notary credentials saved once: xcrun notarytool store-credentials v4vad-notary
 #
 # Usage:
 #   ./publish_release.sh
@@ -139,13 +139,13 @@ rm -rf "$BUILD_DIR"
 # Notarization: Apple scans the DMG and issues a ticket; stapling attaches the
 # ticket so Gatekeeper accepts it even offline. Must run before Sparkle's
 # signature, because stapling changes the file.
-# One-time setup: xcrun notarytool store-credentials rayee-notary
+# One-time setup: xcrun notarytool store-credentials v4vad-notary
 info "Step 2b: Notarizing DMG (usually a few minutes)..."
 codesign --force --timestamp --sign "$SIGN_IDENTITY" "$DMG_NAME"
-NOTARY_OUTPUT=$(xcrun notarytool submit "$DMG_NAME" --keychain-profile rayee-notary --wait 2>&1) || true
+NOTARY_OUTPUT=$(xcrun notarytool submit "$DMG_NAME" --keychain-profile v4vad-notary --wait 2>&1) || true
 echo "$NOTARY_OUTPUT"
 if ! echo "$NOTARY_OUTPUT" | grep -q "status: Accepted"; then
-    error "Notarization failed. See details with: xcrun notarytool log <submission id> --keychain-profile rayee-notary"
+    error "Notarization failed. See details with: xcrun notarytool log <submission id> --keychain-profile v4vad-notary"
 fi
 xcrun stapler staple "$DMG_NAME"
 spctl -a -vv -t open --context context:primary-signature "$DMG_NAME"
